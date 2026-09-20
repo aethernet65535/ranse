@@ -1,0 +1,7 @@
+subjects:
+  BC: "BAHASA CINA 华 文"
+  BI: "ENGLISH"
+
+# Fixed cell values: TAB-separated → <SHEET> <RANGE> <VALUE>
+fixed_cells: |
+  MENU	B3:C3	ALI BIN ABU
