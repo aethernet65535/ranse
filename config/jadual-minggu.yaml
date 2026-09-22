@@ -5,9 +5,9 @@
 #   1. 今天（--date，默认本周星期日）是第几周？  → 查 minggu 表
 #   2. 那一周用哪一份课表（siri）？             → 查 jadual_siri / jadual
 #
-# 用法:
-#   python fill-erph.py --xlsx M19.xlsx --jadual-config jadual-minggu.yaml
-#   python fill-erph.py --xlsx M19.xlsx --jadual-config jadual-minggu.yaml --date 2026-09-20
+# 用法（由 profile 的 inputs.jadual 引用；命令行只覆盖日期/周次）:
+#   ranse fill --profile profiles/ali-bin-abu.yaml
+#   ranse fill --profile profiles/ali-bin-abu.yaml --date 2026-09-20
 #
 # 说明:
 #   - minggu 表由 M18.xlsx 里 DATA 表 (TARIKH → MINGGU) 生成，

@@ -11,159 +11,199 @@ If you've ever spent time copying class names, periods, and subjects into the e-
 ## Features
 
 - **Preserves original formatting** — Directly edits the xlsx file's internal XML, so all cell styles, merged cells, and borders remain untouched.
+- **Profiles** — One YAML file per teacher/template says where the files live (`inputs`), what is shared between handlers (`context`) and which handlers run (`handlers`).
 - **Two input formats** — Read your timetable from an `.xlsx` file or a `.csv` file.
 - **Automatic period merging** — Consecutive periods with the same class and subject are merged into one row (e.g., two back-to-back Bahasa Cina periods become one entry).
 - **Configurable subject mapping** — Map short codes like `BC` to full names like "BAHASA CINA 华文".
-- **Fixed cell values** — Write constant values (e.g., teacher name) to specific cells across multiple sheets.
+- **Fixed cell values** — Write constant values (e.g., teacher name) to specific cells.
+- **Single-cell writes** — `ranse write MENU!B3 "ALI BIN ABU"` for one-off corrections.
 - **Date-aware** — The date defaults to the Sunday of the current week; override it with `--date`.
-- **Week-aware (minggu → siri)** — With `--jadual-config`, the week number is resolved from the date, the matching timetable (siri 1, 7, …) is picked automatically, and holidays are detected.
-- **Automatic content standards** — Every Bahasa Cina lesson is filled with two parent-level content standards side by side (left/right columns), sliding forward one section per week: `1+2 → 2+3 → … → wrap back to 1+2`.
+- **Week-aware (minggu → siri)** — The week number is resolved from the date, the matching timetable (siri 1, 7, …) is picked automatically, and holiday weeks are reported instead of silently filling the wrong week.
+- **Automatic content standards** — Every matched lesson is filled with two parent-level content standards side by side (left/right columns), sliding forward one section per week: `1+2 → 2+3 → … → wrap back to 1+2`.
+- **DSKP toolkit** — `ranse dskp` parses a DSKP txt/pdf into structured JSON for the manual entries.
 
 ## Project Structure
 
 ```
-fill-erph.py        # Main script
-gen_dskp.py         # Parse DSKP txt/pdf into structured content
-constants.py        # Period times, day names, and other constants
-erph-config.yaml    # Configuration file (subject codes, fixed cells, dskp_auto)
-jadual-minggu.yaml  # Week calendar: minggu → siri → timetable file
+profiles/                    # One profile per teacher/template (start here)
+  ali-bin-abu.yaml
+config/jadual-minggu.yaml    # School calendar: date → minggu → siri → timetable
+src/ranse/
+  cli.py                     # ranse fill / write / dskp
+  model.py                   # Lesson / Schedule / Week / Profile
+  core/                      # write-only xlsx engine (no school knowledge)
+  inputs/                    # timetable, DSKP and YAML readers
+  handlers/                  # week / menu / fixed_cells / dskp
+tests/                       # unit tests + golden regression baselines
 ```
 
 ## Requirements
 
-- Python 3.6 or later
-- [PyYAML](https://pypi.org/project/PyYAML/)
+- Python 3.9 or later
+- [PyYAML](https://pypi.org/project/PyYAML/) (installed automatically)
 
 ## Installation
 
 ```bash
-pip install pyyaml
+pip install -e .
 ```
+
+This installs the `ranse` command. `pip install -e ".[dev]"` also installs pytest for development.
 
 > **Note:** A standalone Windows executable (no Python required) is planned for future release.
 
 ## Usage
 
-### Basic command
+### `ranse fill` — fill the template
 
 ```bash
-python fill-erph.py --xlsx <eRPH_template.xlsx> --timetable-xlsx <timetable.xlsx>
+ranse fill --profile profiles/ali-bin-abu.yaml
 ```
 
-Or with a CSV timetable:
-
-```bash
-python fill-erph.py --xlsx <eRPH_template.xlsx> --csv <timetable.csv>
-```
-
-Full auto (week number → siri timetable → MENU + content standards):
-
-```bash
-python fill-erph.py --xlsx <eRPH_template.xlsx> --jadual-config jadual-minggu.yaml
-```
-
-### All options
+That single command resolves the week from the calendar, reads that week's timetable, fills the MENU sheet, the fixed cells and the DSKP blocks, and overwrites the template **in place**.
 
 | Option | Required | Description |
 |---|---|---|
-| `--xlsx` | Yes | Path to the e-RPH xlsx template file |
-| `--timetable-xlsx` | One of `--timetable-xlsx`, `--csv` or `--jadual-config` is required (unless the config has `dskp` entries) | Path to the timetable xlsx file |
-| `--csv` | One of the above is required | Path to the timetable csv file |
-| `--jadual-config` | No | Path to `jadual-minggu.yaml`; enables week-aware filling and automatic content standards |
+| `--profile` | Yes | Path to the profile YAML (`inputs` + `handlers`) |
+| `--date` | No | Week start date in `YYYY-MM-DD` (default: **the Sunday of the current week**; other days are rolled back to their Sunday) |
 | `--minggu` | No | Override the week number (default: resolved from `--date`) |
-| `--no-dskp-auto` | No | Disable automatic content-standard filling |
-| `--config` | No | Path to config YAML (default: `./erph-config.yaml`) |
-| `--date` | No | Week start date in `YYYY-MM-DD` format (default: **the Sunday of the current week**; other days are rolled back to their Sunday) |
+| `--no-dskp-auto` | No | Disable automatic content-standard filling for this run |
 
-### Example
+There is deliberately no `--xlsx`: the template is a profile input, so a mistake in the shell cannot overwrite the wrong workbook.
 
 ```bash
-python fill-erph.py \
-  --xlsx my-eRPH.xlsx \
-  --jadual-config jadual-minggu.yaml \
-  --config erph-config.yaml \
-  --date 2026-09-20
+ranse fill --profile profiles/ali-bin-abu.yaml --date 2026-09-20
 ```
 
 This will:
-1. Resolve the week: `2026-09-20` → **minggu 33**, siri from `jadual-minggu.yaml`
-2. Read that week's timetable (`jadual-waktu-2026-siri-7.xlsx`)
-3. Fill the MENU sheet (dates default to the week's Sunday)
-4. Fill every Bahasa Cina lesson with two parent-level content standards (left/right), sliding one section per week
-5. Overwrite `my-eRPH.xlsx` with the filled result
+1. Resolve the week: `2026-09-20` → **minggu 33**, siri `7` from `config/jadual-minggu.yaml`
+2. Read that week's timetable (`assets/timetable/jadual-waktu-2026-siri-7.xlsx`)
+3. Fill the MENU sheet (the date column gets the week's Sunday)
+4. Fill every matched lesson with two parent-level content standards (left/right), sliding one section per week
+5. Overwrite the template in place
 
-## Configuration
+### `ranse write` — one cell
 
-The `erph-config.yaml` file has two sections:
+```bash
+ranse write --profile profiles/ali-bin-abu.yaml MENU!B3 "ALI BIN ABU"
+```
 
-### `subjects`
+Writes a single cell (`SHEET!CELL`, or `SHEET!FROM:TO` — the top-left of a range or merged range is used) and saves the template. The value is written as text; use `ranse fill` with a `fixed_cells` handler for values that must be numbers.
 
-Map short subject codes to their full names as they should appear in the e-RPH:
+### `ranse dskp` — parse DSKP content
+
+```bash
+ranse dskp --txt assets/bc-dskp/t1.txt --select 1 1 1 -o t1.json
+ranse dskp --pdf dskp.pdf --pages 35-45 -o t1.json
+ranse dskp --list
+```
+
+Produces the structured JSON that the manual `dskp` entries reference.
+
+## Configuration (the profile)
+
+A profile is the only thing `ranse fill` / `ranse write` need. It has three sections:
 
 ```yaml
-subjects:
-  BC: "BAHASA CINA 华文"
-  BI: "ENGLISH"
-  BM: "BAHASA MELAYU"
-  MT: "MATEMATIK"
-  SC: "SAINS"
+profile: ali-bin-abu-2026
+
+inputs:
+  template: "assets/ALI BIN ABU/12. ERPH/template.xlsx"  # required
+  jadual: "config/jadual-minggu.yaml"                     # week calendar
+  # timetable: "assets/timetable/jadual-waktu-2026-siri-7.xlsx"  # optional override
+  # csv: "timetable.csv"
+
+context:
+  subjects:
+    BC: "BAHASA CINA 华 文"
+
+handlers:
+  - name: week
+  - name: menu
+  - name: fixed_cells
+    params:
+      cells:
+        - [MENU, "B3:C3", "ALI BIN ABU"]
+  - name: dskp
+    params:
+      mode: auto
+      file: "assets/bc-dskp/t{tingkatan}.txt"
+      match_codes: [BC]
+      match_names: ["BAHASA CINA", "华文"]
+      cs: 1
+      ls: 1
+      left_col: 2
+      right_col: 5
 ```
 
-Any code not listed here will be written into the template as-is.
+### `inputs`
 
-### `fixed_cells`
+| Key | Description |
+|---|---|
+| `template` | **Required.** The e-RPH xlsx that gets filled in place |
+| `jadual` | The week calendar (`config/jadual-minggu.yaml`) |
+| `timetable` | Optional explicit timetable xlsx; wins over the siri lookup |
+| `csv` | Optional explicit timetable csv; wins over the siri lookup |
 
-Write fixed values to specific cells. Each line is **tab-separated** with three fields:
+Relative paths are resolved against the profile's own directory, then the current directory, then the repo root — so the shipped profile works no matter where you run it from.
 
-```
-<SHEET>    <CELL_RANGE>    <VALUE>
-```
+### `context`
 
-Example:
+Values shared by several handlers. `subjects` maps subject codes to the names written into the template; a code that is not listed is written as-is.
 
 ```yaml
-fixed_cells: |
-  MENU	B3:C3	ALI BIN ABU
+context:
+  subjects:
+    BC: "BAHASA CINA 华 文"
+    BI: "ENGLISH"
 ```
 
-This writes "ALI BIN ABU" to cell `B3` (or the top-left of the merged range `B3:C3`) on the `MENU` sheet.
+### `handlers`
 
-### `dskp_auto`
+An explicit, ordered list. Only built-in handlers can be named — an unknown name is an error, and every handler validates its own `params` before anything is written.
 
-Controls automatic content-standard filling (only active together with `--jadual-config`):
+| Handler | Phase | What it does |
+|---|---|---|
+| `week` | resolve | date → minggu/siri → timetable path (holiday weeks are an error) |
+| `menu` | fill | MENU rows: class, times with PAGI/TGH/TPTG suffix, subject name, tingkatan |
+| `fixed_cells` | fill | writes `params.cells` — a list of `[sheet, range, value]` |
+| `dskp` | fill | DSKP blocks: manual `entries` first, then the automatic week-based pair |
+
+#### `fixed_cells` params
 
 ```yaml
-dskp_auto:
-  enabled: true
-  match_codes: [BC]                # subject codes in the timetable xlsx
-  match_names: ["BAHASA CINA", "华文"]  # matched when reading a CSV
-  file: assets/bc-dskp/t{tingkatan}.txt  # source txt/json (see below)
-  cs: 1                            # which content standard inside a section
-  ls: 1                            # which learning standard
-  left_col: 2                      # left half  = column B
-  right_col: 5                     # right half = column E
+- name: fixed_cells
+  params:
+    cells:
+      - [MENU, "B3:C3", "ALI BIN ABU"]   # writes to the top-left of the range
+      - [MENU, "B4", 2026]                # numbers stay numbers
 ```
 
-#### `dskp_auto.file`
-
-Same source format as the static `dskp` entries — any txt (parsed by `gen_dskp.py`) or JSON produced from it, so a hand-written file works too (e.g. one holding your own teaching objectives 教学目标).
-
-`{tingkatan}` is replaced with the tingkatan of each lesson, so the right file is picked automatically:
+#### `dskp` params
 
 ```yaml
-dskp_auto:
-  file: assets/bc-dskp/t{tingkatan}.txt   # T1 → t1.txt, T2 → t2.txt, …
+- name: dskp
+  params:
+    mode: auto                            # auto (default) | static
+    entries:                              # manual entries, written first
+      - {sheet: ISNIN, class: 1, file: t1.json,
+         selection: [1, 1, 1], col_start: 2}
+    file: "assets/bc-dskp/t{tingkatan}.txt"  # source for the automatic pair
+    match_codes: [BC]                     # subject codes in the timetable xlsx
+    match_names: ["BAHASA CINA", "华文"]   # matched when reading a CSV
+    cs: 1                                 # which content standard inside a section
+    ls: 1                                 # which learning standard
+    left_col: 2                           # left half  = column B
+    right_col: 5                          # right half = column E
 ```
 
-A per-tingkatan map works as well, and when `file` is omitted the built-in `assets/bc-dskp/t1.txt` … `t5.txt` table is used. Relative `file` paths are resolved against the config directory, the current directory, then the repo root.
+`file` accepts a `{tingkatan}` placeholder (T1 → `t1.txt`, T2 → `t2.txt`, …), a per-tingkatan map, or nothing at all — in which case the built-in `assets/bc-dskp/t1.txt` … `t5.txt` table is used. The same source formats as the manual entries are supported: a txt file, or JSON produced by `ranse dskp`.
 
-### `dskp` (static entries)
+Automatic entries are appended **after** the manual ones, so on the same cell the automatic entry wins. `--no-dskp-auto` (or `mode: static`) turns the automatic part off for a run.
 
-Manual, one explicit selection per cell — see the commented example in `erph-config.yaml`. Automatic entries are appended after these, so they win when both target the same cell.
+## Week calendar (`config/jadual-minggu.yaml`)
 
-## Week calendar (`jadual-minggu.yaml`)
-
-The week-aware mode is driven by `scripts/jadual-minggu.yaml`:
+The week-aware mode is driven by the calendar referenced from `inputs.jadual`:
 
 ```yaml
 jadual:                 # siri number → timetable file
@@ -181,9 +221,9 @@ minggu:                 # each record takes effect from its start date
     minggu: 34
 ```
 
-- `minggu` records are pre-filled from the school calendar (M01…M43); holiday weeks are marked with `cuti` and cause a clear error instead of silently filling the wrong week.
+- `minggu` records are pre-filled from the school calendar (M01…M43); holiday weeks are marked with `cuti` and produce a clear error instead of silently filling the wrong week.
 - `jadual_siri` is the minggu → siri table; you can also put `siri: 7` directly inside a `minggu` record (it wins over `jadual_siri`).
-- Weeks without a configured siri are an error unless you pass `--timetable-xlsx`/`--csv` explicitly.
+- Weeks without a configured siri are an error unless `inputs.timetable` / `inputs.csv` is set in the profile.
 
 ## Automatic content standards
 
@@ -208,7 +248,7 @@ Ranse bypasses libraries like `openpyxl` and works directly with the xlsx file's
 3. **Modifies** only the cell values (`<v>` elements) while keeping every original attribute (style, number format, etc.) intact
 4. **Re-zips** everything back into a valid xlsx file
 
-This approach ensures that formatting, merged cells, and other layout details are never lost.
+The workbook engine is deliberately write-only — it has no way to read a cell value — and knows nothing about school weeks, subjects or layouts. All of that lives in the handlers, which write through the engine. Sheets nobody wrote to are copied through byte-for-byte, so untouched parts of the template cannot drift.
 
 ## Timetable Input Format
 
@@ -226,6 +266,8 @@ The timetable xlsx should have the following layout:
 - **Column A** contains the period number
 - **Other columns** contain class codes in the format `<SUBJECT>-<TINGKATAN><CLASS>` (e.g., `BC-1A` means Bahasa Cina, Tingkatan 1, Class A)
 
+Friday and Saturday columns are ignored: the template only has sheets for Ahad–Khamis.
+
 ### csv format
 
 The CSV should have these columns:
@@ -233,6 +275,15 @@ The CSV should have these columns:
 ```
 Date,Class,Start Time,End Time,Subject,Tingkatan
 ```
+
+## Development
+
+```bash
+pip install -e ".[dev]"
+pytest
+```
+
+`tests/golden/` holds per-sheet XML baselines; the regression test fills a temporary copy of the template and compares sheet XML byte-for-byte. It is skipped when `assets/` (gitignored) is missing, so a fresh clone still runs the unit tests.
 
 ## License
 
