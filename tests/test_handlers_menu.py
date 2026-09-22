@@ -1,16 +1,22 @@
-"""MENU handler behaviour: period merging + time suffixes (PLAN.md stage 0)."""
+"""MENU handler behaviour: period merging + time suffixes (PLAN.md stage 0).
+
+Stage 3 turned the lesson dict into the ``Lesson`` dataclass, so the
+expectations below are built from ``Lesson`` too (``entry["class"]`` →
+``entry.cls``).
+"""
 
 from harness import fn
 
 merge_periods = fn("merge_periods")
 _time_with_suffix = fn("_time_with_suffix")
+Lesson = fn("Lesson")
 
 
 def _entry(start, end, **overrides):
-    entry = {"class": "1E", "subject": "BC", "tingkatan": "1",
-             "start": start, "end": end}
-    entry.update(overrides)
-    return entry
+    fields = {"cls": "1E", "subject": "BC", "tingkatan": "1",
+              "start": start, "end": end}
+    fields.update(overrides)
+    return Lesson(**fields)
 
 
 def test_merge_empty_day():
@@ -30,7 +36,7 @@ def test_merge_three_periods_into_one_row():
     assert len(merged) == 1
     start, entry = merged[0]
     assert start == 1
-    assert (entry["start"], entry["end"]) == ("07:40", "09:40")
+    assert (entry.start, entry.end) == ("07:40", "09:40")
 
 
 def test_no_merge_when_time_not_contiguous():
@@ -41,7 +47,7 @@ def test_no_merge_when_time_not_contiguous():
 
 def test_no_merge_different_class():
     day = {1: _entry("07:40", "08:20"),
-           2: _entry("08:20", "09:00", **{"class": "2E"})}
+           2: _entry("08:20", "09:00", cls="2E")}
     assert [p for p, _ in merge_periods(day)] == [1, 2]
 
 
@@ -64,8 +70,8 @@ def test_merge_splits_then_resumes():
            3: _entry("09:00", "09:40", subject="BI"),
            4: _entry("09:40", "10:20")}
     merged = merge_periods(day)
-    assert [(p, e["subject"]) for p, e in merged] == [(1, "BC"), (3, "BI"),
-                                                      (4, "BC")]
+    assert [(p, e.subject) for p, e in merged] == [(1, "BC"), (3, "BI"),
+                                                   (4, "BC")]
 
 
 def test_time_suffix_day_part_boundaries():

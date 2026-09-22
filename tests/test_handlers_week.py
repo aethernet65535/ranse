@@ -2,6 +2,7 @@
 
 All error assertions match substrings of the CURRENT wording; PLAN.md scope
 item "不重构错误文案措辞" guarantees the wording survives the refactor.
+Stage 3 changed the return value from a dict to the ``Week`` dataclass.
 """
 
 from datetime import date, datetime
@@ -9,6 +10,7 @@ from datetime import date, datetime
 from harness import call_error, fn
 
 resolve_week = fn("resolve_week")
+Week = fn("Week")
 
 CUTI = {"start": date(2026, 1, 1), "cuti": "CUTI A.TAHUN 2026"}
 WK1 = {"start": date(2026, 1, 11), "minggu": 1}
@@ -30,39 +32,38 @@ def test_no_config_without_override():
 
 
 def test_no_config_with_override():
-    assert resolve_week(None, datetime(2026, 9, 20), 33) == {
-        "minggu": 33, "siri": None}
+    assert resolve_week(None, datetime(2026, 9, 20), 33) == Week(
+        minggu=33, siri=None)
 
 
 # --- normal resolution -----------------------------------------------------
 
 def test_resolves_minggu_and_siri():
-    assert resolve_week(jadual(), datetime(2026, 1, 18)) == {
-        "minggu": 2, "siri": 7}
+    assert resolve_week(jadual(), datetime(2026, 1, 18)) == Week(
+        minggu=2, siri=7)
 
 
 def test_record_stays_in_effect_until_the_next_one():
     # 2026-01-19 (a Monday) still belongs to the record starting 2026-01-18
-    assert resolve_week(jadual(), datetime(2026, 1, 19))["minggu"] == 2
+    assert resolve_week(jadual(), datetime(2026, 1, 19)).minggu == 2
 
 
 def test_record_siri_overrides_jadual_siri():
     cfg = jadual(minggu=[CUTI, WK1,
                          {"start": date(2026, 1, 18), "minggu": 2,
                           "siri": 3}])
-    assert resolve_week(cfg, datetime(2026, 1, 18)) == {
-        "minggu": 2, "siri": 3}
+    assert resolve_week(cfg, datetime(2026, 1, 18)) == Week(minggu=2, siri=3)
 
 
 def test_missing_siri_lookup_yields_none():
-    assert resolve_week(jadual(jadual_siri={}), datetime(2026, 1, 18)) == {
-        "minggu": 2, "siri": None}
+    assert resolve_week(jadual(jadual_siri={}),
+                        datetime(2026, 1, 18)) == Week(minggu=2, siri=None)
 
 
 def test_override_replaces_minggu_and_siri_is_looked_up_for_it():
     cfg = jadual(jadual_siri={1: 1, 2: 7, 5: 5})
-    assert resolve_week(cfg, datetime(2026, 1, 18), override=5) == {
-        "minggu": 5, "siri": 5}
+    assert resolve_week(cfg, datetime(2026, 1, 18), override=5) == Week(
+        minggu=5, siri=5)
 
 
 # --- error paths -----------------------------------------------------------

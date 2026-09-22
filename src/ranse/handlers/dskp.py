@@ -1,4 +1,4 @@
-"""DSKP content: automatic two-section selection + cell filling (stage 1 move)."""
+"""DSKP content: automatic two-section selection + cell filling."""
 
 import json
 import os
@@ -9,20 +9,22 @@ from xml.etree import ElementTree as ET
 
 from .. import _REPO_ROOT
 from ..core.refs import _cell_ref, _resolve_path
-from ..inputs.timetable import DAY_ORDER, merge_periods
+from ..errors import ProfileError
+from ..inputs.timetable import DAY_ORDER
+from ..model import merge_periods
 from .base import Context
 
 _DSKP_CONTENT_CACHE = {}
 
 
-# {tingkatan} / {t} / {T} in dskp_auto.file → the lesson's tingkatan number
+# {tingkatan} / {t} / {T} in the params' `file` → the lesson's tingkatan number
 _DSKP_TINGKATAN_PLACEHOLDER = re.compile(r"\{(?:tingkatan|t|T)\}")
 
 
-def _dskp_file_for_tingkatan(tingkatan, auto_cfg, config_dir=None):
+def _dskp_file_for_tingkatan(tingkatan, params, base_dir=None):
     """tingkatan ('1'..'5') → DSKP txt/json file path, or None.
 
-    `dskp_auto.file` picks the source file and auto-detects the tingkatan
+    `params.file` picks the source file and auto-detects the tingkatan
     through the {tingkatan} placeholder:
 
         file: assets/bc-dskp/t{tingkatan}.txt   # T1 → assets/bc-dskp/t1.txt
@@ -33,12 +35,12 @@ def _dskp_file_for_tingkatan(tingkatan, auto_cfg, config_dir=None):
           1: assets/bc-dskp/t1.txt
           2: assets/bc-dskp/t2.txt
 
-    When `file` is absent, `dskp_auto.dskp_files` (same map, older key) and
+    When `file` is absent, `params.dskp_files` (same map, older key) and
     finally the built-in gen_dskp.DSKP_FILES table are used.
     """
-    spec = auto_cfg.get("file")
+    spec = params.get("file")
     if spec is None:
-        spec = auto_cfg.get("dskp_files")
+        spec = params.get("dskp_files")
     if spec is None:
         try:
             from ..inputs import dskp as _gen_dskp_mod
@@ -57,8 +59,8 @@ def _dskp_file_for_tingkatan(tingkatan, auto_cfg, config_dir=None):
         return None
 
     bases = [os.getcwd(), _REPO_ROOT]
-    if config_dir:
-        bases.insert(0, config_dir)
+    if base_dir:
+        bases.insert(0, base_dir)
     return _resolve_path(path, bases)
 
 
@@ -79,65 +81,57 @@ def _section_pair(sections, minggu):
     return keys[idx], keys[idx + 1]
 
 
-def _auto_subject_matchers(auto):
-    """dskp_auto config → (subject codes set, uppercased names list)."""
-    codes = {str(c).strip() for c in auto.get("match_codes", ["BC"])}
+def _auto_subject_matchers(params):
+    """dskp params → (subject codes set, uppercased names list)."""
+    codes = {str(c).strip() for c in params.get("match_codes", ["BC"])}
     names = [str(n).strip().upper()
-             for n in auto.get("match_names", ["BAHASA CINA", "华文"])]
+             for n in params.get("match_names", ["BAHASA CINA", "华文"])]
     return codes, names
 
 
 def _is_matched_subject(subject, codes, names, subject_map):
-    """Does this timetable subject code/name belong to dskp_auto?"""
+    """Does this timetable subject code/name belong to the auto matchers?"""
     mapped = str(subject_map.get(subject, subject)).upper()
     return subject in codes or any(n in mapped for n in names if n)
 
 
-def schedule_has_auto_match(schedule, cfg):
-    """True if the timetable has any lesson dskp_auto would fill."""
-    auto = cfg.get("dskp_auto") or {}
-    if not auto.get("enabled", True):
-        return False
-    codes, names = _auto_subject_matchers(auto)
-    subject_map = cfg.get("subjects") or {}
+def schedule_has_auto_match(schedule, params, subjects):
+    """True if the timetable has any lesson the auto mode would fill."""
+    codes, names = _auto_subject_matchers(params)
+    subject_map = subjects or {}
     for day in DAY_ORDER:
-        for entry in schedule.get(day, {}).values():
-            if _is_matched_subject(entry["subject"], codes, names,
+        for entry in schedule.day(day).values():
+            if _is_matched_subject(entry.subject, codes, names,
                                    subject_map):
                 return True
     return False
 
 
-def build_auto_dskp_entries(schedule, minggu, cfg):
+def build_auto_dskp_entries(schedule, minggu, params, subjects, base_dir=None):
     """Turn this week's timetable lessons into DSKP fill entries.
 
-    Every subject listed in dskp_auto.match_codes gets, for each of its
+    Every subject listed in params.match_codes gets, for each of its
     merged lessons (40 or 80 minutes), two entries: the left column
     (col_start, default B) and the right column (default E) of its class
     block. Returns (entries, report_lines).
     """
-    auto = cfg.get("dskp_auto") or {}
-    if not auto.get("enabled", True):
-        return [], []
-
-    codes, names = _auto_subject_matchers(auto)
-    cs_idx = int(auto.get("cs", 1))
-    ls_idx = int(auto.get("ls", 1))
-    left_col = int(auto.get("left_col", 2))
-    right_col = int(auto.get("right_col", 5))
-    subject_map = cfg.get("subjects") or {}
+    codes, names = _auto_subject_matchers(params)
+    cs_idx = int(params.get("cs", 1))
+    ls_idx = int(params.get("ls", 1))
+    left_col = int(params.get("left_col", 2))
+    right_col = int(params.get("right_col", 5))
+    subject_map = subjects or {}
 
     entries, report = [], []
     for day in DAY_ORDER:
-        merged = merge_periods(schedule.get(day, {}))
+        merged = merge_periods(schedule.day(day))
         for class_num, (_, entry) in enumerate(merged, start=1):
-            subject = entry["subject"]
+            subject = entry.subject
             if not _is_matched_subject(subject, codes, names, subject_map):
                 continue
 
-            tingkatan = str(entry["tingkatan"]).strip()
-            dskp_path = _dskp_file_for_tingkatan(tingkatan, auto,
-                                                 cfg.get("_config_dir"))
+            tingkatan = str(entry.tingkatan).strip()
+            dskp_path = _dskp_file_for_tingkatan(tingkatan, params, base_dir)
             if not dskp_path or not os.path.isfile(dskp_path):
                 print(f"  Warning: no DSKP file for tingkatan {tingkatan} "
                       f"({day} class {class_num}): "
@@ -166,7 +160,7 @@ def build_auto_dskp_entries(schedule, minggu, cfg):
             right_title = sections[right].get("title", str(right))
             report.append(
                 f"  {day.upper()} class {class_num} "
-                f"({entry['class']}, {entry['start']}-{entry['end']}, T{tingkatan}): "
+                f"({entry.cls}, {entry.start}-{entry.end}, T{tingkatan}): "
                 f"{left_title} + {right_title}")
 
     return entries, report
@@ -249,18 +243,73 @@ def _write_dskp_cells(sheet, content, col_start, class_num):
 
 
 class DskpFiller:
-    """Fill the day sheets' DSKP blocks (stage 2: Filler form).
+    """Fill the day sheets' DSKP blocks.
 
     Entry order is significant: static entries come first, automatic ones
-    are appended after them by the orchestrator, so on the same cell the
-    automatic entry wins (PLAN.md risk 9).
+    are appended after them, so on the same cell the automatic entry wins
+    (PLAN.md risk 9).
+
+    Profile form::
+
+        - name: dskp
+          params:
+            mode: auto                # auto (default) | static
+            entries:                  # static entries (written first)
+              - {sheet: ISNIN, class: 1, file: t1.json,
+                 selection: [1, 1, 1], col_start: 2}
+            file: assets/bc-dskp/t{tingkatan}.txt
+            match_codes: [BC]
+            match_names: ["BAHASA CINA", "华文"]
+            cs: 1
+            ls: 1
+            left_col: 2
+            right_col: 5
     """
 
     name = "dskp"
+    phase = "fill"
+
+    @staticmethod
+    def validate(params):
+        mode = params.get("mode", "auto")
+        if mode not in ("auto", "static"):
+            raise ProfileError(
+                f"dskp handler: unknown mode {mode!r} (use 'auto' or 'static')")
+
+        entries = params.get("entries") or []
+        if not isinstance(entries, list):
+            raise ProfileError("dskp handler: 'entries' must be a list")
+        for i, entry in enumerate(entries, start=1):
+            if not isinstance(entry, dict):
+                raise ProfileError(f"dskp handler: entries[{i}] must be a mapping")
+            if not entry.get("sheet"):
+                raise ProfileError(
+                    f"dskp handler: entries[{i}] is missing 'sheet'")
+            if not entry.get("file"):
+                raise ProfileError(
+                    f"dskp handler: entries[{i}] is missing 'file'")
+            selection = entry.get("selection")
+            if selection is not None and (
+                    not isinstance(selection, (list, tuple))
+                    or len(selection) != 3):
+                raise ProfileError(
+                    f"dskp handler: entries[{i}] 'selection' must be "
+                    f"[section, content_standard, learning_standard]")
+
+        for key in ("cs", "ls", "left_col", "right_col", "class", "col_start"):
+            if key in params and not isinstance(params[key], int):
+                raise ProfileError(
+                    f"dskp handler: '{key}' must be an integer")
 
     def fill(self, ctx: Context) -> List[str]:
-        report: List[str] = []
-        for dskp_cfg in ctx.profile.get("dskp", []):
+        params = ctx.params
+        subjects = ctx.profile.context.get("subjects") or {}
+
+        entries = list(params.get("entries") or [])
+        report = self._auto_entries(ctx, params, subjects, entries)
+
+        base_dir = ctx.profile.base_dir
+        for dskp_cfg in entries:
             sheet_name = dskp_cfg.get("sheet")
             class_num = dskp_cfg.get("class", 1)
             json_path = dskp_cfg.get("file")
@@ -277,6 +326,8 @@ class DskpFiller:
                       file=sys.stderr)
                 continue
 
+            json_path = _resolve_path(json_path, [base_dir, os.getcwd(),
+                                                  _REPO_ROOT])
             if not json_path or not os.path.isfile(json_path):
                 print(f"  Warning: DSKP file not found: {json_path}",
                       file=sys.stderr)
@@ -301,3 +352,28 @@ class DskpFiller:
             _write_dskp_cells(ctx.workbook.sheet(sheet_name), content,
                               col_start, class_num)
         return report
+
+    def _auto_entries(self, ctx, params, subjects, entries):
+        """Append this week's automatic entries to ``entries``; return report."""
+        if params.get("mode", "auto") != "auto":
+            return []
+        if ctx.runtime.get("no_dskp_auto"):
+            return []
+
+        if ctx.week is not None:
+            if not ctx.schedule:
+                return []
+            auto, report = build_auto_dskp_entries(
+                ctx.schedule, ctx.week.minggu, params, subjects,
+                ctx.profile.base_dir)
+            entries.extend(auto)
+            return report
+
+        # Without a week number there is no section pair to pick — say so
+        # instead of silently writing nothing.
+        if ctx.schedule and schedule_has_auto_match(ctx.schedule, params,
+                                                   subjects):
+            return ["Note: automatic DSKP filling skipped (no week known) — "
+                    "add inputs.jadual to the profile or pass --minggu N "
+                    "to enable it"]
+        return []

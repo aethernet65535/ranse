@@ -9,6 +9,7 @@ from datetime import date
 from typing import Optional, Protocol
 
 from ..core.xlsx import Workbook
+from ..model import Profile, Schedule, Week
 
 
 @dataclass
@@ -16,33 +17,41 @@ class Context:
     """Everything handlers may touch.
 
     ``workbook``   the target workbook (write-only core API);
-    ``profile``    the loaded config/profile (plain dict until stage 3);
+    ``profile``    the loaded profile (``inputs`` / ``context`` / handlers);
     ``schedule``   timetable lessons, read between resolve and fill;
-    ``week``       ``{'minggu': N, 'siri': S or None}`` once resolved;
+    ``week``       resolved ``Week`` (or None when no calendar is used);
     ``start_date`` week start (Sunday) the MENU date column is filled from;
-    ``params``     runtime overrides from the CLI (``--date``, ``--minggu``,
-                   ``--jadual-config``, ``--timetable-xlsx``, ``--csv``,
-                   ``--no-dskp-auto``) plus resolver outputs (timetable path);
+    ``params``     params of the handler currently running (set per handler
+                   by the orchestrator);
+    ``runtime``    CLI overrides: ``--date`` / ``--minggu`` /
+                   ``--no-dskp-auto``;
+    ``timetable_path`` / ``timetable_is_csv``  resolver output, consumed by
+                   the orchestrator to read the timetable;
     ``report``     lines printed by the orchestrator after filling.
     """
     workbook: Workbook
-    profile: dict
-    schedule: Optional[dict] = None
-    week: Optional[dict] = None
+    profile: Profile
+    schedule: Optional[Schedule] = None
+    week: Optional[Week] = None
     start_date: Optional[date] = None
     params: dict = field(default_factory=dict)
+    runtime: dict = field(default_factory=dict)
+    timetable_path: Optional[str] = None
+    timetable_is_csv: bool = False
     report: list = field(default_factory=list)
 
 
 class Resolver(Protocol):
-    """Phase one: compute inputs, never write a cell."""
+    """Phase one: compute inputs, never write a cell (``phase = "resolve"``)."""
     name: str
+    phase: str
 
     def resolve(self, ctx: Context) -> None: ...
 
 
 class Filler(Protocol):
-    """Phase two: write cells, only through the core write API."""
+    """Phase two: write cells through core (``phase = "fill"``)."""
     name: str
+    phase: str
 
     def fill(self, ctx: Context) -> list: ...

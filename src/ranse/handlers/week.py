@@ -1,4 +1,9 @@
-"""Week/date resolution: date → minggu/siri → timetable path (stage 1 move)."""
+"""Week/date resolution: date → minggu/siri → timetable path.
+
+Business rules (cuti weeks, missing minggu, dates outside the calendar) live
+here in the handler layer, never in core (PLAN.md decision 6). Error
+reporting keeps the handler style: print to stderr + exit (decision 13).
+"""
 
 import os
 import sys
@@ -7,6 +12,7 @@ from datetime import datetime, timedelta
 from .. import _REPO_ROOT
 from ..core.refs import _resolve_path
 from ..inputs.yaml import load_jadual_config
+from ..model import Week
 from .base import Context
 
 
@@ -16,7 +22,7 @@ def _sunday_of(dt):
 
 
 def resolve_week(jadual_cfg, start_date, override=None):
-    """Resolve start_date → {'minggu': N, 'siri': S or None} (or None if no config).
+    """Resolve start_date → Week(minggu, siri) (or None if no config).
 
     Each record takes effect from its `start` date (a Sunday) until the next
     record. Holiday weeks (`cuti`) and records without a minggu number are
@@ -25,7 +31,7 @@ def resolve_week(jadual_cfg, start_date, override=None):
     if jadual_cfg is None:
         if override is None:
             return None
-        return {"minggu": int(override), "siri": None}
+        return Week(minggu=int(override), siri=None)
 
     def _as_date(value):
         return value.date() if isinstance(value, datetime) else value
@@ -71,7 +77,7 @@ def resolve_week(jadual_cfg, start_date, override=None):
         per_minggu = jadual_cfg.get("jadual_siri") or {}
         siri = per_minggu.get(minggu, per_minggu.get(str(minggu)))
 
-    return {"minggu": minggu, "siri": siri}
+    return Week(minggu=minggu, siri=siri)
 
 
 def siri_to_timetable(jadual_cfg, siri):
@@ -87,26 +93,32 @@ def siri_to_timetable(jadual_cfg, siri):
 
 
 class WeekResolver:
-    """Phase-one resolver: date → minggu/siri → timetable path (stage 2).
+    """Phase-one resolver: date → minggu/siri → timetable path.
 
-    Reads only the runtime params (``--date``, ``--minggu``,
-    ``--jadual-config``, ``--timetable-xlsx``, ``--csv``) and fills
-    ``ctx.start_date``, ``ctx.week`` and the timetable path — it never
-    writes a cell. Error reporting keeps the handler-layer style: print to
-    stderr + exit (decision 13).
+    Reads the profile's ``inputs:`` (jadual calendar, optional timetable /
+    csv override) plus the runtime ``--date`` / ``--minggu`` overrides, and
+    fills ``ctx.start_date``, ``ctx.week`` and the timetable path — it never
+    writes a cell.
     """
 
     name = "week"
+    phase = "resolve"
+
+    @staticmethod
+    def validate(params):
+        """The week handler has no params of its own (inputs live in profile)."""
 
     def resolve(self, ctx: Context) -> None:
-        params = ctx.params
+        runtime = ctx.runtime
+        inputs = ctx.profile.inputs
+        bases = [ctx.profile.base_dir, os.getcwd(), _REPO_ROOT]
 
         # --- Resolve the week date (weeks start on Sunday/Ahad) ---
-        if params.get("date"):
+        if runtime.get("date"):
             try:
-                raw_date = datetime.strptime(params["date"], "%Y-%m-%d")
+                raw_date = datetime.strptime(runtime["date"], "%Y-%m-%d")
             except ValueError:
-                print(f"Error: invalid --date {params['date']!r} "
+                print(f"Error: invalid --date {runtime['date']!r} "
                       f"(expected YYYY-MM-DD)", file=sys.stderr)
                 sys.exit(1)
         else:
@@ -116,36 +128,39 @@ class WeekResolver:
 
         # --- Week number / siri from jadual-minggu.yaml ---
         jadual_cfg = None
-        if params.get("jadual_config"):
-            if not os.path.isfile(params["jadual_config"]):
-                print(f"Error: file not found: {params['jadual_config']}",
+        jadual_path = None
+        if inputs.jadual:
+            jadual_path = _resolve_path(inputs.jadual, bases)
+            if not os.path.isfile(jadual_path):
+                print(f"Error: file not found: {jadual_path}",
                       file=sys.stderr)
                 sys.exit(1)
-            jadual_cfg = load_jadual_config(params["jadual_config"])
-        ctx.week = resolve_week(jadual_cfg, ctx.start_date, params.get("minggu"))
+            jadual_cfg = load_jadual_config(jadual_path)
+        ctx.week = resolve_week(jadual_cfg, ctx.start_date,
+                                runtime.get("minggu"))
 
-        # --- Timetable source: explicit flag wins, else siri from the week ---
-        if params.get("timetable_xlsx"):
-            tt_path, tt_is_csv = params["timetable_xlsx"], False
-        elif params.get("csv"):
-            tt_path, tt_is_csv = params["csv"], True
-        elif ctx.week is not None and ctx.week.get("siri") is not None:
-            tt_path = siri_to_timetable(jadual_cfg, ctx.week["siri"])
+        # --- Timetable source: an explicit input wins, else siri from the week ---
+        if inputs.timetable:
+            tt_path, tt_is_csv = _resolve_path(inputs.timetable, bases), False
+        elif inputs.csv:
+            tt_path, tt_is_csv = _resolve_path(inputs.csv, bases), True
+        elif ctx.week is not None and ctx.week.siri is not None:
+            tt_path = siri_to_timetable(jadual_cfg, ctx.week.siri)
             tt_is_csv = tt_path.lower().endswith(".csv")
         else:
             tt_path, tt_is_csv = None, False
 
         if (jadual_cfg is not None and not tt_path
-                and ctx.week.get("siri") is None):
-            print(f"Error: minggu {ctx.week['minggu']} has no siri "
+                and ctx.week is not None and ctx.week.siri is None):
+            print(f"Error: minggu {ctx.week.minggu} has no siri "
                   f"configured yet (fill in jadual_siri in "
-                  f"{params['jadual_config']}, or pass "
-                  f"--timetable-xlsx/--csv)", file=sys.stderr)
+                  f"{jadual_path}, or set inputs.timetable / inputs.csv "
+                  f"in the profile)", file=sys.stderr)
             sys.exit(1)
 
         if tt_path and not os.path.isfile(tt_path):
             print(f"Error: file not found: {tt_path}", file=sys.stderr)
             sys.exit(1)
 
-        ctx.params["timetable_path"] = tt_path
-        ctx.params["timetable_is_csv"] = tt_is_csv
+        ctx.timetable_path = tt_path
+        ctx.timetable_is_csv = tt_is_csv

@@ -1,7 +1,8 @@
 """MENU sheet filling: layout rows, time suffixes, merged periods."""
 
 from ..core.refs import _cell_ref, _date_to_excel
-from ..inputs.timetable import DAY_ORDER, merge_periods
+from ..inputs.timetable import DAY_ORDER
+from ..model import merge_periods
 from .base import Context
 
 # --- MENU layout (decision 12: layout constants stay in the handler) ------
@@ -25,23 +26,27 @@ def _time_with_suffix(t):
 
 
 class MenuFiller:
-    """Fill the MENU sheet with this week's merged lessons (stage 2)."""
+    """Fill the MENU sheet with this week's merged lessons."""
 
     name = "menu"
+    phase = "fill"
+
+    @staticmethod
+    def validate(params):
+        """The MENU layout is fixed (decision 12): no params to validate."""
 
     def fill(self, ctx: Context) -> list:
-        schedule = ctx.schedule or {}
+        schedule = ctx.schedule
         if not schedule:
             # Without a timetable there is nothing to write into MENU —
             # and the sheet must stay untouched (not even re-serialized).
             return []
 
-        subject_map = ctx.profile.get("subjects", {})
+        subject_map = ctx.profile.context.get("subjects", {})
         sheet = ctx.workbook.sheet("MENU")
 
         for day_idx, day_name in enumerate(DAY_ORDER):
-            day_schedule = schedule.get(day_name, {})
-            merged = merge_periods(day_schedule)
+            merged = merge_periods(schedule.day(day_name))
 
             header_row = 5 + day_idx * 10
 
@@ -55,12 +60,11 @@ class MenuFiller:
 
                 if entry:
                     cells = [
-                        (3, entry["class"]),
-                        (4, _time_with_suffix(entry["start"])),
-                        (5, _time_with_suffix(entry["end"])),
-                        (6, subject_map.get(entry["subject"],
-                                            entry["subject"])),
-                        (7, int(entry["tingkatan"])),
+                        (3, entry.cls),
+                        (4, _time_with_suffix(entry.start)),
+                        (5, _time_with_suffix(entry.end)),
+                        (6, subject_map.get(entry.subject, entry.subject)),
+                        (7, int(entry.tingkatan)),
                     ]
                     for col, val in cells:
                         sheet.write(_cell_ref(row, col), val)

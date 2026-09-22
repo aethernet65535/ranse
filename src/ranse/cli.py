@@ -1,45 +1,35 @@
-"""Command-line orchestration: load → resolve → read → fill → save.
+"""Command-line orchestration: load profile → resolve → read → fill → save.
 
-Only orchestration lives here: argparse, the pipeline order and turning a
-RanseError into `Error: …` + exit code 1 (decision 13). Handlers keep their
-own print-to-stderr warnings.
+Only orchestration lives here: argparse, the pipeline order, printing the
+report and turning a RanseError into ``Error: …`` + exit code 1 (decision
+13). Every business decision belongs to a handler, which is what keeps this
+file free of timetable/DSKP knowledge.
 """
 
 import argparse
 import os
 import sys
 
-from .core.xlsx import Workbook, _read_shared_strings, _read_zip
+from . import _REPO_ROOT
+from .core.refs import _resolve_path
+from .core.xlsx import Workbook
 from .errors import RanseError
 from .handlers.base import Context
-from .handlers.dskp import (DskpFiller, build_auto_dskp_entries,
-                            schedule_has_auto_match)
-from .handlers.fixed_cells import FixedCellsFiller
-from .handlers.menu import MenuFiller
-from .handlers.week import WeekResolver
-from .inputs.timetable import (DAY_ORDER, build_schedule, read_csv,
-                               read_timetable_xlsx)
-from .inputs.yaml import load_config
+from .handlers.registry import build_handlers
+from .inputs.timetable import DAY_ORDER, load_schedule
+from .inputs.yaml import load_profile
 
 REQUIRED_SHEETS = ["MENU"] + [d.upper() for d in DAY_ORDER]
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Fill an e-RPH xlsx template with timetable and/or DSKP data")
-    parser.add_argument("--xlsx", required=True,
-                        help="Path to the target xlsx file")
-    parser.add_argument("--timetable-xlsx", default=None,
-                        help="Path to the timetable xlsx file")
-    parser.add_argument("--csv", default=None,
-                        help="Path to the timetable CSV (alternative to --timetable-xlsx)")
-    parser.add_argument("--config", default="./erph-config.yaml",
-                        help="Path to the config YAML (default: ./erph-config.yaml)")
-    parser.add_argument("--jadual-config", default=None,
-                        help="Path to jadual-minggu.yaml (minggu → siri → timetable); "
-                             "enables week-aware automatic filling")
+        description="Fill an e-RPH xlsx template from a ranse profile")
+    parser.add_argument("--profile", required=True,
+                        help="Path to the profile YAML (inputs + handlers)")
     parser.add_argument("--minggu", type=int, default=None,
-                        help="Override the week number (default: resolved from --date)")
+                        help="Override the week number "
+                             "(default: resolved from --date)")
     parser.add_argument("--no-dskp-auto", action="store_true",
                         help="Disable automatic DSKP content-standard filling")
     parser.add_argument("--date",
@@ -55,15 +45,18 @@ def main():
 
 
 def _run(parser, args):
-    if not os.path.isfile(args.xlsx):
-        print(f"Error: file not found: {args.xlsx}", file=sys.stderr)
+    profile = load_profile(args.profile)
+    bases = [profile.base_dir, os.getcwd(), _REPO_ROOT]
+    template = _resolve_path(profile.inputs.template, bases)
+    if not os.path.isfile(template):
+        print(f"Error: file not found: {template}", file=sys.stderr)
         sys.exit(1)
 
-    # --- Profile / config (stage 3 replaces this with the profile schema) ---
-    cfg = load_config(args.config)
+    # Unknown handler names / invalid params fail here, before any cell is
+    # touched (decision 2 + "params 由各 handler 自己校验").
+    handlers = build_handlers(profile.handlers)
 
-    # --- Target workbook ---
-    wb = Workbook.open(args.xlsx)
+    wb = Workbook.open(template)
     missing = [s for s in REQUIRED_SHEETS if s not in wb.sheets]
     if missing:
         print(f"Error: missing sheets: {', '.join(missing)}", file=sys.stderr)
@@ -71,64 +64,43 @@ def _run(parser, args):
 
     ctx = Context(
         workbook=wb,
-        profile=cfg,
-        params={
+        profile=profile,
+        runtime={
             "date": args.date,
             "minggu": args.minggu,
-            "jadual_config": args.jadual_config,
-            "timetable_xlsx": args.timetable_xlsx,
-            "csv": args.csv,
             "no_dskp_auto": args.no_dskp_auto,
         },
     )
 
-    # --- Phase one: resolve inputs (no cell writes) ---
-    WeekResolver().resolve(ctx)
+    # --- Phase one: resolvers compute the inputs (no cell writes) ---
+    for spec, handler in handlers:
+        if handler.phase != "resolve":
+            continue
+        ctx.params = spec.params
+        handler.resolve(ctx)
 
-    tt_path = ctx.params["timetable_path"]
-    tt_is_csv = ctx.params["timetable_is_csv"]
+    if not ctx.timetable_path and not any(spec.name == "dskp"
+                                          for spec, _ in handlers):
+        parser.error("Nothing to do: set inputs.timetable / inputs.csv or "
+                     "inputs.jadual in the profile, or add a dskp handler")
 
-    if not tt_path and not cfg.get("dskp"):
-        parser.error("Nothing to do: provide --timetable-xlsx, --csv or "
-                     "--jadual-config, or add dskp entries to the config")
-
-    # --- Read the timetable (inputs layer; the target workbook stays write-only) ---
-    schedule = {}
-    if tt_path and tt_is_csv:
-        schedule = build_schedule(read_csv(tt_path))
-    elif tt_path:
-        tt_zip = _read_zip(tt_path)
-        shared_strings = _read_shared_strings(tt_zip)
-        schedule = read_timetable_xlsx(tt_zip, shared_strings)
-    ctx.schedule = schedule
+    # --- Read the timetable (inputs layer; target workbook stays write-only) ---
+    if ctx.timetable_path:
+        ctx.schedule = load_schedule(ctx.timetable_path)
 
     if ctx.week is not None:
-        siri_txt = ctx.week["siri"] if ctx.week.get("siri") is not None else "-"
-        print(f"Week: minggu {ctx.week['minggu']}, siri {siri_txt}"
-              + (f" ({tt_path})" if tt_path else ""))
-
-    # --- Automatic DSKP entries: two parent sections per BC lesson ---
-    # Static entries come first, auto entries are appended after them so
-    # they win on the same cell (PLAN.md risk 9).
-    auto_report = []
-    if schedule and ctx.week is not None and not args.no_dskp_auto:
-        auto_entries, auto_report = build_auto_dskp_entries(
-            schedule, ctx.week["minggu"], cfg)
-        cfg["dskp"] = cfg.get("dskp", []) + auto_entries
-        for line in auto_report:
-            print(line)
-    elif schedule and ctx.week is None and not args.no_dskp_auto:
-        # Without a week number there is no section pair to pick — say so
-        # instead of silently writing nothing.
-        if schedule_has_auto_match(schedule, cfg):
-            print("Note: automatic DSKP filling skipped (no week known) — "
-                  "add --jadual-config or --minggu N to enable it")
+        siri_txt = ctx.week.siri if ctx.week.siri is not None else "-"
+        print(f"Week: minggu {ctx.week.minggu}, siri {siri_txt}"
+              + (f" ({ctx.timetable_path})" if ctx.timetable_path else ""))
 
     # --- Phase two: fillers (the only code allowed to touch cells) ---
-    for filler in (MenuFiller(), FixedCellsFiller(), DskpFiller()):
-        ctx.report.extend(filler.fill(ctx))
+    for spec, handler in handlers:
+        if handler.phase != "fill":
+            continue
+        ctx.params = spec.params
+        ctx.report.extend(handler.fill(ctx))
     for line in ctx.report:
         print(line)
 
     wb.save()
-    print(f"Done: {args.xlsx}")
+    print(f"Done: {template}")

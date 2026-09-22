@@ -16,7 +16,9 @@ from datetime import datetime
 from xml.etree import ElementTree as ET
 
 from ..core.refs import _parse_cell_ref
-from ..core.xlsx import NS, NS_R, _parse_sheet_names, _parse_sheet_rels
+from ..core.xlsx import (NS, NS_R, _parse_sheet_names, _parse_sheet_rels,
+                         _read_shared_strings, _read_zip)
+from ..model import Lesson, Schedule
 
 DAY_ORDER = ["Ahad", "Isnin", "Selasa", "Rabu", "Khamis"]
 
@@ -69,7 +71,7 @@ def read_csv(path):
 
 
 def build_schedule(rows):
-    """Build a schedule from CSV rows, keyed by day name (as read_timetable_xlsx)."""
+    """Build a Schedule from CSV rows (same shape as read_timetable_xlsx)."""
     schedule = defaultdict(dict)
     for r in rows:
         period = TIME_PERIOD.get((r["Start Time"], r["End Time"]))
@@ -83,14 +85,22 @@ def build_schedule(rows):
         if day not in DAY_ORDER:
             # Jumaat/Sabtu have no sheet in the template.
             continue
-        schedule[day][period] = {
-            "class": r["Class"],
-            "start": r["Start Time"],
-            "end": r["End Time"],
-            "subject": r["Subject"],
-            "tingkatan": r["Tingkatan"],
-        }
-    return schedule
+        schedule[day][period] = Lesson(
+            cls=r["Class"],
+            start=r["Start Time"],
+            end=r["End Time"],
+            subject=r["Subject"],
+            tingkatan=r["Tingkatan"],
+        )
+    return Schedule(days=dict(schedule))
+
+
+def load_schedule(path):
+    """Read a timetable file (``.csv`` or ``.xlsx``) into a Schedule."""
+    if str(path).lower().endswith(".csv"):
+        return build_schedule(read_csv(path))
+    zip_data = _read_zip(path)
+    return read_timetable_xlsx(zip_data, _read_shared_strings(zip_data))
 
 
 def _day_name_from_date(value):
@@ -103,33 +113,6 @@ def _day_name_from_date(value):
             continue
         return DAY_BY_WEEKDAY[d.weekday()]
     return None
-
-
-def merge_periods(day_schedule):
-    """Merge consecutive periods with the same class/subject/tingkatan."""
-    periods = sorted(day_schedule.keys())
-    if not periods:
-        return []
-
-    merged = []
-    buf_start = periods[0]
-    buf_entry = day_schedule[periods[0]]
-
-    for p in periods[1:]:
-        entry = day_schedule[p]
-        same = (entry["class"] == buf_entry["class"]
-                and entry["subject"] == buf_entry["subject"]
-                and entry["tingkatan"] == buf_entry["tingkatan"]
-                and entry["start"] == buf_entry["end"])
-        if same:
-            buf_entry = {**buf_entry, "end": entry["end"]}
-        else:
-            merged.append((buf_start, buf_entry))
-            buf_start = p
-            buf_entry = entry
-
-    merged.append((buf_start, buf_entry))
-    return merged
 
 
 # ---------------------------------------------------------------------------
@@ -206,7 +189,7 @@ def read_timetable_xlsx(zip_data, shared_strings):
         Row 2+:          period_num  code   code     code      code    code
 
     Returns:
-        { day_name: { period_num: { class, start, end, subject, tingkatan } } }
+        Schedule — { day_name: { period_num: Lesson } }
     """
     rid_to_target = _parse_sheet_rels(zip_data)
     sheet_map = _parse_sheet_names(zip_data, rid_to_target)
@@ -270,12 +253,12 @@ def read_timetable_xlsx(zip_data, shared_strings):
             subject, tingkatan, cls = _parse_class_code(code)
             start, end = PERIOD_TIMES[period_num]
 
-            schedule[day_name][period_num] = {
-                "class": f"{tingkatan}{cls}",
-                "start": start,
-                "end": end,
-                "subject": subject,
-                "tingkatan": tingkatan,
-            }
+            schedule[day_name][period_num] = Lesson(
+                cls=f"{tingkatan}{cls}",
+                start=start,
+                end=end,
+                subject=subject,
+                tingkatan=tingkatan,
+            )
 
-    return schedule
+    return Schedule(days=dict(schedule))

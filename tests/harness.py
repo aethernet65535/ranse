@@ -4,7 +4,9 @@ Everything the tests need in order to survive the refactor with minimal churn:
 
 - path constants (repo root, template, golden dir, golden case table);
 - ``run_fill``   — the single place that knows how to invoke the fill entry
-  point (stage 4 swaps ``scripts/fill-erph.py`` → ``ranse fill`` here);
+  point: stage 3 switched it to ``python -m ranse`` driven by a profile whose
+  ``inputs.template`` points at the temporary workbook copy (the template
+  path is profile-only — decision 10 — and the real asset is read-only);
 - ``fn(name)``   — find a function by name: first in ``src/ranse`` (once it
   exists), then in the legacy ``scripts/``. Unit tests call ``fn`` instead of
   importing a fixed module, so moving code between stages does not require
@@ -21,25 +23,28 @@ import gzip as _gzip
 import importlib
 import importlib.util
 import io
+import os
 import re
 import subprocess
 import sys
+import tempfile
 import zipfile
 from contextlib import redirect_stderr
 from pathlib import Path
+
+import yaml
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 TESTS_DIR = REPO_ROOT / "tests"
 SRC_DIR = REPO_ROOT / "src"
 SCRIPTS_DIR = REPO_ROOT / "scripts"
-FILL_SCRIPT = SCRIPTS_DIR / "fill-erph.py"
 GOLDEN_DIR = TESTS_DIR / "golden"
 
 TEMPLATE_XLSX = REPO_ROOT / "assets" / "ALI BIN ABU" / "12. ERPH" / "template.xlsx"
 TIMETABLE_DIR = REPO_ROOT / "assets" / "timetable"
 DSKP_DIR = REPO_ROOT / "assets" / "bc-dskp"
-CONFIG_YAML = SCRIPTS_DIR / "erph-config.yaml"
-JADUAL_YAML = SCRIPTS_DIR / "jadual-minggu.yaml"
+PROFILE_YAML = REPO_ROOT / "profiles" / "ali-bin-abu.yaml"
+JADUAL_YAML = REPO_ROOT / "config" / "jadual-minggu.yaml"
 
 # Stage-0 golden cases (PLAN.md stage 0): two normal weeks …
 GOLDEN_CASES = {
@@ -57,7 +62,7 @@ def assets_available():
     return (TEMPLATE_XLSX.is_file()
             and TIMETABLE_DIR.is_dir()
             and DSKP_DIR.is_dir()
-            and CONFIG_YAML.is_file()
+            and PROFILE_YAML.is_file()
             and JADUAL_YAML.is_file())
 
 
@@ -65,21 +70,39 @@ def assets_available():
 # Running the fill entry point
 # ---------------------------------------------------------------------------
 
-def run_fill(xlsx_path, date):
+def _pythonpath():
+    """Environment with ``src/`` on PYTHONPATH so ``python -m ranse`` works."""
+    parts = [str(SRC_DIR)]
+    if os.environ.get("PYTHONPATH"):
+        parts.append(os.environ["PYTHONPATH"])
+    return {**os.environ, "PYTHONPATH": os.pathsep.join(parts)}
+
+
+def run_fill(xlsx_path, date, extra_args=()):
     """Run the current fill entry point against a writable xlsx copy.
 
-    The ONLY place that knows the CLI invocation: stage 4 replaces the
-    ``scripts/fill-erph.py`` call with the installed ``ranse fill``.
+    The ONLY place that knows the CLI invocation (stage 4 wraps it in the
+    ``ranse fill`` console script). The shipped profile is copied to a temp
+    file with ``inputs.template`` pointing at ``xlsx_path`` — the CLI has no
+    ``--xlsx`` on purpose (decision 10).
     Returns a ``subprocess.CompletedProcess``.
     """
-    cmd = [
-        sys.executable, str(FILL_SCRIPT),
-        "--xlsx", str(xlsx_path),
-        "--config", str(CONFIG_YAML),
-        "--jadual-config", str(JADUAL_YAML),
-        "--date", str(date),
-    ]
-    return subprocess.run(cmd, cwd=str(REPO_ROOT), capture_output=True, text=True)
+    with tempfile.TemporaryDirectory() as tmp:
+        raw = yaml.safe_load(PROFILE_YAML.read_text(encoding="utf-8"))
+        raw["inputs"]["template"] = str(xlsx_path)
+        raw["inputs"]["jadual"] = str(JADUAL_YAML)
+        profile_path = Path(tmp) / "profile.yaml"
+        profile_path.write_text(
+            yaml.safe_dump(raw, allow_unicode=True, sort_keys=False),
+            encoding="utf-8")
+        cmd = [
+            sys.executable, "-m", "ranse",
+            "--profile", str(profile_path),
+            "--date", str(date),
+            *extra_args,
+        ]
+        return subprocess.run(cmd, cwd=str(REPO_ROOT), capture_output=True,
+                              text=True, env=_pythonpath())
 
 
 # ---------------------------------------------------------------------------
@@ -139,6 +162,7 @@ _PACKAGE_CANDIDATES = (
     "ranse.handlers.menu",
     "ranse.handlers.fixed_cells",
     "ranse.handlers.dskp",
+    "ranse.handlers.registry",
 )
 _LEGACY_CANDIDATES = (
     (SCRIPTS_DIR / "fill-erph.py", "_legacy_fill_erph"),

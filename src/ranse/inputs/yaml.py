@@ -1,49 +1,83 @@
-"""Profile/config YAML loading (moved verbatim from fill-erph.py, stage 1)."""
+"""Profile + calendar YAML loading (PLAN.md §3 schema, stage 3)."""
 
 import os
 import sys
 
 import yaml
 
+from ..errors import ProfileError
+from ..model import HandlerSpec, Profile, ProfileInputs
 
-def load_config(path):
+
+def load_profile(path):
+    """Load a profile YAML into a :class:`~ranse.model.Profile`.
+
+    Structural validation only — required ``inputs.template``, a well-formed
+    ``handlers:`` list. Whether a handler *name* exists and whether its
+    ``params`` make sense is checked by the handler registry (decision 2 +
+    "params 由各 handler 自己校验").
+    """
     with open(path, encoding="utf-8") as f:
-        cfg = yaml.safe_load(f) or {}
+        raw = yaml.safe_load(f)
 
-    # Relative paths in the config (dskp_auto.file, static dskp files, ...)
-    # resolve against the config's own directory first.
-    cfg["_config_dir"] = os.path.dirname(os.path.abspath(path))
+    if raw is None:
+        raw = {}
+    if not isinstance(raw, dict):
+        raise ProfileError(f"{path}: profile must be a YAML mapping")
 
-    fixed = []
-    raw = cfg.get("fixed_cells", "")
-    if isinstance(raw, str):
-        for line in raw.strip().splitlines():
-            line = line.strip()
-            if not line or line.startswith("#"):
-                continue
-            parts = line.split("\t")
-            if len(parts) >= 3:
-                sheet, cell_range, value = parts[0], parts[1], "\t".join(parts[2:])
-                fixed.append((sheet, cell_range, value))
-    cfg["fixed_cells"] = fixed
+    raw_inputs = raw.get("inputs")
+    if not isinstance(raw_inputs, dict):
+        raise ProfileError(f"{path}: profile is missing the 'inputs:' mapping")
+    template = raw_inputs.get("template")
+    if not isinstance(template, str) or not template.strip():
+        raise ProfileError(
+            f"{path}: profile is missing 'inputs.template' (the e-RPH "
+            f"template xlsx)")
+    inputs = ProfileInputs(
+        template=template.strip(),
+        jadual=_text(raw_inputs.get("jadual"), path, "inputs.jadual"),
+        timetable=_text(raw_inputs.get("timetable"), path, "inputs.timetable"),
+        csv=_text(raw_inputs.get("csv"), path, "inputs.csv"),
+    )
 
-    # Parse DSKP config: list of {sheet, class, file, selection, col_start}
-    raw_dskp = cfg.get("dskp", [])
-    if isinstance(raw_dskp, dict):
-        raw_dskp = [raw_dskp]
-    dskp_list = []
-    for entry in raw_dskp:
-        if isinstance(entry, dict) and "file" in entry:
-            dskp_list.append({
-                "sheet": entry.get("sheet"),
-                "class": entry.get("class", 1),
-                "file": entry["file"],
-                "selection": entry.get("selection"),
-                "col_start": entry.get("col_start", 2),
-            })
-    cfg["dskp"] = dskp_list
+    raw_handlers = raw.get("handlers")
+    if raw_handlers is None:
+        raw_handlers = []
+    if not isinstance(raw_handlers, list):
+        raise ProfileError(f"{path}: 'handlers' must be a list")
+    handlers = []
+    for i, entry in enumerate(raw_handlers, start=1):
+        if not isinstance(entry, dict):
+            raise ProfileError(f"{path}: handlers[{i}] must be a mapping")
+        name = entry.get("name")
+        if not isinstance(name, str) or not name.strip():
+            raise ProfileError(f"{path}: handlers[{i}] is missing 'name'")
+        params = entry.get("params") or {}
+        if not isinstance(params, dict):
+            raise ProfileError(
+                f"{path}: handlers[{i}] 'params' must be a mapping")
+        handlers.append(HandlerSpec(name=name.strip(), params=params))
 
-    return cfg
+    context = raw.get("context") or {}
+    if not isinstance(context, dict):
+        raise ProfileError(f"{path}: 'context' must be a mapping")
+
+    name = raw.get("profile")
+    if not isinstance(name, str) or not name.strip():
+        name = os.path.splitext(os.path.basename(path))[0]
+
+    return Profile(name=name.strip(), inputs=inputs, context=context,
+                   handlers=handlers,
+                   base_dir=os.path.dirname(os.path.abspath(path)))
+
+
+def _text(value, path, key):
+    """Optional path-ish field: str → stripped, anything else → None."""
+    if value is None:
+        return None
+    if not isinstance(value, str) or not value.strip():
+        raise ProfileError(f"{path}: '{key}' must be a non-empty string")
+    return value.strip()
 
 
 def load_jadual_config(path):
