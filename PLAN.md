@@ -230,7 +230,7 @@ inputs:
 
 context:                        # shared across handlers; never duplicate it into handler params
   subjects:
-    BC: "BAHASA CINA"
+    BC: "BAHASA CINA 华 文"
 
 handlers:
   - name: week                  # phase: resolve
@@ -242,7 +242,7 @@ handlers:
     params:
       mode: auto
       match_codes: [BC]
-      match_names: ["BAHASA CINA", "CHINESE"]
+      match_names: ["BAHASA CINA", "华文"]
       cs: 1
       ls: 1
       left_col: 2

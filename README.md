@@ -14,7 +14,7 @@ If you've ever spent time copying class names, periods, and subjects into the e-
 - **Profiles** — One YAML file per teacher says where the files live (`inputs`), what is shared between handlers (`context`) and which handlers run (`handlers`). The workbook can be a `{minggu}` pattern (`…/M{minggu}.xlsx`), so one profile serves the whole year.
 - **Two input formats** — Read your timetable from an `.xlsx` file or a `.csv` file.
 - **Automatic period merging** — Consecutive periods with the same class and subject are merged into one row (e.g., two back-to-back Bahasa Cina periods become one entry).
-- **Configurable subject mapping** — Map short codes like `BC` to full names like "BAHASA CINA".
+- **Configurable subject mapping** — Map short codes like `BC` to full names like "BAHASA CINA 华文".
 - **Fixed cell values** — Write constant values (e.g., teacher name) to specific cells.
 - **Single-cell writes** — `ranse write MENU!B3 "ALI BIN ABU"` for one-off corrections.
 - **Date-aware** — The date defaults to the Sunday of the current week; override it with `--date`.
@@ -113,7 +113,7 @@ inputs:
 
 context:
   subjects:
-    BC: "BAHASA CINA"
+    BC: "BAHASA CINA 华 文"
 
 handlers:
   - name: week
@@ -127,7 +127,7 @@ handlers:
       mode: auto
       file: "assets/bc-dskp/t{tingkatan}.txt"
       match_codes: [BC]
-      match_names: ["BAHASA CINA", "CHINESE"]
+      match_names: ["BAHASA CINA", "华文"]
       cs: 1
       ls: 1
       left_col: 2
@@ -171,7 +171,7 @@ Values shared by several handlers. `subjects` maps subject codes to the names wr
 ```yaml
 context:
   subjects:
-    BC: "BAHASA CINA"
+    BC: "BAHASA CINA 华 文"
     BI: "ENGLISH"
 ```
 
@@ -207,7 +207,7 @@ An explicit, ordered list. Only built-in handlers can be named — an unknown na
          selection: [1, 1, 1], col_start: 2}
     file: "assets/bc-dskp/t{tingkatan}.txt"  # source for the automatic pair
     match_codes: [BC]                     # subject codes in the timetable xlsx
-    match_names: ["BAHASA CINA", "CHINESE"]  # matched when reading a CSV
+    match_names: ["BAHASA CINA", "华文"]   # matched when reading a CSV
     cs: 1                                 # which content standard inside a section
     ls: 1                                 # which learning standard
     left_col: 2                           # left half  = column B

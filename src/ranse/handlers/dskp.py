@@ -85,7 +85,7 @@ def _auto_subject_matchers(params):
     """dskp params → (subject codes set, uppercased names list)."""
     codes = {str(c).strip() for c in params.get("match_codes", ["BC"])}
     names = [str(n).strip().upper()
-             for n in params.get("match_names", ["BAHASA CINA", "CHINESE"])]
+             for n in params.get("match_names", ["BAHASA CINA", "华文"])]
     return codes, names
 
 
@@ -259,7 +259,7 @@ class DskpFiller:
                  selection: [1, 1, 1], col_start: 2}
             file: assets/bc-dskp/t{tingkatan}.txt
             match_codes: [BC]
-            match_names: ["BAHASA CINA", "CHINESE"]
+            match_names: ["BAHASA CINA", "华文"]
             cs: 1
             ls: 1
             left_col: 2

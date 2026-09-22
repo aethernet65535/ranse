@@ -14,7 +14,7 @@ Jika anda pernah menghabiskan masa menyalin nama kelas, waktu, dan subjek ke dal
 - **Profil** — Satu fail YAML bagi setiap guru yang menyatakan di mana fail berada (`inputs`), apa yang dikongsi antara handler (`context`) dan handler mana yang dijalankan (`handlers`). Buku kerja boleh menjadi pola `{minggu}` (`…/M{minggu}.xlsx`), jadi satu profil berkhidmat untuk setahun.
 - **Dua format input** — Baca jadual waktu anda dari fail `.xlsx` atau `.csv`.
 - **Penggabungan waktu secara automatik** — Waktu berturut-turut dengan kelas dan subjek yang sama digabungkan menjadi satu baris (contohnya dua waktu Bahasa Cina berturut-turut menjadi satu entri).
-- **Pemetaan subjek yang boleh dikonfigurasi** — Petakan kod pendek seperti `BC` kepada nama penuh seperti "BAHASA CINA".
+- **Pemetaan subjek yang boleh dikonfigurasi** — Petakan kod pendek seperti `BC` kepada nama penuh seperti "BAHASA CINA 华文".
 - **Nilai sel tetap** — Tulis nilai tetap (contohnya nama guru) ke sel tertentu.
 - **Penulisan satu sel** — `ranse write MENU!B3 "ALI BIN ABU"` untuk pembetulan sekali sahaja.
 - **Sedar tarikh** — Tarikh lalai ialah hari Ahad minggu semasa; gantikan dengan `--date`.
@@ -117,7 +117,7 @@ inputs:
 
 context:
   subjects:
-    BC: "BAHASA CINA"
+    BC: "BAHASA CINA 华 文"
 
 handlers:
   - name: week
@@ -131,7 +131,7 @@ handlers:
       mode: auto
       file: "assets/bc-dskp/t{tingkatan}.txt"
       match_codes: [BC]
-      match_names: ["BAHASA CINA", "CHINESE"]
+      match_names: ["BAHASA CINA", "华文"]
       cs: 1
       ls: 1
       left_col: 2
@@ -175,7 +175,7 @@ Nilai yang dikongsi oleh beberapa handler. `subjects` memetakan kod subjek kepad
 ```yaml
 context:
   subjects:
-    BC: "BAHASA CINA"
+    BC: "BAHASA CINA 华 文"
     BI: "ENGLISH"
 ```
 
@@ -211,7 +211,7 @@ Senarai eksplisit dan tersusun. Hanya handler terbina dalam boleh dinamakan — 
          selection: [1, 1, 1], col_start: 2}
     file: "assets/bc-dskp/t{tingkatan}.txt"  # sumber bagi pasangan automatik
     match_codes: [BC]                     # kod subjek dalam jadual waktu xlsx
-    match_names: ["BAHASA CINA", "CHINESE"]  # dipadankan semasa membaca CSV
+    match_names: ["BAHASA CINA", "华文"]   # dipadankan semasa membaca CSV
     cs: 1                                 # standard kandungan dalam sesuatu seksyen
     ls: 1                                 # standard pembelajaran
     left_col: 2                           # separuh kiri  = lajur B
