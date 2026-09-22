@@ -4,13 +4,13 @@ import json
 import os
 import re
 import sys
+from typing import List
 from xml.etree import ElementTree as ET
 
 from .. import _REPO_ROOT
 from ..core.refs import _cell_ref, _resolve_path
-from ..core.xlsx import (_find_merge_top_left, _get_merge_ranges,
-                         _parse_sheet, write_cell)
 from ..inputs.timetable import DAY_ORDER, merge_periods
+from .base import Context
 
 _DSKP_CONTENT_CACHE = {}
 
@@ -222,12 +222,11 @@ def _class_start_row(class_num):
     return CLASS_HEADER_ROW + (class_num - 1) * CLASS_BLOCK_SIZE
 
 
-def write_dskp_cells(root, merges, content, col_start, class_num):
+def _write_dskp_cells(sheet, content, col_start, class_num):
     """Write DSKP content to a column block (3 cols wide) in the sheet.
 
     Args:
-        root: sheet XML root element
-        merges: list of merge ranges
+        sheet: writable Sheet (core API)
         content: dict with keys title, content_standard, learning_standard
         col_start: starting column (2=B, 5=E, 9=I)
         class_num: class number (1-based)
@@ -235,85 +234,70 @@ def write_dskp_cells(root, merges, content, col_start, class_num):
     base = _class_start_row(class_num)
 
     if "title" in content:
-        r, c = _find_merge_top_left(merges, base + CLASS_OFFSET_TITLE, col_start)
-        write_cell(root, _cell_ref(r, c), content["title"])
+        r = base + CLASS_OFFSET_TITLE
+        sheet.write(_cell_ref(r, col_start), content["title"])
 
     if "content_standard" in content:
-        r, c = _find_merge_top_left(merges, base + CLASS_OFFSET_CS, col_start)
-        write_cell(root, _cell_ref(r, c), content["content_standard"]["content"])
+        r = base + CLASS_OFFSET_CS
+        sheet.write(_cell_ref(r, col_start),
+                    content["content_standard"]["content"])
 
     if "learning_standard" in content:
-        r, c = _find_merge_top_left(merges, base + CLASS_OFFSET_LS, col_start)
-        write_cell(root, _cell_ref(r, c), content["learning_standard"]["content"])
+        r = base + CLASS_OFFSET_LS
+        sheet.write(_cell_ref(r, col_start),
+                    content["learning_standard"]["content"])
 
 
-def fill_dskp_sheets(zip_data, sheet_map, dskp_configs):
-    """Fill DSKP content in specified sheets.
+class DskpFiller:
+    """Fill the day sheets' DSKP blocks (stage 2: Filler form).
 
-    Each config entry specifies: sheet, class, col_start, file, selection.
-    Multiple entries can target different sheets/classes/columns.
-
-    Args:
-        zip_data: xlsx zip data dict
-        sheet_map: sheet name → path mapping
-        dskp_configs: list of dicts from config
+    Entry order is significant: static entries come first, automatic ones
+    are appended after them by the orchestrator, so on the same cell the
+    automatic entry wins (PLAN.md risk 9).
     """
-    # Cache parsed sheets to avoid re-parsing for multiple entries on same sheet
-    parsed_cache = {}  # sheet_name → (root, modified)
 
-    for dskp_cfg in dskp_configs:
-        sheet_name = dskp_cfg.get("sheet")
-        class_num = dskp_cfg.get("class", 1)
-        json_path = dskp_cfg.get("file")
-        selection = dskp_cfg.get("selection")
-        col_start = dskp_cfg.get("col_start", 2)  # default B
+    name = "dskp"
 
-        if not sheet_name:
-            print("  Warning: dskp entry missing 'sheet', skipping",
-                  file=sys.stderr)
-            continue
+    def fill(self, ctx: Context) -> List[str]:
+        report: List[str] = []
+        for dskp_cfg in ctx.profile.get("dskp", []):
+            sheet_name = dskp_cfg.get("sheet")
+            class_num = dskp_cfg.get("class", 1)
+            json_path = dskp_cfg.get("file")
+            selection = dskp_cfg.get("selection")
+            col_start = dskp_cfg.get("col_start", 2)  # default B
 
-        if sheet_name not in sheet_map:
-            print(f"  Warning: sheet '{sheet_name}' not found, skipping",
-                  file=sys.stderr)
-            continue
-
-        if not json_path or not os.path.isfile(json_path):
-            print(f"  Warning: DSKP file not found: {json_path}",
-                  file=sys.stderr)
-            continue
-
-        content = load_dskp_content(json_path)
-
-        # Resolve selection if provided
-        if selection:
-            try:
-                from ..inputs import dskp as _gen_dskp_mod
-                content = _gen_dskp_mod.resolve_selection(content, selection)
-            except ImportError:
-                print("  Warning: gen_dskp.py not found, using raw JSON",
+            if not sheet_name:
+                print("  Warning: dskp entry missing 'sheet', skipping",
                       file=sys.stderr)
+                continue
 
-        if content is None:
-            print(f"  Warning: no content for selection {selection}",
-                  file=sys.stderr)
-            continue
+            if sheet_name not in ctx.workbook.sheets:
+                print(f"  Warning: sheet '{sheet_name}' not found, skipping",
+                      file=sys.stderr)
+                continue
 
-        # Get or parse the sheet
-        if sheet_name not in parsed_cache:
-            path = sheet_map[sheet_name]
-            root = _parse_sheet(zip_data[path])
-            merges = _get_merge_ranges(root)
-            parsed_cache[sheet_name] = (root, merges, False)
+            if not json_path or not os.path.isfile(json_path):
+                print(f"  Warning: DSKP file not found: {json_path}",
+                      file=sys.stderr)
+                continue
 
-        root, merges, _ = parsed_cache[sheet_name]
-        write_dskp_cells(root, merges, content, col_start, class_num)
-        parsed_cache[sheet_name] = (root, merges, True)
+            content = load_dskp_content(json_path)
 
-    # Write back all modified sheets
-    for sheet_name, (root, merges, modified) in parsed_cache.items():
-        if modified:
-            path = sheet_map[sheet_name]
-            zip_data[path] = ET.tostring(root, xml_declaration=True,
-                                         encoding="UTF-8",
-                                         short_empty_elements=False)
+            # Resolve selection if provided
+            if selection:
+                try:
+                    from ..inputs import dskp as _gen_dskp_mod
+                    content = _gen_dskp_mod.resolve_selection(content, selection)
+                except ImportError:
+                    print("  Warning: gen_dskp.py not found, using raw JSON",
+                          file=sys.stderr)
+
+            if content is None:
+                print(f"  Warning: no content for selection {selection}",
+                      file=sys.stderr)
+                continue
+
+            _write_dskp_cells(ctx.workbook.sheet(sheet_name), content,
+                              col_start, class_num)
+        return report

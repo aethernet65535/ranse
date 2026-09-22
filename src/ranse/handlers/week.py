@@ -6,6 +6,8 @@ from datetime import datetime, timedelta
 
 from .. import _REPO_ROOT
 from ..core.refs import _resolve_path
+from ..inputs.yaml import load_jadual_config
+from .base import Context
 
 
 def _sunday_of(dt):
@@ -82,3 +84,68 @@ def siri_to_timetable(jadual_cfg, siri):
         sys.exit(1)
     return _resolve_path(path, [jadual_cfg.get("_config_dir", _REPO_ROOT),
                                 _REPO_ROOT, os.getcwd()])
+
+
+class WeekResolver:
+    """Phase-one resolver: date → minggu/siri → timetable path (stage 2).
+
+    Reads only the runtime params (``--date``, ``--minggu``,
+    ``--jadual-config``, ``--timetable-xlsx``, ``--csv``) and fills
+    ``ctx.start_date``, ``ctx.week`` and the timetable path — it never
+    writes a cell. Error reporting keeps the handler-layer style: print to
+    stderr + exit (decision 13).
+    """
+
+    name = "week"
+
+    def resolve(self, ctx: Context) -> None:
+        params = ctx.params
+
+        # --- Resolve the week date (weeks start on Sunday/Ahad) ---
+        if params.get("date"):
+            try:
+                raw_date = datetime.strptime(params["date"], "%Y-%m-%d")
+            except ValueError:
+                print(f"Error: invalid --date {params['date']!r} "
+                      f"(expected YYYY-MM-DD)", file=sys.stderr)
+                sys.exit(1)
+        else:
+            raw_date = datetime.now()
+        ctx.start_date = _sunday_of(raw_date).replace(
+            hour=0, minute=0, second=0, microsecond=0)
+
+        # --- Week number / siri from jadual-minggu.yaml ---
+        jadual_cfg = None
+        if params.get("jadual_config"):
+            if not os.path.isfile(params["jadual_config"]):
+                print(f"Error: file not found: {params['jadual_config']}",
+                      file=sys.stderr)
+                sys.exit(1)
+            jadual_cfg = load_jadual_config(params["jadual_config"])
+        ctx.week = resolve_week(jadual_cfg, ctx.start_date, params.get("minggu"))
+
+        # --- Timetable source: explicit flag wins, else siri from the week ---
+        if params.get("timetable_xlsx"):
+            tt_path, tt_is_csv = params["timetable_xlsx"], False
+        elif params.get("csv"):
+            tt_path, tt_is_csv = params["csv"], True
+        elif ctx.week is not None and ctx.week.get("siri") is not None:
+            tt_path = siri_to_timetable(jadual_cfg, ctx.week["siri"])
+            tt_is_csv = tt_path.lower().endswith(".csv")
+        else:
+            tt_path, tt_is_csv = None, False
+
+        if (jadual_cfg is not None and not tt_path
+                and ctx.week.get("siri") is None):
+            print(f"Error: minggu {ctx.week['minggu']} has no siri "
+                  f"configured yet (fill in jadual_siri in "
+                  f"{params['jadual_config']}, or pass "
+                  f"--timetable-xlsx/--csv)", file=sys.stderr)
+            sys.exit(1)
+
+        if tt_path and not os.path.isfile(tt_path):
+            print(f"Error: file not found: {tt_path}", file=sys.stderr)
+            sys.exit(1)
+
+        ctx.params["timetable_path"] = tt_path
+        ctx.params["timetable_is_csv"] = tt_is_csv

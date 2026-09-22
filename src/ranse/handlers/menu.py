@@ -1,43 +1,73 @@
-"""MENU sheet filling: layout rows, time suffixes, merged periods (stage 1 move)."""
+"""MENU sheet filling: layout rows, time suffixes, merged periods."""
 
 from ..core.refs import _cell_ref, _date_to_excel
-from ..core.xlsx import (_find_merge_top_left, _get_merge_ranges,
-                         write_cell)
-from ..inputs.timetable import (DAY_ORDER, NUM_PERIODS, _time_with_suffix,
-                                merge_periods)
+from ..inputs.timetable import DAY_ORDER, merge_periods
+from .base import Context
+
+# --- MENU layout (decision 12: layout constants stay in the handler) ------
+NUM_PERIODS = 8
+
+_TIME_SUFFIX_CACHE = {}
+for _h in range(24):
+    _t = f"{_h:02d}:00"
+    if _h < 11:
+        _TIME_SUFFIX_CACHE[_t] = f"{_t} PAGI"
+    elif _h < 14:
+        _TIME_SUFFIX_CACHE[_t] = f"{_t} TGH"
+    else:
+        _TIME_SUFFIX_CACHE[_t] = f"{_t} TPTG"
 
 
-def fill_menu(root, schedule, subject_map, start_date):
-    """Fill the MENU sheet tree with schedule data (mutates root)."""
-    merges = _get_merge_ranges(root)
+def _time_with_suffix(t):
+    hour = int(t.split(":")[0])
+    key = f"{hour:02d}:{t.split(':')[1]}"
+    return _TIME_SUFFIX_CACHE.get(key, f"{t} PAGI")
 
-    for day_idx, day_name in enumerate(DAY_ORDER):
-        day_schedule = schedule.get(day_name, {})
-        merged = merge_periods(day_schedule)
 
-        header_row = 5 + day_idx * 10
+class MenuFiller:
+    """Fill the MENU sheet with this week's merged lessons (stage 2)."""
 
-        if day_idx == 0:
-            date_serial = _date_to_excel(start_date)
-            r, c = _find_merge_top_left(merges, header_row + 1, 9)
-            write_cell(root, _cell_ref(r, c), date_serial)
+    name = "menu"
 
-        for i in range(NUM_PERIODS):
-            row = header_row + 1 + i
-            entry = merged[i][1] if i < len(merged) else None
+    def fill(self, ctx: Context) -> list:
+        schedule = ctx.schedule or {}
+        if not schedule:
+            # Without a timetable there is nothing to write into MENU —
+            # and the sheet must stay untouched (not even re-serialized).
+            return []
 
-            if entry:
-                cells = [
-                    (3, entry["class"]),
-                    (4, _time_with_suffix(entry["start"])),
-                    (5, _time_with_suffix(entry["end"])),
-                    (6, subject_map.get(entry["subject"], entry["subject"])),
-                    (7, int(entry["tingkatan"])),
-                ]
-                for col, val in cells:
-                    wr, wc = _find_merge_top_left(merges, row, col)
-                    write_cell(root, _cell_ref(wr, wc), val)
-            else:
-                for col in range(3, 8):
-                    wr, wc = _find_merge_top_left(merges, row, col)
-                    write_cell(root, _cell_ref(wr, wc), "")
+        subject_map = ctx.profile.get("subjects", {})
+        sheet = ctx.workbook.sheet("MENU")
+
+        for day_idx, day_name in enumerate(DAY_ORDER):
+            day_schedule = schedule.get(day_name, {})
+            merged = merge_periods(day_schedule)
+
+            header_row = 5 + day_idx * 10
+
+            if day_idx == 0:
+                date_serial = _date_to_excel(ctx.start_date)
+                sheet.write(_cell_ref(header_row + 1, 9), date_serial)
+
+            for i in range(NUM_PERIODS):
+                row = header_row + 1 + i
+                entry = merged[i][1] if i < len(merged) else None
+
+                if entry:
+                    cells = [
+                        (3, entry["class"]),
+                        (4, _time_with_suffix(entry["start"])),
+                        (5, _time_with_suffix(entry["end"])),
+                        (6, subject_map.get(entry["subject"],
+                                            entry["subject"])),
+                        (7, int(entry["tingkatan"])),
+                    ]
+                    for col, val in cells:
+                        sheet.write(_cell_ref(row, col), val)
+                else:
+                    # Empty rows are written as "" — that CLEARS the results
+                    # of a previous run (PLAN.md risk 7). Keep this branch.
+                    for col in range(3, 8):
+                        sheet.write(_cell_ref(row, col), "")
+
+        return []

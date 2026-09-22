@@ -1,23 +1,25 @@
-"""Command-line orchestration: argparse + pipeline + exit codes (stage 1 move)."""
+"""Command-line orchestration: load → resolve → read → fill → save.
+
+Only orchestration lives here: argparse, the pipeline order and turning a
+RanseError into `Error: …` + exit code 1 (decision 13). Handlers keep their
+own print-to-stderr warnings.
+"""
 
 import argparse
 import os
 import sys
-import zipfile
-from collections import defaultdict
-from datetime import datetime
-from xml.etree import ElementTree as ET
 
-from .core.xlsx import (_parse_sheet, _parse_sheet_names, _parse_sheet_rels,
-                        _read_shared_strings, _read_zip)
-from .handlers.dskp import (build_auto_dskp_entries, fill_dskp_sheets,
+from .core.xlsx import Workbook, _read_shared_strings, _read_zip
+from .errors import RanseError
+from .handlers.base import Context
+from .handlers.dskp import (DskpFiller, build_auto_dskp_entries,
                             schedule_has_auto_match)
-from .handlers.fixed_cells import write_fixed_cells
-from .handlers.menu import fill_menu
-from .handlers.week import _sunday_of, resolve_week, siri_to_timetable
+from .handlers.fixed_cells import FixedCellsFiller
+from .handlers.menu import MenuFiller
+from .handlers.week import WeekResolver
 from .inputs.timetable import (DAY_ORDER, build_schedule, read_csv,
                                read_timetable_xlsx)
-from .inputs.yaml import load_config, load_jadual_config
+from .inputs.yaml import load_config
 
 REQUIRED_SHEETS = ["MENU"] + [d.upper() for d in DAY_ORDER]
 
@@ -45,70 +47,52 @@ def main():
                              "(default: the Sunday of the current week)")
     args = parser.parse_args()
 
+    try:
+        _run(parser, args)
+    except RanseError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(1)
+
+
+def _run(parser, args):
     if not os.path.isfile(args.xlsx):
         print(f"Error: file not found: {args.xlsx}", file=sys.stderr)
         sys.exit(1)
 
-    # --- Resolve the week date (weeks start on Sunday/Ahad) ---
-    if args.date:
-        try:
-            raw_date = datetime.strptime(args.date, "%Y-%m-%d")
-        except ValueError:
-            print(f"Error: invalid --date {args.date!r} (expected YYYY-MM-DD)",
-                  file=sys.stderr)
-            sys.exit(1)
-    else:
-        raw_date = datetime.now()
-    start_date = _sunday_of(raw_date).replace(hour=0, minute=0, second=0,
-                                              microsecond=0)
-
-    # --- Week number / siri from jadual-minggu.yaml ---
-    jadual_cfg = None
-    if args.jadual_config:
-        if not os.path.isfile(args.jadual_config):
-            print(f"Error: file not found: {args.jadual_config}", file=sys.stderr)
-            sys.exit(1)
-        jadual_cfg = load_jadual_config(args.jadual_config)
-    week = resolve_week(jadual_cfg, start_date, args.minggu)
-
+    # --- Profile / config (stage 3 replaces this with the profile schema) ---
     cfg = load_config(args.config)
 
-    # --- Timetable source: explicit flag wins, else siri from the week ---
-    if args.timetable_xlsx:
-        tt_path, tt_is_csv = args.timetable_xlsx, False
-    elif args.csv:
-        tt_path, tt_is_csv = args.csv, True
-    elif week is not None and week.get("siri") is not None:
-        tt_path = siri_to_timetable(jadual_cfg, week["siri"])
-        tt_is_csv = tt_path.lower().endswith(".csv")
-    else:
-        tt_path, tt_is_csv = None, False
-
-    if (jadual_cfg is not None and not tt_path
-            and week.get("siri") is None):
-        print(f"Error: minggu {week['minggu']} has no siri configured yet "
-              f"(fill in jadual_siri in {args.jadual_config}, or pass "
-              f"--timetable-xlsx/--csv)", file=sys.stderr)
+    # --- Target workbook ---
+    wb = Workbook.open(args.xlsx)
+    missing = [s for s in REQUIRED_SHEETS if s not in wb.sheets]
+    if missing:
+        print(f"Error: missing sheets: {', '.join(missing)}", file=sys.stderr)
         sys.exit(1)
+
+    ctx = Context(
+        workbook=wb,
+        profile=cfg,
+        params={
+            "date": args.date,
+            "minggu": args.minggu,
+            "jadual_config": args.jadual_config,
+            "timetable_xlsx": args.timetable_xlsx,
+            "csv": args.csv,
+            "no_dskp_auto": args.no_dskp_auto,
+        },
+    )
+
+    # --- Phase one: resolve inputs (no cell writes) ---
+    WeekResolver().resolve(ctx)
+
+    tt_path = ctx.params["timetable_path"]
+    tt_is_csv = ctx.params["timetable_is_csv"]
 
     if not tt_path and not cfg.get("dskp"):
         parser.error("Nothing to do: provide --timetable-xlsx, --csv or "
                      "--jadual-config, or add dskp entries to the config")
 
-    if tt_path and not os.path.isfile(tt_path):
-        print(f"Error: file not found: {tt_path}", file=sys.stderr)
-        sys.exit(1)
-
-    zip_data = _read_zip(args.xlsx)
-    rid_to_target = _parse_sheet_rels(zip_data)
-    sheet_map = _parse_sheet_names(zip_data, rid_to_target)
-
-    missing = [s for s in REQUIRED_SHEETS if s not in sheet_map]
-    if missing:
-        print(f"Error: missing sheets: {', '.join(missing)}", file=sys.stderr)
-        sys.exit(1)
-
-    # --- Build schedule (optional) ---
+    # --- Read the timetable (inputs layer; the target workbook stays write-only) ---
     schedule = {}
     if tt_path and tt_is_csv:
         schedule = build_schedule(read_csv(tt_path))
@@ -116,62 +100,35 @@ def main():
         tt_zip = _read_zip(tt_path)
         shared_strings = _read_shared_strings(tt_zip)
         schedule = read_timetable_xlsx(tt_zip, shared_strings)
+    ctx.schedule = schedule
 
-    if week is not None:
-        siri_txt = week["siri"] if week.get("siri") is not None else "-"
-        print(f"Week: minggu {week['minggu']}, siri {siri_txt}"
+    if ctx.week is not None:
+        siri_txt = ctx.week["siri"] if ctx.week.get("siri") is not None else "-"
+        print(f"Week: minggu {ctx.week['minggu']}, siri {siri_txt}"
               + (f" ({tt_path})" if tt_path else ""))
 
     # --- Automatic DSKP entries: two parent sections per BC lesson ---
+    # Static entries come first, auto entries are appended after them so
+    # they win on the same cell (PLAN.md risk 9).
     auto_report = []
-    if schedule and week is not None and not args.no_dskp_auto:
+    if schedule and ctx.week is not None and not args.no_dskp_auto:
         auto_entries, auto_report = build_auto_dskp_entries(
-            schedule, week["minggu"], cfg)
+            schedule, ctx.week["minggu"], cfg)
         cfg["dskp"] = cfg.get("dskp", []) + auto_entries
         for line in auto_report:
             print(line)
-    elif schedule and week is None and not args.no_dskp_auto:
+    elif schedule and ctx.week is None and not args.no_dskp_auto:
         # Without a week number there is no section pair to pick — say so
         # instead of silently writing nothing.
         if schedule_has_auto_match(schedule, cfg):
             print("Note: automatic DSKP filling skipped (no week known) — "
                   "add --jadual-config or --minggu N to enable it")
 
-    subject_map = cfg.get("subjects", {})
+    # --- Phase two: fillers (the only code allowed to touch cells) ---
+    for filler in (MenuFiller(), FixedCellsFiller(), DskpFiller()):
+        ctx.report.extend(filler.fill(ctx))
+    for line in ctx.report:
+        print(line)
 
-    # --- Fill MENU sheet (if schedule available) ---
-    if schedule:
-        menu_path = sheet_map["MENU"]
-        menu_root = _parse_sheet(zip_data[menu_path])
-        fill_menu(menu_root, schedule, subject_map, start_date)
-        zip_data[menu_path] = ET.tostring(menu_root, xml_declaration=True,
-                                          encoding="UTF-8", short_empty_elements=False)
-
-    # --- Write fixed cells (grouped by sheet) ---
-    fixed_by_sheet = defaultdict(list)
-    for sheet_name, cell_range, value in cfg.get("fixed_cells", []):
-        if sheet_name not in sheet_map:
-            print(f"  Warning: sheet '{sheet_name}' not found, skipping",
-                  file=sys.stderr)
-            continue
-        fixed_by_sheet[sheet_name].append((sheet_name, cell_range, value))
-
-    for sheet_name, entries in fixed_by_sheet.items():
-        path = sheet_map[sheet_name]
-        root = _parse_sheet(zip_data[path])
-        write_fixed_cells(root, entries)
-        zip_data[path] = ET.tostring(root, xml_declaration=True,
-                                     encoding="UTF-8", short_empty_elements=False)
-
-    # --- Fill DSKP cells (static config entries first, then auto entries) ---
-    dskp_configs = cfg.get("dskp", [])
-    if dskp_configs:
-        fill_dskp_sheets(zip_data, sheet_map, dskp_configs)
-
-    # --- Rewrite zip ---
-    with zipfile.ZipFile(args.xlsx, "w",
-                         compression=zipfile.ZIP_DEFLATED) as zf:
-        for name, data in zip_data.items():
-            zf.writestr(name, data)
-
+    wb.save()
     print(f"Done: {args.xlsx}")

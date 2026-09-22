@@ -7,6 +7,8 @@ import os
 import re
 from datetime import datetime
 
+from ..errors import SheetError
+
 _EXCEL_EPOCH = datetime(1899, 12, 30)
 
 
@@ -35,6 +37,9 @@ def _cell_ref(row, col):
 def _parse_cell_ref(ref):
     """'C6' → (row=6, col=3)."""
     m = re.match(r"([A-Z]+)(\d+)", ref)
+    if m is None:
+        # core never lets a bare AttributeError escape (decision 13)
+        raise SheetError(f"invalid cell reference: {ref!r}")
     return int(m.group(2)), _col_to_num(m.group(1))
 
 

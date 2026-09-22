@@ -53,17 +53,8 @@ TIME_PERIOD = {
     ("13:30", "14:10"): 10,
 }
 
-NUM_PERIODS = 8
-
-_TIME_SUFFIX_CACHE = {}
-for _h in range(24):
-    _t = f"{_h:02d}:00"
-    if _h < 11:
-        _TIME_SUFFIX_CACHE[_t] = f"{_t} PAGI"
-    elif _h < 14:
-        _TIME_SUFFIX_CACHE[_t] = f"{_t} TGH"
-    else:
-        _TIME_SUFFIX_CACHE[_t] = f"{_t} TPTG"
+# NUM_PERIODS + the PAGI/TGH/TPTG suffix cache moved to handlers/menu.py in
+# stage 2: decision 12 keeps MENU layout constants in the handler.
 
 CLASS_CODE_RE = re.compile(r"([A-Z]+)[–-](\d+)([A-Za-z]+)")
 
@@ -139,12 +130,6 @@ def merge_periods(day_schedule):
 
     merged.append((buf_start, buf_entry))
     return merged
-
-
-def _time_with_suffix(t):
-    hour = int(t.split(":")[0])
-    key = f"{hour:02d}:{t.split(':')[1]}"
-    return _TIME_SUFFIX_CACHE.get(key, f"{t} PAGI")
 
 
 # ---------------------------------------------------------------------------

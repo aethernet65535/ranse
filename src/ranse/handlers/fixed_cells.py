@@ -1,17 +1,26 @@
-"""Fixed cell values from the config (stage 1 move)."""
+"""Fixed cell values from the config (stage 2: Filler form)."""
 
-from ..core.refs import _cell_range_top_left, _cell_ref, _parse_cell_ref
-from ..core.xlsx import _find_merge_top_left, _get_merge_ranges, write_cell
+import sys
+from typing import List
+
+from .base import Context
 
 
-def write_fixed_cells(root, fixed_entries):
-    merges = _get_merge_ranges(root)
-    for _, cell_range, value in fixed_entries:
-        top_left = _cell_range_top_left(cell_range)
-        row, col = _parse_cell_ref(top_left)
-        row, col = _find_merge_top_left(merges, row, col)
-        try:
-            value = int(value)
-        except (ValueError, TypeError):
-            pass
-        write_cell(root, _cell_ref(row, col), value)
+class FixedCellsFiller:
+    """Write the configured constant cells, e.g. the school name."""
+
+    name = "fixed_cells"
+
+    def fill(self, ctx: Context) -> List[str]:
+        report: List[str] = []
+        for sheet_name, cell_range, value in ctx.profile.get("fixed_cells", []):
+            if sheet_name not in ctx.workbook.sheets:
+                print(f"  Warning: sheet '{sheet_name}' not found, skipping",
+                      file=sys.stderr)
+                continue
+            try:
+                value = int(value)
+            except (ValueError, TypeError):
+                pass
+            ctx.workbook.sheet(sheet_name).write(cell_range, value)
+        return report
