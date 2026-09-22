@@ -1,1 +1,1 @@
-"""Ranse core: write-only xlsx engine (no business logic — PLAN.md decision 6)."""
+"""Ranse core: write-only xlsx engine (no business logic — DESIGN.md decision 6)."""

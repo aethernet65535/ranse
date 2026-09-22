@@ -1,7 +1,7 @@
 """Golden regression: run the current implementation and compare sheet XML.
 
 Skipped on a fresh clone — assets/ (template, timetables, DSKP txt) is
-gitignored (PLAN.md risk 5). The pure-function unit tests are the only
+gitignored (DESIGN.md risk 5). The pure-function unit tests are the only
 protection available without assets.
 """
 
@@ -18,7 +18,7 @@ from harness import (GOLDEN_CASES, GOLDEN_DIR, GOLDEN_ERROR_CASES,
 
 pytestmark = pytest.mark.skipif(
     not assets_available(),
-    reason="assets/ not present (gitignored) — see PLAN.md risk 5")
+    reason="assets/ not present (gitignored) — see DESIGN.md risk 5")
 
 
 def _run_in_tmp(date):

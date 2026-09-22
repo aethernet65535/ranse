@@ -1,12 +1,12 @@
-"""Xlsx zip container + write-only Workbook API (PLAN.md decision 7).
+"""Xlsx zip container + write-only Workbook API (DESIGN.md decision 7).
 
 Write-only towards the target workbook: there is no ``read(coord)``.
 Serialization details (attribute preservation, inline strings, namespace
 prefixes, xml declaration flags) must stay byte-identical — the golden
-regression suite checks exactly that (PLAN.md risk 1-2).
+regression suite checks exactly that (DESIGN.md risk 1-2).
 
 ``ET.register_namespace`` side effects live in ``Workbook.open`` (once per
-open) instead of inside every parse (PLAN.md stage 2 item 5); the registered
+open) instead of inside every parse (DESIGN.md stage 2 item 5); the registered
 prefixes/URIs are identical to the original module-level list.
 """
 
@@ -245,7 +245,7 @@ class Workbook:
     def open(cls, path):
         """Open the workbook at path (all zip entries are read into memory)."""
         # Register namespaces so serialisation keeps the original prefixes.
-        # (Moved here from _parse_sheet — PLAN.md stage 2 item 5. The
+        # (Moved here from _parse_sheet — DESIGN.md stage 2 item 5. The
         # prefixes/URIs must stay identical or the golden suite fails.)
         ET.register_namespace("", NS[1:-1])  # strip braces
         ET.register_namespace("r", NS_R[1:-1])

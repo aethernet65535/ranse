@@ -11,7 +11,7 @@ then the resulting per-sheet XML is stored under:
     tests/golden/<case>/stderr.txt          error cases (exit code + wording)
 
 Golden compares sheet XML byte-for-byte, never zip bytes — zip entry order
-and timestamps would produce false diffs (PLAN.md stage 0 / risk 1-2).
+and timestamps would produce false diffs (DESIGN.md stage 0 / risk 1-2).
 
 Run this once when baselines must be (re)generated, review the diff, commit
 the result to git.

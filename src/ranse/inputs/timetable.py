@@ -1,6 +1,6 @@
 """Weekly timetable reading (CSV / xlsx) → schedule structures.
 
-Both period tables live here (PLAN.md risk 4, values unchanged):
+Both period tables live here (DESIGN.md risk 4, values unchanged):
 
 - ``PERIOD_TIMES`` (period → time range) fills the MENU rows;
 - ``TIME_PERIOD`` (time range → period) is the CSV direction. The two cannot
