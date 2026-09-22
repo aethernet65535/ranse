@@ -1,4 +1,4 @@
-# Ranse (染色)
+# Ranse
 
 **Isi borang e-RPH xlsx secara automatik dengan data jadual waktu mingguan anda — dengan satu arahan sahaja.**
 
@@ -14,7 +14,7 @@ Jika anda pernah menghabiskan masa menyalin nama kelas, waktu, dan subjek ke dal
 - **Profil** — Satu fail YAML bagi setiap guru yang menyatakan di mana fail berada (`inputs`), apa yang dikongsi antara handler (`context`) dan handler mana yang dijalankan (`handlers`). Buku kerja boleh menjadi pola `{minggu}` (`…/M{minggu}.xlsx`), jadi satu profil berkhidmat untuk setahun.
 - **Dua format input** — Baca jadual waktu anda dari fail `.xlsx` atau `.csv`.
 - **Penggabungan waktu secara automatik** — Waktu berturut-turut dengan kelas dan subjek yang sama digabungkan menjadi satu baris (contohnya dua waktu Bahasa Cina berturut-turut menjadi satu entri).
-- **Pemetaan subjek yang boleh dikonfigurasi** — Petakan kod pendek seperti `BC` kepada nama penuh seperti "BAHASA CINA 华文".
+- **Pemetaan subjek yang boleh dikonfigurasi** — Petakan kod pendek seperti `BC` kepada nama penuh seperti "BAHASA CINA".
 - **Nilai sel tetap** — Tulis nilai tetap (contohnya nama guru) ke sel tertentu.
 - **Penulisan satu sel** — `ranse write MENU!B3 "ALI BIN ABU"` untuk pembetulan sekali sahaja.
 - **Sedar tarikh** — Tarikh lalai ialah hari Ahad minggu semasa; gantikan dengan `--date`.
@@ -117,7 +117,7 @@ inputs:
 
 context:
   subjects:
-    BC: "BAHASA CINA 华 文"
+    BC: "BAHASA CINA"
 
 handlers:
   - name: week
@@ -131,7 +131,7 @@ handlers:
       mode: auto
       file: "assets/bc-dskp/t{tingkatan}.txt"
       match_codes: [BC]
-      match_names: ["BAHASA CINA", "华文"]
+      match_names: ["BAHASA CINA", "CHINESE"]
       cs: 1
       ls: 1
       left_col: 2
@@ -175,7 +175,7 @@ Nilai yang dikongsi oleh beberapa handler. `subjects` memetakan kod subjek kepad
 ```yaml
 context:
   subjects:
-    BC: "BAHASA CINA 华 文"
+    BC: "BAHASA CINA"
     BI: "ENGLISH"
 ```
 
@@ -211,7 +211,7 @@ Senarai eksplisit dan tersusun. Hanya handler terbina dalam boleh dinamakan — 
          selection: [1, 1, 1], col_start: 2}
     file: "assets/bc-dskp/t{tingkatan}.txt"  # sumber bagi pasangan automatik
     match_codes: [BC]                     # kod subjek dalam jadual waktu xlsx
-    match_names: ["BAHASA CINA", "华文"]   # dipadankan semasa membaca CSV
+    match_names: ["BAHASA CINA", "CHINESE"]  # dipadankan semasa membaca CSV
     cs: 1                                 # standard kandungan dalam sesuatu seksyen
     ls: 1                                 # standard pembelajaran
     left_col: 2                           # separuh kiri  = lajur B
@@ -251,14 +251,14 @@ minggu:                 # setiap rekod berkuat kuasa dari tarikh mula
 Untuk setiap pelajaran bergabung bagi subjek yang dipadankan, dua seksyen **peringkat induk** DSKP (tajuk `X.0`) ditulis bersebelahan — lajur kiri dahulu, lajur kanan kemudian:
 
 ```
-minggu 1 → 1.0 听说技能  |  2.0 阅读技能
-minggu 2 → 2.0 阅读技能  |  3.0 书写技能
-minggu 3 → 3.0 书写技能  |  4.0 趣味语文
+minggu 1 → 1.0 Listening and Speaking  |  2.0 Reading
+minggu 2 → 2.0 Reading  |  3.0 Writing
+minggu 3 → 3.0 Writing  |  4.0 Fun with Chinese
 ...
 tiada seksyen seterusnya → pusing balik ke 1.0 + 2.0
 ```
 
-Pasangan itu dikira daripada nombor minggu sahaja, jadi menjalankan semula mana-mana minggu sentiasa menghasilkan keputusan yang sama. Setiap bahagian menulis tajuk seksyen (baris 技能), baris standard kandungan, dan baris standard pembelajaran blok kelasnya.
+Pasangan itu dikira daripada nombor minggu sahaja, jadi menjalankan semula mana-mana minggu sentiasa menghasilkan keputusan yang sama. Setiap bahagian menulis tajuk seksyen (baris kemahiran), baris standard kandungan, dan baris standard pembelajaran blok kelasnya.
 
 ## Bagaimana Ia Berfungsi
 

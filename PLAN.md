@@ -1,155 +1,170 @@
-# Ranse 重构实施说明（给实现 Agent）
+# Ranse refactor implementation plan (for the implementing agent)
 
-> 本文档是**唯一实施依据**。所有架构决策已与维护者确认完毕，不要重新提出分层方案、
-> 不要改动下列「已定决策」。按阶段推进，每阶段一个 commit，回归测试全绿才能进入下一阶段。
+> This document is the **single source of truth** for the implementation. All
+> architectural decisions have been settled with the maintainer — do not
+> propose alternative layering, and do not change the "settled decisions"
+> below. Work stage by stage: one commit per stage, and regression tests must be
+> fully green before moving on.
 
 ---
 
-## 0. 背景与现状
+## 0. Background and current state
 
-Ranse 是给马来西亚教师用的 CLI 工具：读取周课表，自动填 e-RPH Excel 模板。
-全部逻辑集中在 `scripts/fill-erph.py`（1231 行），混了 5 种职责：
+Ranse is a CLI tool for Malaysian teachers: it reads a weekly timetable and
+automatically fills the e-RPH Excel template. All the logic sits in
+`scripts/fill-erph.py` (1231 lines) and mixes five responsibilities:
 
-| 现有代码段（行号） | 实际职责 |
+| Existing code block (line numbers) | Actual responsibility |
 |---|---|
-| `_read_zip` / `_parse_sheet_rels` / `_parse_sheet_names` / `_read_shared_strings`（140–190） | xlsx 容器读写 |
-| `_parse_sheet` / merge / row / cell / `write_cell` / `_set_cell_value`（196–337） | 单元格写入原语 |
-| `read_csv` / `build_schedule` / `merge_periods` / `read_timetable_xlsx`（343–567） | 课表读取 + 领域模型 |
-| `load_config` / `load_jadual_config` / `resolve_week` / `siri_to_timetable`（574–698） | 配置加载 + 周次解析 |
-| `build_auto_dskp_entries` / `_section_pair` / `_dskp_file_for_tingkatan`（705–862） | 业务回调（周次滑动选 DSKP） |
-| `fill_menu` / `write_fixed_cells` / `write_dskp_cells` / `fill_dskp_sheets`（869–1068） | 业务回调（写哪些格） |
-| `main()`（1075–1231） | CLI 编排 |
+| `_read_zip` / `_parse_sheet_rels` / `_parse_sheet_names` / `_read_shared_strings` (140–190) | xlsx container read/write |
+| `_parse_sheet` / merge / row / cell / `write_cell` / `_set_cell_value` (196–337) | cell-write primitives |
+| `read_csv` / `build_schedule` / `merge_periods` / `read_timetable_xlsx` (343–567) | timetable reading + domain model |
+| `load_config` / `load_jadual_config` / `resolve_week` / `siri_to_timetable` (574–698) | config loading + week resolution |
+| `build_auto_dskp_entries` / `_section_pair` / `_dskp_file_for_tingkatan` (705–862) | business callbacks (week-sliding DSKP selection) |
+| `fill_menu` / `write_fixed_cells` / `write_dskp_cells` / `fill_dskp_sheets` (869–1068) | business callbacks (which cells to write) |
+| `main()` (1075–1231) | CLI orchestration |
 
-配套文件：`scripts/constants.py`、`scripts/gen_dskp.py`（265 行）、
-`scripts/erph-config.yaml`、`scripts/jadual-minggu.yaml`、`scripts/archived/preview-pdf.py`。
+Companion files: `scripts/constants.py`, `scripts/gen_dskp.py` (265 lines),
+`scripts/erph-config.yaml`, `scripts/jadual-minggu.yaml`, `scripts/archived/preview-pdf.py`.
 
-已知问题：
-- `sys.exit()` / `print()` 散落 20+ 处，**包括本该是纯函数的 `resolve_week`、`siri_to_timetable`**；
-- `load_dskp_content`、`build_auto_dskp_entries` 里 `sys.path.insert` + 动态 `import gen_dskp`；
-- `_parse_sheet` 内有全局 `ET.register_namespace` 副作用；
-- **没有任何测试**（`find . -name "test*"` 为空），只有 2 个 commit。
+Known problems:
+- `sys.exit()` / `print()` are scattered in 20+ places, **including in
+  `resolve_week` and `siri_to_timetable`, which should be pure functions**;
+- `load_dskp_content` and `build_auto_dskp_entries` use `sys.path.insert` plus a
+  dynamic `import gen_dskp`;
+- `_parse_sheet` has a global `ET.register_namespace` side effect;
+- **there are no tests at all** (`find . -name "test*"` is empty), and only 2 commits.
 
-### ⚠️ 开工前必读：工作区有未提交改动
+### ⚠️ Read before starting: the working tree has uncommitted changes
 
 ```
- M scripts/fill-erph.py   (+609/-…)      ← 大量未提交功能
+ M scripts/fill-erph.py   (+609/-…)      <- lots of uncommitted work
  M scripts/erph-config.yaml
  M README.md  M .gitignore
- D scripts/{LICENSE,README.md,README.ms.md}   ← 已移动到根目录
+ D scripts/{LICENSE,README.md,README.ms.md}   <- already moved to the repo root
 ?? scripts/gen_dskp.py  ?? scripts/jadual-minggu.yaml
 ```
 
-**阶段 0 第一件事**：把这些收口成一个独立 commit，作为重构起点和 golden 基线来源。
-基线必须取自**工作区当前状态**，不是 `HEAD`。否则重构 diff 与 WIP 混在一起，无法 review、无法回滚。
+**The first thing in stage 0**: fold these into a single standalone commit that
+serves as the refactor's starting point and the source of the golden baselines.
+Baselines must be taken from **the current state of the working tree**, not
+`HEAD`. Otherwise the refactor diff gets mixed with WIP and cannot be reviewed or
+rolled back.
 
 ---
 
-## 1. 已定决策（不要重新讨论）
+## 1. Settled decisions (do not re-litigate)
 
-| # | 项 | 决定 |
+| # | Item | Decision |
 |---|---|---|
-| 1 | Profile 形态 | **显式 `handlers:` 列表**（不采用「沿用旧顶层字段」或「两者兼容」） |
-| 2 | Handler 发现 | **仅内置注册表**。不支持动态 import 路径，不支持 entry points 插件 |
-| 3 | 打包 | **建可安装包，不留 `scripts/fill-erph.py` 旧入口**，README 全量更新 |
-| 4 | 等价性验证 | **先写回归测试（golden）再动业务代码** |
-| 5 | 附加范围 | dict→dataclass、README + `docs/translations/ms-MY/README.md` 更新、`gen_dskp.py` 收编 |
-| 6 | **核心约束** | **业务逻辑不得进入核心**（core 里不出现 `DAY_ORDER`/`PERIOD_TIMES`/`BC-1A`/`minggu`/`cuti`/`sys.exit`） |
-| 7 | core 读写边界 | core 对目标 workbook **只有写**：`open / sheet / write(coord, content) / save`。**不暴露 `read(coord)`**，需要时再加 |
-| 8 | 输入读取归属 | 独立 **`inputs/` 层**（课表 xlsx/csv、DSKP txt/json、两份 YAML），不放 core，也不碰目标 workbook |
-| 9 | `<coord> <write_content>` | **两层都要**：core Python API `wb.write("MENU!B3", "值")`；CLI 也提供 `ranse write` 单格子命令 |
-| 10 | 模板路径 | **`--xlsx` 是 profile 专属参数**，写在 `profile.inputs.template`，不进 CLI |
-| 11 | 校历文件 | `jadual-minggu.yaml` 是**独立数据文件**，由 profile 通过 `inputs.jadual` 引用，不并入 profile |
-| 12 | 版面常量 | MENU 行 `5 + day_idx*10`、列 3–7、`NUM_PERIODS=8`、`CLASS_BLOCK_SIZE=31` 等**第一版留在 handler**，不进 profile |
-| 13 | 错误处理（最小范围） | core 改为抛 `RanseError` 层级异常，由 CLI 统一转 exit code。**这是决策 6 的必要推论**。只改 core 的错误传递，**不做 logging 体系改造**，保持现有 `print(..., file=sys.stderr)` 风格于 CLI/handler 层 |
+| 1 | Profile shape | **explicit `handlers:` list** (do not "keep the old top-level fields" or "support both") |
+| 2 | Handler discovery | **built-in registry only**. No dynamic import paths, no entry-point plugins |
+| 3 | Packaging | **build an installable package, keep no `scripts/fill-erph.py` legacy entry**, update the README fully |
+| 4 | Equivalence check | **write the regression (golden) tests before touching business code** |
+| 5 | Extra scope | dict→dataclass, README + `docs/translations/ms-MY/README.md` updates, absorb `gen_dskp.py` |
+| 6 | **Core constraint** | **business logic must not enter core** (no `DAY_ORDER`/`PERIOD_TIMES`/`BC-1A`/`minggu`/`cuti`/`sys.exit` in core) |
+| 7 | core read/write boundary | core is **write-only** towards the target workbook: `open / sheet / write(coord, content) / save`. **Do not expose `read(coord)`**; add it later if needed |
+| 8 | Where input reading lives | a separate **`inputs/` layer** (timetable xlsx/csv, DSKP txt/json, the two YAML files); not in core, and it never touches the target workbook |
+| 9 | `<coord> <write_content>` | **both layers**: the core Python API `wb.write("MENU!B3", "value")`, and the CLI's `ranse write` single-cell subcommand |
+| 10 | Template path | **`--xlsx` is a profile-only parameter**, set in `profile.inputs.template`; it is not on the CLI |
+| 11 | Calendar file | `jadual-minggu.yaml` is a **standalone data file** referenced by the profile via `inputs.jadual`; it is not merged into the profile |
+| 12 | Layout constants | MENU row `5 + day_idx*10`, columns 3–7, `NUM_PERIODS=8`, `CLASS_BLOCK_SIZE=31`, etc. **stay in the handler for v1**; they do not go into the profile |
+| 13 | Error handling (minimal scope) | core switches to the `RanseError` exception hierarchy, and the CLI maps it to an exit code. **This is a necessary corollary of decision 6.** Only change core's error propagation, **do not overhaul logging**, and keep the existing `print(..., file=sys.stderr)` style in the CLI/handler layer |
 
-补充说明「读」的现状（维护者已确认）：
-1. **读目标模板的单元格值** —— 不存在，也不需要（`_read_cell_value` 只服务于课表读取）；
-2. **读输入课表** —— 必需，归 `inputs/`；
-3. **读数据文件**（DSKP / profile / 校历）—— 必需，归 `inputs/`。
+Notes on the current state of "reading" (confirmed by the maintainer):
+1. **Reading target-template cell values** — does not exist and is not needed (`_read_cell_value` only serves timetable reading);
+2. **Reading the input timetable** — required, belongs in `inputs/`;
+3. **Reading data files** (DSKP / profile / calendar) — required, belongs in `inputs/`.
 
-写入时读取 merge 区间和 `<c>` 的 `s=` 样式属性是为了**保持格式**，属结构元数据，不算值读取，留在 core。
+Reading merge ranges and the `<c>` `s=` style attribute while writing is there to
+**preserve formatting**; it is structural metadata, not value reading, so it stays in core.
 
 ---
 
-## 2. 目标架构
+## 2. Target architecture
 
 ```
-┌─ CLI ──────────────────────────────────────────────┐
-│  ranse fill  --profile p.yaml [--date][--minggu]   │  ← --xlsx 只在 profile 里
-│  ranse write --profile p.yaml MENU!B3 "值"         │  ← 直接单格写
-│  ranse dskp  --txt ... --select 1 1 1 -o out.json  │
-└──────────────┬─────────────────────────────────────┘
-               │ 只做编排 + 异常 → exit code
-┌─ handlers/ ──▼─────────────────────────────────────┐
-│  base.py       Resolver / Filler Protocol + Context│
-│  registry.py   内置注册表（唯一发现方式）              │
-│  week.py       校历 → minggu/siri/课表路径(cuti校验) │
-│  menu.py       MENU 版面 + 时间后缀 + 连堂合并        │
-│  fixed_cells.py / dskp.py   版面常量在此             │
-└──────────────┬─────────────────────────────────────┘
-               │ 只能调用 core 的 write API
-┌─ core/ ──────▼──────────────┐  ┌─ inputs/ ──────────┐
-│  Workbook.open()/save()     │  │  timetable.py 课表  │
-│  sheet(name)                │  │  dskp.py  txt/json │
-│  write(coord, content)      │  │  yaml.py profile/  │
-│  merges（保格式所需结构）     │  │        校历加载     │
-│  ✗ 不暴露 read(coord)        │  │  ✗ 不碰目标 workbook │
-│  ✗ 无 DAY_ORDER/PERIOD_…    │  │                    │
-└─────────────────────────────┘  └────────────────────┘
++-- CLI ---------------------------------------------+
+|  ranse fill  --profile p.yaml [--date][--minggu]   |  <- --xlsx lives only in the profile
+|  ranse write --profile p.yaml MENU!B3 "value"      |  <- direct single-cell write
+|  ranse dskp  --txt ... --select 1 1 1 -o out.json  |
++--------------+-------------------------------------+
+               | orchestration + exceptions -> exit code only
++-- handlers/ -v-------------------------------------+
+|  base.py       Resolver / Filler Protocol + Context|
+|  registry.py   built-in registry (only discovery)  |
+|  week.py       calendar -> minggu/siri/timetable   |
+|  menu.py       MENU layout + time suffix + merging |
+|  fixed_cells.py / dskp.py   layout constants here  |
++--------------+-------------------------------------+
+               | may only call core's write API
++-- core/ -----v---------------+   +-- inputs/ -------+
+|  Workbook.open()/save()      |   |  timetable.py    |
+|  sheet(name)                 |   |  dskp.py         |
+|  write(coord, content)       |   |  yaml.py         |
+|  merges (keeps formatting)   |   |  calendar loader |
+|  x no read(coord)            |   |  x never touches |
+|  x no DAY_ORDER/PERIOD_...   |   |    the workbook  |
++------------------------------+   +------------------+
 ```
 
-依赖方向严格单向：`cli → handlers → core`，`cli/handlers → inputs`。
-**`core` 不得 import `handlers` 或 `inputs`。**
+Dependency direction is strictly one-way: `cli → handlers → core`, `cli/handlers → inputs`.
+**`core` must not import `handlers` or `inputs`.**
 
-### 目标文件清单
+### Target file list
 
 ```
-pyproject.toml                       # [project] + console script + dev extra(pytest)
+pyproject.toml                       # [project] + console script + dev extra (pytest)
 src/ranse/__init__.py
 src/ranse/__main__.py                # python -m ranse
 src/ranse/errors.py                  # RanseError / ProfileError / WeekError / SheetError
-src/ranse/cli.py                     # argparse 子命令 + 两阶段编排 + 异常→exit code
+src/ranse/cli.py                     # argparse subcommands + two-phase orchestration + exceptions->exit code
 src/ranse/core/__init__.py
-src/ranse/core/refs.py               # A1 ↔ (row,col)、区域左上角、Excel 日期序列号
+src/ranse/core/refs.py               # A1 <-> (row,col), range top-left, Excel date serial
 src/ranse/core/xlsx.py               # Workbook.open/save/sheet/write/merges
 src/ranse/inputs/__init__.py
-src/ranse/inputs/timetable.py        # read_csv / read_xlsx → Schedule
-src/ranse/inputs/dskp.py             # ← gen_dskp.py 收编（含其 CLI main）
-src/ranse/inputs/yaml.py             # profile + 校历加载与结构校验
+src/ranse/inputs/timetable.py        # read_csv / read_xlsx -> Schedule
+src/ranse/inputs/dskp.py             # <- absorbs gen_dskp.py (including its CLI main)
+src/ranse/inputs/yaml.py             # profile + calendar loading and structural validation
 src/ranse/handlers/__init__.py
 src/ranse/handlers/base.py           # Resolver / Filler Protocol + Context dataclass
-src/ranse/handlers/registry.py       # 内置注册表
+src/ranse/handlers/registry.py       # built-in registry
 src/ranse/handlers/{week,menu,fixed_cells,dskp}.py
 src/ranse/model.py                   # Lesson / Schedule / Week dataclass + merge_periods
-profiles/ali-bin-abu.yaml           # 显式 handlers 列表，含 inputs.template
-config/jadual-minggu.yaml            # 独立校历（原 scripts/jadual-minggu.yaml）
-tests/golden/                        # 基线 sheet XML（.gz，提交进 git）
-tests/make_golden.py                 # 手工执行一次，生成基线
+profiles/ali-bin-abu.yaml            # explicit handlers list, including inputs.template
+config/jadual-minggu.yaml            # standalone calendar (originally scripts/jadual-minggu.yaml)
+tests/golden/                        # baseline sheet XML (.gz, committed to git)
+tests/make_golden.py                 # run once by hand to generate the baselines
 tests/test_core_refs.py
 tests/test_handlers_menu.py
 tests/test_week.py
 tests/test_profile.py
-tests/test_regression.py             # 依赖 assets/，缺失时 pytest.skip
-README.md + docs/translations/ms-MY/README.md   # 结构/用法/配置三章重写
+tests/test_regression.py             # depends on assets/; pytest.skip when missing
+README.md + docs/translations/ms-MY/README.md   # rewrite of the structure/usage/configuration chapters
 
-删除：scripts/ 整个目录（fill-erph.py、gen_dskp.py、constants.py、
-      erph-config.yaml、jadual-minggu.yaml、archived/）
+Delete: the whole scripts/ directory (fill-erph.py, gen_dskp.py, constants.py,
+      erph-config.yaml, jadual-minggu.yaml, archived/)
 ```
 
-说明：
-- `model.py` 放 `src/ranse/` 顶层而非 `core/`，因为 `Lesson/Schedule/Week` 携带
-  `DAY_ORDER` 相关语义，属于领域模型，不属于纯写引擎；`inputs` 产出它、`handlers` 消费它。
-  （若实现时更倾向 `core/model.py`，可接受，但**其中不得出现 e-RPH 版面知识**。）
-- `assets/` 保持 `.gitignore`，**不作为 package data**。路径解析基准沿用现状：
-  profile 所在目录 → cwd → 仓库根（复用现有 `_resolve_path`）。
-- `requires-python = ">=3.9"`（dataclass + 现代打包）。README 现在写「Python 3.6+」，需一并改。
-- `scripts/archived/preview-pdf.py`、`assets/timetable/src/*.jpg` 不在范围内，原样保留。
+Notes:
+- `model.py` lives at the top level of `src/ranse/` rather than `core/`, because
+  `Lesson/Schedule/Week` carry `DAY_ORDER`-related semantics and belong to the
+  domain model, not to the pure write engine; `inputs` produce them and
+  `handlers` consume them. (If the implementer prefers `core/model.py`, that is
+  acceptable, but **no e-RPH layout knowledge may appear there**.)
+- `assets/` stays in `.gitignore` and **is not package data**. Path-resolution
+  bases stay as they are: profile directory → cwd → repo root (reuse the
+  existing `_resolve_path`).
+- `requires-python = ">=3.9"` (dataclass + modern packaging). The README
+  currently says "Python 3.6+"; change that too.
+- `scripts/archived/preview-pdf.py` and `assets/timetable/src/*.jpg` are out of
+  scope; keep them as they are.
 
 ---
 
-## 3. 接口草案
+## 3. Interface draft
 
-### core API（严格只有写）
+### core API (strictly write-only)
 
 ```python
 # src/ranse/core/xlsx.py
@@ -159,23 +174,27 @@ class Workbook:
     @property
     def sheets(self) -> list[str]: ...
     def sheet(self, name: str) -> "Sheet": ...
-    def save(self, path: str | Path | None = None) -> None: ...   # None = 原地覆盖
+    def save(self, path: str | Path | None = None) -> None: ...   # None = overwrite in place
 
 class Sheet:
     def write(self, coord: str, content: str | int | float) -> None:
-        """coord 形如 'B3' 或 'B3:C3'（取左上角，遵循合并单元格）。"""
+        """coord is like 'B3' or 'B3:C3' (the top-left cell is used, respecting merges)."""
     def merges(self) -> list[tuple[int, int, int, int]]: ...
 ```
 
-要求：
-- **不提供 `read(coord)`**。
-- 写入时保留 `<c>` 上所有原属性（`s`/`t` 等），字符串写 `t="inlineStr"` + `<is><t>`，
-  数字删 `t` 用 `<v>` —— 与现状 `_set_cell_value` 完全一致，**不得改变序列化结果**。
-- 自动创建缺失的 `<row>` / `<c>` 并保持行列有序（现状 `_ensure_row` / `_ensure_cell` 逻辑）。
-- `ET.register_namespace` 的副作用收进 `Workbook` 实例方法，不再全局散落
-  —— 但**注册的前缀与 URI 必须与现状一字不差**，否则 golden 失败。
+Requirements:
+- **do not provide `read(coord)`**.
+- when writing, keep every original attribute on `<c>` (`s`/`t`, etc.); for
+  strings write `t="inlineStr"` + `<is><t>`; for numbers drop `t` and use `<v>`
+  — exactly like the current `_set_cell_value`; **the serialization result must
+  not change**.
+- auto-create missing `<row>` / `<c>` and keep rows/columns ordered (the current
+  `_ensure_row` / `_ensure_cell` logic).
+- move the `ET.register_namespace` side effect into a `Workbook` instance method
+  rather than scattering it globally — but **the registered prefixes and URIs
+  must match the current ones exactly**, or the golden tests fail.
 
-### Handler 接口（业务被接口本身挡在 core 外）
+### Handler interface (the interface itself keeps business logic out of core)
 
 ```python
 # src/ranse/handlers/base.py
@@ -185,33 +204,33 @@ class Context:
     profile: Profile
     schedule: Schedule | None = None
     week: Week | None = None
-    params: dict = field(default_factory=dict)   # 该 handler 自己的 params
+    params: dict = field(default_factory=dict)   # this handler's own params
     report: list[str] = field(default_factory=list)
 
-class Resolver(Protocol):        # 阶段一：算出输入，不写格
+class Resolver(Protocol):        # phase one: compute inputs, write no cells
     name: str
     def resolve(self, ctx: Context) -> None: ...
 
-class Filler(Protocol):          # 阶段二：写格，只能通过 core
+class Filler(Protocol):          # phase two: write cells only through core
     name: str
-    def fill(self, ctx: Context) -> list[str]: ...   # 返回 report 行
+    def fill(self, ctx: Context) -> list[str]: ...   # returns report lines
 ```
 
-编排器 `cli.py` 的职责仅限：
-`load profile → 建 Workbook → 跑全部 Resolver → (读课表，若需要) → 跑全部 Filler → save → 打印 report`。
+The orchestrator `cli.py` is responsible only for:
+`load profile → build Workbook → run all Resolvers → (read timetable, if needed) → run all Fillers → save → print report`.
 
-### Profile schema（显式 handlers 列表）
+### Profile schema (explicit handlers list)
 
 ```yaml
 # profiles/ali-bin-abu.yaml
 profile: ali-bin-abu-2026
 inputs:
-  template: "assets/ALI BIN ABU/12. ERPH/template.xlsx"   # --xlsx 专属位置
-  jadual:   "config/jadual-minggu.yaml"                     # 独立校历，非 profile 本体
+  template: "assets/ALI BIN ABU/12. ERPH/template.xlsx"   # the --xlsx location
+  jadual:   "config/jadual-minggu.yaml"                     # standalone calendar, not part of the profile
 
-context:                        # 跨 handler 共享，禁止在 handler params 里复制两份
+context:                        # shared across handlers; never duplicate it into handler params
   subjects:
-    BC: "BAHASA CINA 华 文"
+    BC: "BAHASA CINA"
 
 handlers:
   - name: week                  # phase: resolve
@@ -223,15 +242,16 @@ handlers:
     params:
       mode: auto
       match_codes: [BC]
-      match_names: ["BAHASA CINA", "华文"]
+      match_names: ["BAHASA CINA", "CHINESE"]
       cs: 1
       ls: 1
       left_col: 2
       right_col: 5
 ```
 
-校验规则：未知 `name` → `ProfileError`；`params` 由各 handler 自己校验后报错；
-`inputs.template` 缺失 → `ProfileError`。
+Validation rules: an unknown `name` → `ProfileError`; `params` are validated by
+each handler itself before it reports an error; a missing `inputs.template` →
+`ProfileError`.
 
 ### CLI
 
@@ -241,127 +261,163 @@ ranse write --profile profiles/ali-bin-abu.yaml MENU!B3 "ALI BIN ABU"
 ranse dskp  --txt assets/bc-dskp/t1.txt [--select 1 1 1] [-o out.json] | [--pdf x.pdf --pages 35-45] | [--list]
 ```
 
-- **没有 `--xlsx`**（决策 10）。
-- `fill` 默认原地覆盖 `inputs.template`，与现状一致。
-- 现有 `--config` / `--jadual-config` / `--timetable-xlsx` / `--csv` 的能力，
-  全部由 profile 的 `inputs` 与 `handlers[].params` 承接；CLI 仅保留 `--date` / `--minggu` / `--no-dskp-auto` 作临时覆盖。
-- 异常出口：`RanseError` → `print(f"Error: {e}", file=sys.stderr)` + `sys.exit(1)`；
-  argparse 用法错误仍走 `parser.error`。
+- **there is no `--xlsx`** (decision 10).
+- `fill` overwrites `inputs.template` in place by default, matching the current behaviour.
+- The capabilities of the existing `--config` / `--jadual-config` /
+  `--timetable-xlsx` / `--csv` are all taken over by the profile's `inputs` and
+  `handlers[].params`; the CLI keeps only `--date` / `--minggu` /
+  `--no-dskp-auto` as temporary overrides.
+- Error exit: `RanseError` → `print(f"Error: {e}", file=sys.stderr)` +
+  `sys.exit(1)`; argparse usage errors still go through `parser.error`.
 
 ---
 
-## 4. 分阶段实施
+## 4. Staged implementation
 
-每阶段 = 一个 commit。**每阶段结束必须 `pytest` 全绿**，否则不得进入下一阶段。
+One stage = one commit. **`pytest` must be fully green at the end of every
+stage**, otherwise you may not move on.
 
-### 阶段 0 —— 收口 WIP + 回归基线（不动业务代码）
+### Stage 0 — fold in the WIP + regression baseline (do not touch business code)
 
-1. 现有未提交改动单独 commit（`chore: 收口现有改动` 之类）。
-2. 写 `tests/make_golden.py`，用**当前** `scripts/fill-erph.py` 跑出基线：
-   - minggu 33（siri 1）、minggu 34（siri 7）两个正常周次；
-   - 一个 `cuti` 周的**报错路径**（断言非零退出 + stderr 文案）；
-   - 每次先把模板复制到临时目录再跑（脚本是原地覆盖）。
-   - 基线存**逐 sheet 的 XML**（gzip），不存整个 zip —— zip 条目顺序/时间戳会造成假差异。
-   - 存进 `tests/golden/<case>/<sheet>.xml.gz`，提交进 git。
-3. 补纯函数单测（不依赖 `assets/`，新 clone 必须能跑）：
-   `_col_to_num`/`_col_letter`/`_parse_cell_ref` 往返、`_cell_range_top_left`、
-   `_date_to_excel`、`_section_pair` 滑动回绕（含最后一页 wrap）、
-   `merge_periods`（连堂合并、时间不连续不合并）、`resolve_week`（含 cuti / 无 minggu / 越界日期）、
-   `_parse_class_code`（`BC-1A`、`BC–1A` 全角连字符、非匹配原样返回）、
-   `_time_with_suffix`（PAGI/TGH/TPTG 分界 11:00/14:00）。
-4. 建 `pyproject.toml`（`[project]` + `dev` extra 含 pytest，`requires-python = ">=3.9"`）。
-5. 依赖 `assets/` 的 `tests/test_regression.py` 在 assets 缺失时 `pytest.skip`。
+1. Commit the existing uncommitted changes separately (something like `chore: fold in existing changes`).
+2. Write `tests/make_golden.py` and produce baselines with the **current**
+   `scripts/fill-erph.py`:
+   - two normal weeks: minggu 33 (siri 1) and minggu 34 (siri 7);
+   - the **error path** for a `cuti` week (assert a non-zero exit + stderr wording);
+   - copy the template to a temp directory before each run (the script overwrites in place);
+   - store the baseline as **per-sheet XML** (gzip), not the whole zip — zip
+     entry order/timestamps would cause false diffs;
+   - store it under `tests/golden/<case>/<sheet>.xml.gz` and commit it to git.
+3. Add pure-function unit tests (no `assets/` dependency; a fresh clone must be
+   able to run them):
+   `_col_to_num`/`_col_letter`/`_parse_cell_ref` round-trips,
+   `_cell_range_top_left`, `_date_to_excel`, `_section_pair` sliding with wrap
+   (including the last-page wrap), `merge_periods` (contiguous periods merge,
+   non-contiguous do not), `resolve_week` (including cuti / missing minggu /
+   out-of-range dates), `_parse_class_code` (`BC-1A`, `BC–1A` with an en dash,
+   non-matching returned unchanged), `_time_with_suffix` (PAGI/TGH/TPTG
+   boundaries at 11:00/14:00).
+4. Create `pyproject.toml` (`[project]` + a `dev` extra with pytest,
+   `requires-python = ">=3.9"`).
+5. `tests/test_regression.py`, which depends on `assets/`, does `pytest.skip`
+   when the assets are missing.
 
-**验收**：`pytest` 全绿；golden 已入库；WIP 已单独 commit。
+**Acceptance**: `pytest` fully green; golden baselines committed; WIP committed separately.
 
-### 阶段 1 —— 纯移动
+### Stage 1 — pure move
 
-只改 import 与文件归属，**不改任何逻辑、不改任何字符串、不改任何常量值**：
+Only change imports and file placement; **do not change any logic, any string, or
+any constant value**:
 
-- 140–337 行 → `core/refs.py` + `core/xlsx.py`；
-- 343–567 行 → `inputs/timetable.py`（`constants.PERIOD_TIMES`、`DAY_ORDER`、
-  `DAY_BY_WEEKDAY`、`_TIME_SUFFIX_CACHE`、`NUM_PERIODS` 一并迁入 inputs 或 model）；
-- `gen_dskp.py` → `inputs/dskp.py`（保留其 `main()`，阶段 4 接 CLI）；
-- `load_config` / `load_jadual_config` → `inputs/yaml.py`；
-- `fill_menu` / `write_fixed_cells` / `fill_dskp_*` / `build_auto_dskp_entries` /
-  `resolve_week` / `siri_to_timetable` → 暂入 `handlers/`（先搬不改签名）；
-- `main()` → `cli.py`。
+- lines 140–337 → `core/refs.py` + `core/xlsx.py`;
+- lines 343–567 → `inputs/timetable.py` (`constants.PERIOD_TIMES`, `DAY_ORDER`,
+  `DAY_BY_WEEKDAY`, `_TIME_SUFFIX_CACHE`, `NUM_PERIODS` move along into inputs or model);
+- `gen_dskp.py` → `inputs/dskp.py` (keep its `main()`; stage 4 wires up the CLI);
+- `load_config` / `load_jadual_config` → `inputs/yaml.py`;
+- `fill_menu` / `write_fixed_cells` / `fill_dskp_*` /
+  `build_auto_dskp_entries` / `resolve_week` / `siri_to_timetable` → temporarily
+  into `handlers/` (move first, do not change signatures);
+- `main()` → `cli.py`.
 
-**验收**：golden **逐字节相同**；纯函数单测不变全绿。
+**Acceptance**: golden output **byte-identical**; pure-function unit tests stay green.
 
-### 阶段 2 —— core 去业务化 + Handler 抽取
+### Stage 2 — de-business-ify core + extract handlers
 
-1. core 内所有 `sys.exit` / 业务文案 → `RanseError` 层级异常，由 `cli.py` 统一转 exit code
-   （对应决策 13，**不要顺手引入 logging 框架**）。
-2. 周次解析（`resolve_week` / `siri_to_timetable` / `load_jadual_config` 中的业务规则，
-   含 cuti、无 minggu、日期越界文案）整体移入 `handlers/week.py`，实现 `Resolver`。
-3. 逐个抽取 Filler，每个抽完跑一次 golden：
-   `menu.py`（版面常量、`_time_with_suffix`、连堂合并、Excel 日期序列）→
-   `fixed_cells.py`（合并区左上角 + `int(value)` 尝试转换）→
-   `dskp.py`（`_section_pair` 滑动、`_dskp_file_for_tingkatan` 占位符、
-   `CLASS_BLOCK_SIZE` 等版面常量、静态 selection 写入）。
-4. 消灭 `sys.path.insert` + 动态 `import gen_dskp`，改为正常包内 import。
-5. `_parse_sheet` 的 `ET.register_namespace` 副作用收进 `Workbook`。
+1. Every `sys.exit` / business message in core → the `RanseError` exception
+   hierarchy, mapped to an exit code centrally by `cli.py` (decision 13; **do
+   not sneak in a logging framework**).
+2. Move week resolution (the business rules in `resolve_week` /
+   `siri_to_timetable` / `load_jadual_config`, including the cuti,
+   missing-minggu and out-of-range-date messages) into `handlers/week.py`,
+   implementing `Resolver`.
+3. Extract the Fillers one at a time and run golden after each:
+   `menu.py` (layout constants, `_time_with_suffix`, period merging, Excel date
+   serial) → `fixed_cells.py` (merge-area top-left + the `int(value)` conversion
+   attempt) → `dskp.py` (`_section_pair` sliding, the `_dskp_file_for_tingkatan`
+   placeholder, `CLASS_BLOCK_SIZE` and other layout constants, static selection
+   writes).
+4. Eliminate `sys.path.insert` + the dynamic `import gen_dskp`, replacing them
+   with a normal in-package import.
+5. Move `_parse_sheet`'s `ET.register_namespace` side effect into `Workbook`.
 
-**验收**：golden 逐字节相同；`grep -rn "sys.exit\|DAY_ORDER\|PERIOD_TIMES\|CLASS_BLOCK" src/ranse/core/` 无结果。
+**Acceptance**: golden output byte-identical; `grep -rn "sys.exit\|DAY_ORDER\|PERIOD_TIMES\|CLASS_BLOCK" src/ranse/core/` returns nothing.
 
-### 阶段 3 —— Profile schema + 两阶段编排 + dataclass
+### Stage 3 — Profile schema + two-phase orchestration + dataclasses
 
-1. 新 profile 解析（显式 `handlers:` 列表、`inputs`、`context`），未知 handler 名报错。
-2. `cli.py` 实现 resolve → 读课表 → fill → save 的两阶段编排。
-3. 裸 dict → dataclass（`Lesson` / `Schedule` / `Week` / `Profile`）。
-   **放在 handler 抽完之后做**，改动面最小；`entry["class"]` → `entry.class` 全量替换。
-4. 写 `profiles/ali-bin-abu.yaml`，内容等价于现有 `erph-config.yaml` + `jadual-minggu.yaml` 引用。
-5. `scripts/jadual-minggu.yaml` → `config/jadual-minggu.yaml`（文件内容除注释里的
-   旧命令名外不变）。
+1. New profile parsing (explicit `handlers:` list, `inputs`, `context`); an
+   unknown handler name is an error.
+2. `cli.py` implements the two-phase orchestration: resolve → read timetable →
+   fill → save.
+3. Bare dicts → dataclasses (`Lesson` / `Schedule` / `Week` / `Profile`).
+   **Do this after the handlers are extracted** to keep the change surface
+   minimal; replace `entry["class"]` → `entry.class` everywhere.
+4. Write `profiles/ali-bin-abu.yaml`, equivalent to the existing
+   `erph-config.yaml` plus the `jadual-minggu.yaml` reference.
+5. `scripts/jadual-minggu.yaml` → `config/jadual-minggu.yaml` (contents unchanged
+   except for the old command name in its comments).
 
-**验收**：golden 逐字节相同；`tests/test_profile.py` 覆盖未知 handler、缺 template、
-params 校验失败三种报错。
+**Acceptance**: golden output byte-identical; `tests/test_profile.py` covers the
+three error modes — unknown handler, missing template, and a failing params
+validation.
 
-### 阶段 4 —— 打包 + CLI + 文档
+### Stage 4 — packaging + CLI + docs
 
-1. `pyproject` 配 `[project.scripts] ranse = "ranse.cli:main"`；三个子命令落地。
-2. 删除 `scripts/` 整个目录。
-3. 重写 `README.md`：Project Structure、Installation（`pip install -e .`）、
-   全部命令示例、Configuration 章节改为 Profile schema、Python 版本、
-   「How It Works」保持原意。
-4. `docs/translations/ms-MY/README.md` 同步（马来文，结构与英文版一致）。
-5. `config/jadual-minggu.yaml` 顶部注释里的 `python fill-erph.py ...` 用法示例更新。
+1. Configure `pyproject` with `[project.scripts] ranse = "ranse.cli:main"`; land
+   the three subcommands.
+2. Delete the whole `scripts/` directory.
+3. Rewrite `README.md`: Project Structure, Installation (`pip install -e .`),
+   all command examples, the Configuration chapter as the Profile schema, the
+   Python version, and keep "How It Works" with the same meaning.
+4. Sync `docs/translations/ms-MY/README.md` (Malay, structure matching the
+   English version).
+5. Update the `python fill-erph.py ...` usage example in the top comment of
+   `config/jadual-minggu.yaml`.
 
-**验收**：`pip install -e .` 后 `ranse fill/write/dskp --help` 可用；
-`grep -rn "fill-erph" . --exclude-dir=.git --exclude-dir=assets` 无残留（除 CHANGELOG/历史说明）；
-golden 全绿。
+**Acceptance**: after `pip install -e .`, `ranse fill/write/dskp --help` works;
+`grep -rn "fill-erph" . --exclude-dir=.git --exclude-dir=assets` leaves nothing
+other than CHANGELOG/history mentions; golden fully green.
 
 ---
 
-## 5. 风险与坑（实现时逐条核对）
+## 5. Risks and pitfalls (check each one while implementing)
 
-1. **序列化必须一字不差**：`xml_declaration=True, encoding="UTF-8", short_empty_elements=False`
-   与所有 `register_namespace` 的前缀/URI 保持原样，否则 golden 全挂。
-2. **golden 比 sheet XML，不比 zip 字节**。
-3. **`subjects` 映射被 `fill_menu` 和 `dskp` 两处共用** → 放 profile `context:` 段共享，
-   不要在两个 handler params 里复制两份。
-4. **`PERIOD_TIMES` 存在两份**：`constants.py` 是 period→时间，`fill-erph.py` 顶部是
-   时间→period（CSV 用）。合并到 `inputs/timetable.py` 一处，值不变。
-5. **`assets/` 未入库** → 依赖真实模板的回归测试在新 clone 上 skip；
-   纯函数单测必须完全自足，这是新 clone 上唯一的保护网。
-6. **模板是 7.5MB 原地覆盖** → golden 生成脚本和回归测试都必须先 copy 到临时目录。
-7. **`fill_menu` 会把空行写成 `""`**（清空上一次结果），抽 handler 时别把 else 分支删了。
-8. **`fixed_cells` 的值有 `int(value)` 尝试转换**（`load_config` 阶段不做，
-   在 `write_fixed_cells` 里做），迁移时保持时机一致，否则类型变化会让 golden 挂。
-9. **`dskp_auto` 条目追加在静态 `dskp` 之后**（`cfg["dskp"] = static + auto`），
-   同格时 auto 覆盖 static —— 顺序语义必须保留。
-10. **Jumaat/Sabtu 课表会被丢弃**（模板只有 Ahad–Khamis 的 sheet），这是既有业务规则，
-    属 `inputs/timetable.py` 或 handler，**不属于 core**。
+1. **Serialization must be byte-for-byte**: keep `xml_declaration=True,
+   encoding="UTF-8", short_empty_elements=False` and every `register_namespace`
+   prefix/URI unchanged, or every golden test fails.
+2. **Golden compares sheet XML, not zip bytes**.
+3. **The `subjects` map is shared by `fill_menu` and `dskp`** → put it in the
+   profile `context:` section; do not duplicate it into both handlers' params.
+4. **`PERIOD_TIMES` exists twice**: `constants.py` has period→time, and the top
+   of `fill-erph.py` has time→period (for CSV). Merge both into one place,
+   `inputs/timetable.py`, with unchanged values.
+5. **`assets/` is not committed** → the regression tests that need the real
+   template skip on a fresh clone; the pure-function unit tests must be fully
+   self-contained, as they are the only safety net there.
+6. **The template is 7.5MB and overwritten in place** → both the golden
+   generator and the regression test must copy it to a temp directory first.
+7. **`fill_menu` writes empty rows as `""`** (clearing the previous run's
+   result); do not delete that else branch when extracting the handler.
+8. **`fixed_cells` values go through an `int(value)` conversion attempt** (not
+   at `load_config` time but inside `write_fixed_cells`); keep the timing
+   identical when migrating, or a type change will break golden.
+9. **`dskp_auto` entries are appended after the static `dskp` ones**
+   (`cfg["dskp"] = static + auto`); on the same cell, auto overrides static —
+   this ordering semantics must be preserved.
+10. **Jumaat/Sabtu timetables are dropped** (the template only has sheets for
+    Ahad–Khamis); this is an existing business rule that belongs to
+    `inputs/timetable.py` or a handler, **not to core**.
 
 ---
 
-## 6. 范围外（不要做）
+## 6. Out of scope (do not do)
 
-- 不引入 `openpyxl`（README 明确以直接操作 XML 保格式为卖点）。
-- 不做 logging 体系改造，不重构错误文案措辞。
-- 不把版面常量下沉到 profile（决策 12）。
-- 不支持 profile 动态加载第三方 handler（决策 2）。
-- 不保留 `scripts/fill-erph.py` 兼容入口（决策 3）。
-- 不改动 `assets/` 下任何文件，不动 `scripts/archived/preview-pdf.py`。
-- 不新建额外的 plan/设计文档，本文件是唯一实施依据。
+- Do not introduce `openpyxl` (the README explicitly sells direct XML
+  manipulation for formatting preservation).
+- Do not overhaul logging or reword error messages.
+- Do not push layout constants down into the profile (decision 12).
+- Do not support dynamic third-party handler loading in the profile (decision 2).
+- Do not keep a `scripts/fill-erph.py` compatibility entry (decision 3).
+- Do not modify any file under `assets/`, and do not touch
+  `scripts/archived/preview-pdf.py`.
+- Do not create extra plan/design documents; this file is the single source of
+  truth.

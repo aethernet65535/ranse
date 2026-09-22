@@ -1,24 +1,24 @@
 # ============================================================
-# jadual-minggu.yaml —  minggu ↔ jadual(siri) 对照表
+# jadual-minggu.yaml —  minggu ↔ jadual (siri) lookup table
 # ============================================================
-# 这个文件回答两个问题：
-#   1. 今天（--date，默认本周星期日）是第几周？  → 查 minggu 表
-#   2. 那一周用哪一份课表（siri）？             → 查 jadual_siri / jadual
+# This file answers two questions:
+#   1. Which week is today (--date, default: this week's Sunday)? → minggu table
+#   2. Which timetable (siri) does that week use?                → jadual_siri / jadual
 #
-# 用法（由 profile 的 inputs.jadual 引用；命令行只覆盖日期/周次）:
+# Usage (referenced by the profile's inputs.jadual; the CLI only overrides date/week):
 #   ranse fill --profile profiles/ali-bin-abu.yaml
 #   ranse fill --profile profiles/ali-bin-abu.yaml --date 2026-09-20
 #
-# 说明:
-#   - minggu 表由 M18.xlsx 里 DATA 表 (TARIKH → MINGGU) 生成，
-#     每条记录从 start 那天（星期日）开始生效，直到下一条之前。
-#     校历如有变动，直接增删/修改即可。
-#   - 假期周用 cuti 标记，查到该周会直接报错提示放假。
-#   - jadual_siri 是你之后要补的表：第 N 周 → siri 编号。
-#     也可以跳过它，直接在 minggu 那条记录里写 siri（优先级更高）。
+# Notes:
+#   - The minggu table is generated from the DATA sheet (TARIKH → MINGGU) in
+#     M18.xlsx; each record takes effect on its start date (a Sunday) until the
+#     next record. If the school calendar changes, just add/remove/edit records.
+#   - Holiday weeks are marked with cuti; hitting such a week reports an error.
+#   - jadual_siri is the table you fill in later: week N → siri number. You can
+#     also skip it and put siri directly in the minggu record (higher priority).
 # ============================================================
 
-# siri 编号 → 课表文件（路径相对仓库根目录，也可写绝对路径）
+# siri number → timetable file (paths are relative to the repo root; absolute paths also work)
 jadual:
   1: assets/timetable/jadual-waktu-2026-siri-1.xlsx
   2: assets/timetable/jadual-waktu-2026-siri-2.xlsx
@@ -28,11 +28,12 @@ jadual:
   6: assets/timetable/jadual-waktu-2026-siri-6.xlsx
   7: assets/timetable/jadual-waktu-2026-siri-7.xlsx
 
-# minggu → siri（依据 /tmp/timetable.md 的 JADUAL SIRI 表填写）
-# 对应关系:
+# minggu → siri (filled in from the JADUAL SIRI table in /tmp/timetable.md)
+# Mapping:
 #   siri 1: M1-M5    siri 2: M6      siri 3: M7-M9    siri 4: M10-M14
 #   siri 5: M15-M24  siri 6: M25-M28  siri 7: M29-M44
-# 注意: siri 2-6 的课表文件还没放进 jadual:，查到那几周会报错提示缺文件。
+# Note: the timetable files for siri 2-6 are not in jadual: yet, so those weeks
+#       report a missing-file error.
 jadual_siri:
   # siri 1
   1: 1
@@ -86,7 +87,7 @@ jadual_siri:
   43: 7
   44: 7
 
-# 每条: start(生效日) + minggu(第几周)  [+ siri(可选，覆盖 jadual_siri)]
+# Each record: start (effective date) + minggu (week number)  [+ siri (optional, overrides jadual_siri)]
 minggu:
   - start: 2026-01-01
     cuti: "CUTI A.TAHUN 2026"

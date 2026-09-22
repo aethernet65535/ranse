@@ -1,4 +1,4 @@
-# Ranse (染色)
+# Ranse
 
 **Auto-fill e-RPH xlsx templates with your weekly timetable data — in one command.**
 
@@ -14,7 +14,7 @@ If you've ever spent time copying class names, periods, and subjects into the e-
 - **Profiles** — One YAML file per teacher says where the files live (`inputs`), what is shared between handlers (`context`) and which handlers run (`handlers`). The workbook can be a `{minggu}` pattern (`…/M{minggu}.xlsx`), so one profile serves the whole year.
 - **Two input formats** — Read your timetable from an `.xlsx` file or a `.csv` file.
 - **Automatic period merging** — Consecutive periods with the same class and subject are merged into one row (e.g., two back-to-back Bahasa Cina periods become one entry).
-- **Configurable subject mapping** — Map short codes like `BC` to full names like "BAHASA CINA 华文".
+- **Configurable subject mapping** — Map short codes like `BC` to full names like "BAHASA CINA".
 - **Fixed cell values** — Write constant values (e.g., teacher name) to specific cells.
 - **Single-cell writes** — `ranse write MENU!B3 "ALI BIN ABU"` for one-off corrections.
 - **Date-aware** — The date defaults to the Sunday of the current week; override it with `--date`.
@@ -113,7 +113,7 @@ inputs:
 
 context:
   subjects:
-    BC: "BAHASA CINA 华 文"
+    BC: "BAHASA CINA"
 
 handlers:
   - name: week
@@ -127,7 +127,7 @@ handlers:
       mode: auto
       file: "assets/bc-dskp/t{tingkatan}.txt"
       match_codes: [BC]
-      match_names: ["BAHASA CINA", "华文"]
+      match_names: ["BAHASA CINA", "CHINESE"]
       cs: 1
       ls: 1
       left_col: 2
@@ -171,7 +171,7 @@ Values shared by several handlers. `subjects` maps subject codes to the names wr
 ```yaml
 context:
   subjects:
-    BC: "BAHASA CINA 华 文"
+    BC: "BAHASA CINA"
     BI: "ENGLISH"
 ```
 
@@ -207,7 +207,7 @@ An explicit, ordered list. Only built-in handlers can be named — an unknown na
          selection: [1, 1, 1], col_start: 2}
     file: "assets/bc-dskp/t{tingkatan}.txt"  # source for the automatic pair
     match_codes: [BC]                     # subject codes in the timetable xlsx
-    match_names: ["BAHASA CINA", "华文"]   # matched when reading a CSV
+    match_names: ["BAHASA CINA", "CHINESE"]  # matched when reading a CSV
     cs: 1                                 # which content standard inside a section
     ls: 1                                 # which learning standard
     left_col: 2                           # left half  = column B
@@ -247,14 +247,14 @@ minggu:                 # each record takes effect from its start date
 For each merged lesson of the matched subject, two **parent-level** sections of the DSKP (the `X.0` headings) are written side by side — left column first, right column second:
 
 ```
-week 1 → 1.0 听说技能  |  2.0 阅读技能
-week 2 → 2.0 阅读技能  |  3.0 书写技能
-week 3 → 3.0 书写技能  |  4.0 趣味语文
+week 1 → 1.0 Listening and Speaking  |  2.0 Reading
+week 2 → 2.0 Reading  |  3.0 Writing
+week 3 → 3.0 Writing  |  4.0 Fun with Chinese
 ...
 no next section → wrap back to 1.0 + 2.0
 ```
 
-The pair is computed from the week number alone, so re-running any week always produces the same result. Each side writes the section title (技能 row), the content standard row, and the learning standard row of its class block.
+The pair is computed from the week number alone, so re-running any week always produces the same result. Each side writes the section title (the skill row), the content standard row, and the learning standard row of its class block.
 
 ## How It Works
 
