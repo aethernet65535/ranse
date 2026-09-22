@@ -148,19 +148,21 @@ Relative paths are resolved against the profile's own directory, then the curren
 
 **One profile per year.** `template` is a pattern: `{minggu}` is replaced with the resolved week number, and `*`/`?` wildcards search for the file. The shipped profile therefore finds `01. JANUARY/M1.xlsx`, `02. FEBRUARY/M4.xlsx` and `07. TMP-NEW/M33.xlsx` from one line, and the timetable side is already mapped by the calendar (`jadual_siri` + `jadual`).
 
-If a week cannot be decided automatically, `ranse fill` says so and lists the candidates — then pin it with `templates`:
+If a week cannot be decided automatically — typically because an old week was copied into another folder, leaving two files called `M<minggu>.xlsx` — `ranse fill` says so and lists the candidates, and you pin that week with `templates`:
 
 ```text
-Error: 'assets/…/2026/*/M18.xlsx' matches 2 workbooks for minggu 18:
-…/06. JUNE/M18.xlsx, …/07. TMP-NEW/M18.xlsx
+Error: 'assets/…/2026/*/M25.xlsx' matches 2 workbooks for minggu 25:
+…/05. MAY/M25.xlsx, …/07. TMP-NEW/M25.xlsx
 — add an explicit 'inputs.templates' entry to the profile
 ```
 
 ```yaml
 inputs:
   templates:
-    18: "assets/ALI BIN ABU/12. ERPH/2026/07. TMP-NEW/M18.xlsx"
+    25: "assets/ALI BIN ABU/12. ERPH/2026/07. TMP-NEW/M25.xlsx"
 ```
+
+Keeping exactly one file per week number makes the pattern unambiguous for the whole year; a week whose workbook does not exist yet (say you fill week 34 before creating `M34.xlsx`) is reported the same way, with `no workbook matched`.
 
 ### `context`
 

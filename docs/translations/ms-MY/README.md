@@ -152,19 +152,21 @@ Laluan relatif diselesaikan terhadap direktori profil itu sendiri, kemudian dire
 
 **Satu profil untuk setahun.** `template` ialah satu pola: `{minggu}` digantikan dengan nombor minggu yang diselesaikan, dan wildcard `*`/`?` mencari fail tersebut. Profil yang disertakan justeru menemui `01. JANUARY/M1.xlsx`, `02. FEBRUARY/M4.xlsx` dan `07. TMP-NEW/M33.xlsx` daripada satu baris, manakala jadual waktu sudah dipetakan oleh kalendar (`jadual_siri` + `jadual`).
 
-Jika sesuatu minggu tidak dapat ditentukan secara automatik, `ranse fill` akan memberitahu dan menyenaraikan calonnya — kemudian tetapkan dengan `templates`:
+Jika sesuatu minggu tidak dapat ditentukan secara automatik — biasanya kerana minggu lama disalin ke folder lain sehingga terdapat dua fail bernama `M<minggu>.xlsx` — `ranse fill` akan memberitahu dan menyenaraikan calonnya, dan anda tetapkan minggu itu dengan `templates`:
 
 ```text
-Error: 'assets/…/2026/*/M18.xlsx' matches 2 workbooks for minggu 18:
-…/06. JUNE/M18.xlsx, …/07. TMP-NEW/M18.xlsx
+Error: 'assets/…/2026/*/M25.xlsx' matches 2 workbooks for minggu 25:
+…/05. MAY/M25.xlsx, …/07. TMP-NEW/M25.xlsx
 — add an explicit 'inputs.templates' entry to the profile
 ```
 
 ```yaml
 inputs:
   templates:
-    18: "assets/ALI BIN ABU/12. ERPH/2026/07. TMP-NEW/M18.xlsx"
+    25: "assets/ALI BIN ABU/12. ERPH/2026/07. TMP-NEW/M25.xlsx"
 ```
+
+Menyimpan tepat satu fail bagi setiap nombor minggu menjadikan pola itu tidak kabur sepanjang tahun; minggu yang buku kerjanya belum wujud (contohnya mengisi minggu 34 sebelum `M34.xlsx` dicipta) dilaporkan dengan cara yang sama, dengan `no workbook matched`.
 
 ### `context`
 
