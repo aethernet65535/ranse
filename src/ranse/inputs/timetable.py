@@ -1,10 +1,10 @@
 """Weekly timetable reading (CSV / xlsx) → schedule structures.
 
-Merged constants (PLAN.md risk 4, values unchanged):
-- ``PERIOD_TIMES`` (period → time ranges) came from scripts/constants.py;
-- ``TIME_PERIOD`` (time range → period, used when reading a CSV) was the
-  identically-named map at the top of fill-erph.py. The two directions cannot
-  share one name inside this module, so the CSV direction got a distinct one;
+Both period tables live here (PLAN.md risk 4, values unchanged):
+
+- ``PERIOD_TIMES`` (period → time range) fills the MENU rows;
+- ``TIME_PERIOD`` (time range → period) is the CSV direction. The two cannot
+  share one name inside this module, so the CSV direction got its own;
   ``build_schedule`` is its only caller.
 """
 
@@ -40,8 +40,8 @@ PERIOD_TIMES = {
     10: ("13:30", "14:10"),
 }
 
-# (start, end) → period number   [was the PERIOD_TIMES at the top of
-# fill-erph.py; renamed because both maps now live in this module]
+# (start, end) → period number   [the CSV direction of the legacy
+# PERIOD_TIMES map; renamed because both maps now live in this module]
 TIME_PERIOD = {
     ("07:40", "08:20"): 1,
     ("08:20", "09:00"): 2,

@@ -8,9 +8,9 @@ Everything the tests need in order to survive the refactor with minimal churn:
   ``inputs.template`` points at the temporary workbook copy (the template
   path is profile-only — decision 10 — and the real asset is read-only);
 - ``fn(name)``   — find a function by name: first in ``src/ranse`` (once it
-  exists), then in the legacy ``scripts/``. Unit tests call ``fn`` instead of
-  importing a fixed module, so moving code between stages does not require
-  editing the tests (PLAN.md: "纯函数单测不变全绿");
+  exists). Unit tests call ``fn`` instead of importing a fixed module, so
+  moving code between stages did not require editing the tests (PLAN.md:
+  "纯函数单测不变全绿"); stage 4 removed ``scripts/``, so it is src-only now;
 - ``call_error`` — run a function and return its error text, whether the code
   reports errors the legacy way (print to stderr + sys.exit) or the stage-2 way
   (raise a RanseError subclass carrying the same wording);
@@ -21,7 +21,6 @@ Everything the tests need in order to survive the refactor with minimal churn:
 
 import gzip as _gzip
 import importlib
-import importlib.util
 import io
 import os
 import re
@@ -37,7 +36,6 @@ import yaml
 REPO_ROOT = Path(__file__).resolve().parent.parent
 TESTS_DIR = REPO_ROOT / "tests"
 SRC_DIR = REPO_ROOT / "src"
-SCRIPTS_DIR = REPO_ROOT / "scripts"
 GOLDEN_DIR = TESTS_DIR / "golden"
 
 TEMPLATE_XLSX = REPO_ROOT / "assets" / "ALI BIN ABU" / "12. ERPH" / "template.xlsx"
@@ -81,10 +79,10 @@ def _pythonpath():
 def run_fill(xlsx_path, date, extra_args=()):
     """Run the current fill entry point against a writable xlsx copy.
 
-    The ONLY place that knows the CLI invocation (stage 4 wraps it in the
-    ``ranse fill`` console script). The shipped profile is copied to a temp
-    file with ``inputs.template`` pointing at ``xlsx_path`` — the CLI has no
-    ``--xlsx`` on purpose (decision 10).
+    The ONLY place that knows the CLI invocation (``python -m ranse fill``;
+    the installed console script runs the same entry point). The shipped
+    profile is copied to a temp file with ``inputs.template`` pointing at
+    ``xlsx_path`` — the CLI has no ``--xlsx`` on purpose (decision 10).
     Returns a ``subprocess.CompletedProcess``.
     """
     with tempfile.TemporaryDirectory() as tmp:
@@ -96,7 +94,7 @@ def run_fill(xlsx_path, date, extra_args=()):
             yaml.safe_dump(raw, allow_unicode=True, sort_keys=False),
             encoding="utf-8")
         cmd = [
-            sys.executable, "-m", "ranse",
+            sys.executable, "-m", "ranse", "fill",
             "--profile", str(profile_path),
             "--date", str(date),
             *extra_args,
@@ -164,27 +162,8 @@ _PACKAGE_CANDIDATES = (
     "ranse.handlers.dskp",
     "ranse.handlers.registry",
 )
-_LEGACY_CANDIDATES = (
-    (SCRIPTS_DIR / "fill-erph.py", "_legacy_fill_erph"),
-    (SCRIPTS_DIR / "gen_dskp.py", "_legacy_gen_dskp"),
-)
-
-_modules = {}
-
-
-def _exec_legacy(path, mod_name):
-    """Execute scripts/<file> as a module (filenames contain '-')."""
-    if str(SCRIPTS_DIR) not in sys.path:
-        sys.path.insert(0, str(SCRIPTS_DIR))
-    spec = importlib.util.spec_from_file_location(mod_name, path)
-    mod = importlib.util.module_from_spec(spec)
-    sys.modules[mod_name] = mod  # register BEFORE exec (dataclasses need it)
-    spec.loader.exec_module(mod)
-    return mod
-
-
 def fn(name):
-    """Return ``name`` from the ranse package if present, else from scripts/."""
+    """Return ``name`` from the ranse package (src/ranse), or fail loudly."""
     if SRC_DIR.is_dir() and str(SRC_DIR) not in sys.path:
         sys.path.insert(0, str(SRC_DIR))
     for mod_name in _PACKAGE_CANDIDATES:
@@ -194,16 +173,9 @@ def fn(name):
             continue
         if hasattr(mod, name):
             return getattr(mod, name)
-    for path, mod_name in _LEGACY_CANDIDATES:
-        if not path.is_file():
-            continue
-        if mod_name not in _modules:
-            _modules[mod_name] = _exec_legacy(path, mod_name)
-        if hasattr(_modules[mod_name], name):
-            return getattr(_modules[mod_name], name)
     raise AttributeError(
-        f"{name!r} not found in src/ranse or scripts/ — did a stage move "
-        f"rename it without updating the tests?")
+        f"{name!r} not found in src/ranse — did a rename land without "
+        f"updating the tests?")
 
 
 # ---------------------------------------------------------------------------

@@ -5,10 +5,12 @@ Outputs JSON with sections containing titles, content standards,
 and learning standards. Number-based detection works for any language.
 
 Usage:
-    python gen-dskp.py --txt <file.txt> [-o output.json]
-    python gen-dskp.py --txt <file.txt> --select 1 1 1
-    python gen-dskp.py --pdf <file.pdf> --pages 35-45 [-o output.json]
-    python gen-dskp.py --list
+    ranse dskp --txt <file.txt> [-o output.json]
+    ranse dskp --txt <file.txt> --select 1 1 1
+    ranse dskp --pdf <file.pdf> --pages 35-45 [-o output.json]
+    ranse dskp --list
+
+(``python -m ranse.inputs.dskp ...`` runs the same parser standalone.)
 """
 
 import argparse
@@ -215,9 +217,8 @@ def resolve_selection(sections, selection):
 # CLI
 # ---------------------------------------------------------------------------
 
-def main():
-    parser = argparse.ArgumentParser(
-        description="Generate structured DSKP content from txt or pdf files")
+def add_arguments(parser):
+    """Register the ``dskp`` options (shared by the module and ``ranse dskp``)."""
     parser.add_argument("--txt", help="Path to DSKP txt file")
     parser.add_argument("--pdf", help="Path to DSKP pdf file")
     parser.add_argument("--pages", help="Page range for PDF (e.g. 35-45 or 35,37,39)")
@@ -226,8 +227,10 @@ def main():
                         help="Select specific section (e.g. --select 1 1 1 for 1.0/1.1/1.1.1)")
     parser.add_argument("--list", action="store_true",
                         help="List configured DSKP file paths and exit")
-    args = parser.parse_args()
 
+
+def run(args, parser):
+    """Execute a parsed ``dskp`` invocation."""
     if args.list:
         for name, path in DSKP_FILES.items():
             print(f"  {name}: {path}")
@@ -259,6 +262,13 @@ def main():
         print(f"Done: {args.output} ({len(sections)} sections)", file=sys.stderr)
     else:
         print(output)
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(
+        description="Generate structured DSKP content from txt or pdf files")
+    add_arguments(parser)
+    run(parser.parse_args(argv), parser)
 
 
 if __name__ == "__main__":

@@ -269,6 +269,18 @@ class Workbook:
         """Sheet names in workbook order."""
         return list(self._sheet_map)
 
+    def write(self, ref, content):
+        """Write one cell addressed as ``"SHEET!COORD"`` (decision 9).
+
+        ``ref`` is ``"MENU!B3"`` or ``"MENU!B3:C3"`` — a range / merged range
+        writes its top-left cell, exactly like :meth:`Sheet.write`.
+        """
+        sheet_name, sep, coord = str(ref).partition("!")
+        if not sep or not coord:
+            raise SheetError(
+                f"invalid cell reference: {ref!r} (expected SHEET!A1)")
+        self.sheet(sheet_name).write(coord, content)
+
     def sheet(self, name):
         """Return the writable Sheet called name."""
         if name not in self._sheet_map:

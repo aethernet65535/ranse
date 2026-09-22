@@ -1,9 +1,11 @@
-"""Command-line orchestration: load profile → resolve → read → fill → save.
+"""Command-line orchestration: ``ranse fill`` / ``write`` / ``dskp``.
 
 Only orchestration lives here: argparse, the pipeline order, printing the
 report and turning a RanseError into ``Error: …`` + exit code 1 (decision
 13). Every business decision belongs to a handler, which is what keeps this
 file free of timetable/DSKP knowledge.
+
+There is no ``--xlsx``: the target template is a profile input (decision 10).
 """
 
 import argparse
@@ -16,47 +18,91 @@ from .core.xlsx import Workbook
 from .errors import RanseError
 from .handlers.base import Context
 from .handlers.registry import build_handlers
+from .inputs import dskp as dskp_input
 from .inputs.timetable import DAY_ORDER, load_schedule
 from .inputs.yaml import load_profile
 
 REQUIRED_SHEETS = ["MENU"] + [d.upper() for d in DAY_ORDER]
 
 
-def main():
-    parser = argparse.ArgumentParser(
-        description="Fill an e-RPH xlsx template from a ranse profile")
-    parser.add_argument("--profile", required=True,
-                        help="Path to the profile YAML (inputs + handlers)")
-    parser.add_argument("--minggu", type=int, default=None,
-                        help="Override the week number "
-                             "(default: resolved from --date)")
-    parser.add_argument("--no-dskp-auto", action="store_true",
-                        help="Disable automatic DSKP content-standard filling")
-    parser.add_argument("--date",
-                        help="Week start date YYYY-MM-DD "
-                             "(default: the Sunday of the current week)")
-    args = parser.parse_args()
+def main(argv=None):
+    parser = _build_parser()
+    args = parser.parse_args(argv)
 
     try:
-        _run(parser, args)
+        if args.command == "fill":
+            _run_fill(parser, args)
+        elif args.command == "write":
+            _run_write(args)
+        else:
+            dskp_input.run(args, parser)
     except RanseError as e:
         print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)
 
 
-def _run(parser, args):
-    profile = load_profile(args.profile)
+def _build_parser():
+    parser = argparse.ArgumentParser(
+        prog="ranse",
+        description="Fill e-RPH xlsx templates from a weekly timetable")
+    subparsers = parser.add_subparsers(dest="command", required=True,
+                                       metavar="{fill,write,dskp}")
+
+    fill = subparsers.add_parser(
+        "fill", help="fill the profile's template (MENU / fixed cells / DSKP)")
+    fill.add_argument("--profile", required=True,
+                      help="Path to the profile YAML (inputs + handlers)")
+    fill.add_argument("--minggu", type=int, default=None,
+                      help="Override the week number "
+                           "(default: resolved from --date)")
+    fill.add_argument("--no-dskp-auto", action="store_true",
+                      help="Disable automatic DSKP content-standard filling")
+    fill.add_argument("--date",
+                      help="Week start date YYYY-MM-DD "
+                           "(default: the Sunday of the current week)")
+
+    write = subparsers.add_parser(
+        "write", help="write a single cell on the profile's template")
+    write.add_argument("--profile", required=True,
+                       help="Path to the profile YAML (inputs + handlers)")
+    write.add_argument("ref", metavar="SHEET!CELL",
+                       help="Cell to write, e.g. MENU!B3 or MENU!B3:C3")
+    write.add_argument("value", help="Value to write (written as text)")
+
+    dskp = subparsers.add_parser(
+        "dskp", help="parse a DSKP txt/pdf into structured JSON")
+    dskp_input.add_arguments(dskp)
+
+    return parser
+
+
+def _open_template(profile):
+    """Resolve + open the profile's template (the only target workbook)."""
     bases = [profile.base_dir, os.getcwd(), _REPO_ROOT]
     template = _resolve_path(profile.inputs.template, bases)
     if not os.path.isfile(template):
         print(f"Error: file not found: {template}", file=sys.stderr)
         sys.exit(1)
+    return template, Workbook.open(template)
+
+
+def _run_write(args):
+    """``ranse write`` — one cell through the core write API (decision 9)."""
+    profile = load_profile(args.profile)
+    template, wb = _open_template(profile)
+    wb.write(args.ref, args.value)
+    wb.save()
+    print(f"Done: {args.ref} = {args.value!r} ({template})")
+
+
+def _run_fill(parser, args):
+    profile = load_profile(args.profile)
+    template, wb = _open_template(profile)
 
     # Unknown handler names / invalid params fail here, before any cell is
     # touched (decision 2 + "params 由各 handler 自己校验").
     handlers = build_handlers(profile.handlers)
 
-    wb = Workbook.open(template)
     missing = [s for s in REQUIRED_SHEETS if s not in wb.sheets]
     if missing:
         print(f"Error: missing sheets: {', '.join(missing)}", file=sys.stderr)

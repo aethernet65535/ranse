@@ -36,7 +36,7 @@ def _dskp_file_for_tingkatan(tingkatan, params, base_dir=None):
           2: assets/bc-dskp/t2.txt
 
     When `file` is absent, `params.dskp_files` (same map, older key) and
-    finally the built-in gen_dskp.DSKP_FILES table are used.
+    finally the built-in ``inputs.dskp.DSKP_FILES`` table are used.
     """
     spec = params.get("file")
     if spec is None:
@@ -173,8 +173,8 @@ def build_auto_dskp_entries(schedule, minggu, params, subjects, base_dir=None):
 def load_dskp_content(file_path):
     """Load DSKP content from a JSON or txt file (cached per path).
 
-    JSON: output from gen_dskp.py (structured dict).
-    TXT: parsed on-the-fly using gen_dskp parser (requires --select).
+    JSON: output from ``ranse dskp`` (structured dict).
+    TXT: parsed on-the-fly by the inputs.dskp parser.
     """
     if file_path in _DSKP_CONTENT_CACHE:
         return _DSKP_CONTENT_CACHE[file_path]
