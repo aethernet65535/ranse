@@ -10,7 +10,8 @@ Everything the tests need in order to survive the refactor with minimal churn:
 - ``fn(name)``   — find a function by name: first in ``src/ranse`` (once it
   exists). Unit tests call ``fn`` instead of importing a fixed module, so
   moving code between stages did not require editing the tests (PLAN.md:
-  "纯函数单测不变全绿"); stage 4 removed ``scripts/``, so it is src-only now;
+  "pure-function unit tests stay green"); stage 4 removed ``scripts/``, so it
+  is src-only now;
 - ``call_error`` — run a function and return its error text, whether the code
   reports errors the legacy way (print to stderr + sys.exit) or the stage-2 way
   (raise a RanseError subclass carrying the same wording);

@@ -40,7 +40,7 @@ SEC_RE = re.compile(r"^(\d+(?:\.\d+)*)\s+(.+)$")
 def parse_dskp_txt(content):
     """Parse a DSKP txt file into structured sections.
 
-    Returns: { "1": { "title": "1.0 听说技能",
+    Returns: { "1": { "title": "1.0 Listening and Speaking",
                        "content_standards": {
                            "1": {"id":"1.1", "content":"...",
                                   "learning_standards": {

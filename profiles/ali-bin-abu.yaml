@@ -33,7 +33,7 @@ inputs:
 # Shared across handlers: subject code → name written into the template.
 context:
   subjects:
-    BC: "BAHASA CINA 华 文"
+    BC: "BAHASA CINA"
     BI: "ENGLISH"
 
 handlers:
@@ -55,7 +55,7 @@ handlers:
       mode: auto
       file: "assets/bc-dskp/t{tingkatan}.txt"
       match_codes: [BC]
-      match_names: ["BAHASA CINA", "华文"]
+      match_names: ["BAHASA CINA", "CHINESE"]
       cs: 1
       ls: 1
       left_col: 2

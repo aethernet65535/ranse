@@ -67,7 +67,7 @@ def _dskp_file_for_tingkatan(tingkatan, params, base_dir=None):
 def _section_pair(sections, minggu):
     """Two parent-level sections for this week: (1,2) → (2,3) → … → wrap to (1,2).
 
-    Sections are the X.0 headings of a DSKP (e.g. '1.0 听说技能'). The pair
+    Sections are the X.0 headings of a DSKP (e.g. '1.0 Listening and Speaking'). The pair
     slides forward one section per week and wraps back to the first section
     as soon as there is no next section left.
     """
@@ -85,7 +85,7 @@ def _auto_subject_matchers(params):
     """dskp params → (subject codes set, uppercased names list)."""
     codes = {str(c).strip() for c in params.get("match_codes", ["BC"])}
     names = [str(n).strip().upper()
-             for n in params.get("match_names", ["BAHASA CINA", "华文"])]
+             for n in params.get("match_names", ["BAHASA CINA", "CHINESE"])]
     return codes, names
 
 
@@ -205,7 +205,7 @@ def load_dskp_content(file_path):
 # Class block layout: each class is CLASS_BLOCK_SIZE rows apart.
 # Class 1 header at row 7, Class 2 at 38, Class 3 at 69, etc.
 CLASS_BLOCK_SIZE = 31
-CLASS_HEADER_ROW = 7  # row of "班级: N" / "KELAS: N"
+CLASS_HEADER_ROW = 7  # row of the class header ("KELAS: N")
 CLASS_OFFSET_TITLE = 6   # +6 from header → title/skill row
 CLASS_OFFSET_CS = 7      # +7 → content standard
 CLASS_OFFSET_LS = 9      # +9 → learning standard
@@ -259,7 +259,7 @@ class DskpFiller:
                  selection: [1, 1, 1], col_start: 2}
             file: assets/bc-dskp/t{tingkatan}.txt
             match_codes: [BC]
-            match_names: ["BAHASA CINA", "华文"]
+            match_names: ["BAHASA CINA", "CHINESE"]
             cs: 1
             ls: 1
             left_col: 2

@@ -18,7 +18,7 @@ def load_profile(path):
     Structural validation only — required ``inputs.template``, a well-formed
     ``handlers:`` list. Whether a handler *name* exists and whether its
     ``params`` make sense is checked by the handler registry (decision 2 +
-    "params 由各 handler 自己校验").
+    "each handler validates its own params").
     """
     with open(path, encoding="utf-8") as f:
         raw = yaml.safe_load(f)

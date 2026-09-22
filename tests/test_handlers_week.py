@@ -1,7 +1,7 @@
 """Week resolution: cuti / no-minggu / out-of-range errors (PLAN.md stage 0).
 
 All error assertions match substrings of the CURRENT wording; PLAN.md scope
-item "不重构错误文案措辞" guarantees the wording survives the refactor.
+item "do not reword error messages" guarantees the wording survives the refactor.
 Stage 3 changed the return value from a dict to the ``Week`` dataclass.
 """
 

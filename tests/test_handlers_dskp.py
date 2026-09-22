@@ -4,9 +4,9 @@ from harness import fn
 
 _section_pair = fn("_section_pair")
 
-SECTIONS3 = {"1": {"title": "1.0 听说技能"},
-             "2": {"title": "2.0 阅读技能"},
-             "3": {"title": "3.0 写作技能"}}
+SECTIONS3 = {"1": {"title": "1.0 Listening and Speaking"},
+             "2": {"title": "2.0 Reading"},
+             "3": {"title": "3.0 Writing"}}
 
 
 def test_pair_starts_with_the_first_two_sections():

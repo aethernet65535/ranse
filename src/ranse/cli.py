@@ -90,7 +90,7 @@ def _run_fill(parser, args):
     profile = load_profile(args.profile)
 
     # Unknown handler names / invalid params fail here, before any cell is
-    # touched (decision 2 + "params 由各 handler 自己校验").
+    # touched (decision 2 + "each handler validates its own params").
     handlers = build_handlers(profile.handlers)
 
     ctx = Context(
