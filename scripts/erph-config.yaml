@@ -5,3 +5,53 @@ subjects:
 # Fixed cell values: TAB-separated → <SHEET> <RANGE> <VALUE>
 fixed_cells: |
   MENU	B3:C3	ALI BIN ABU
+
+# ---------------------------------------------------------------------------
+# Automatic DSKP filling
+# ---------------------------------------------------------------------------
+# When run with --jadual-config, every lesson of the matched subject is
+# filled automatically: two parent-level content standards side by side,
+# sliding forward one section per week (1+2 → 2+3 → … → wrap back to 1+2).
+#
+# match_codes:  subject codes in the timetable xlsx (e.g. "BC-1A" → BC)
+# match_names:  subject names to match when reading a CSV timetable
+# cs / ls:      which content/learning standard inside a section (default 1)
+# left_col / right_col: column of the left / right half (2=B, 5=E)
+# enabled:      set false to turn the whole feature off
+#
+# file:         source txt/json, same format as the static dskp entries below
+#               (so a hand-written file works too, e.g. one holding your own
+#               teaching objectives 教学目标). {tingkatan} is replaced with
+#               the lesson's tingkatan, so T1 uses t1.txt, T2 uses t2.txt, …
+#               Omit it to keep the built-in assets/bc-dskp/t1..t5.txt table.
+
+dskp_auto:
+  enabled: true
+  match_codes: [BC]
+  match_names: ["BAHASA CINA", "华文"]
+  file: assets/bc-dskp/t{tingkatan}.txt
+  cs: 1
+  ls: 1
+  left_col: 2
+  right_col: 5
+
+# Static DSKP entries (manual, one selection per cell). The automatic
+# entries above are appended after these, so they win on the same cell.
+# Generate JSON first: python gen_dskp.py --txt <file> --select 1 1 1 -o output.json
+# sheet: target sheet name (e.g. ISNIN, AHAD)
+# class: class number within the sheet (1, 2, 3...)
+# col_start: 2=B, 5=E, 9=I (which column block to fill)
+#
+# dskp:
+#   - file: /path/to/t1.json
+#     selection: [1, 1, 1]
+#     sheet: ISNIN
+#     class: 1
+#     col_start: 2
+
+# dskp:
+#   - file: /home/user/65535/workspace/lab/ranse/assets/bc-dskp/t2.txt
+#     selection: [1, 1, 1]
+#     sheet: ISNIN
+#     class: 1
+#     col_start: 2
