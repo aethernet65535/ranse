@@ -2,9 +2,9 @@
 
 import os
 
-# Repository root, kept at its historical VALUE (the directory holding both
-# scripts/ and src/). The original definition lived in scripts/fill-erph.py
-# as two dirname() levels from that file; the package sits one level deeper
-# (src/ranse/), so it takes three here. _resolve_path bases depend on it.
+# Repository root: the directory holding src/, profiles/, config/ and
+# assets/. The package sits three levels below it (src/ranse/__init__.py),
+# so it takes three dirname() calls. _resolve_path bases depend on this value
+# (relative profile/calendar paths fall back to the repo root).
 _REPO_ROOT = os.path.dirname(os.path.dirname(
     os.path.dirname(os.path.abspath(__file__))))
