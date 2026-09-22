@@ -9,18 +9,15 @@ There is no ``--xlsx``: the target template is a profile input (decision 10).
 """
 
 import argparse
-import os
 import sys
 
-from . import _REPO_ROOT
-from .core.refs import _resolve_path
 from .core.xlsx import Workbook
 from .errors import RanseError
 from .handlers.base import Context
 from .handlers.registry import build_handlers
 from .inputs import dskp as dskp_input
 from .inputs.timetable import DAY_ORDER, load_schedule
-from .inputs.yaml import load_profile
+from .inputs.yaml import load_profile, resolve_template
 
 REQUIRED_SHEETS = ["MENU"] + [d.upper() for d in DAY_ORDER]
 
@@ -65,6 +62,9 @@ def _build_parser():
         "write", help="write a single cell on the profile's template")
     write.add_argument("--profile", required=True,
                        help="Path to the profile YAML (inputs + handlers)")
+    write.add_argument("--minggu", type=int, default=None,
+                       help="Week number, needed only when the profile's "
+                            "template contains {minggu}")
     write.add_argument("ref", metavar="SHEET!CELL",
                        help="Cell to write, e.g. MENU!B3 or MENU!B3:C3")
     write.add_argument("value", help="Value to write (written as text)")
@@ -76,20 +76,11 @@ def _build_parser():
     return parser
 
 
-def _open_template(profile):
-    """Resolve + open the profile's template (the only target workbook)."""
-    bases = [profile.base_dir, os.getcwd(), _REPO_ROOT]
-    template = _resolve_path(profile.inputs.template, bases)
-    if not os.path.isfile(template):
-        print(f"Error: file not found: {template}", file=sys.stderr)
-        sys.exit(1)
-    return template, Workbook.open(template)
-
-
 def _run_write(args):
     """``ranse write`` — one cell through the core write API (decision 9)."""
     profile = load_profile(args.profile)
-    template, wb = _open_template(profile)
+    template = resolve_template(profile, args.minggu)
+    wb = Workbook.open(template)
     wb.write(args.ref, args.value)
     wb.save()
     print(f"Done: {args.ref} = {args.value!r} ({template})")
@@ -97,19 +88,12 @@ def _run_write(args):
 
 def _run_fill(parser, args):
     profile = load_profile(args.profile)
-    template, wb = _open_template(profile)
 
     # Unknown handler names / invalid params fail here, before any cell is
     # touched (decision 2 + "params 由各 handler 自己校验").
     handlers = build_handlers(profile.handlers)
 
-    missing = [s for s in REQUIRED_SHEETS if s not in wb.sheets]
-    if missing:
-        print(f"Error: missing sheets: {', '.join(missing)}", file=sys.stderr)
-        sys.exit(1)
-
     ctx = Context(
-        workbook=wb,
         profile=profile,
         runtime={
             "date": args.date,
@@ -124,6 +108,16 @@ def _run_fill(parser, args):
             continue
         ctx.params = spec.params
         handler.resolve(ctx)
+
+    # --- Which workbook is this week's? (profile input; {minggu} patterns) ---
+    template = resolve_template(profile, ctx.week.minggu if ctx.week else None)
+    wb = Workbook.open(template)
+    ctx.workbook = wb
+
+    missing = [s for s in REQUIRED_SHEETS if s not in wb.sheets]
+    if missing:
+        print(f"Error: missing sheets: {', '.join(missing)}", file=sys.stderr)
+        sys.exit(1)
 
     if not ctx.timetable_path and not any(spec.name == "dskp"
                                           for spec, _ in handlers):

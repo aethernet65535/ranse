@@ -16,8 +16,10 @@ from ..model import Profile, Schedule, Week
 class Context:
     """Everything handlers may touch.
 
-    ``workbook``   the target workbook (write-only core API);
     ``profile``    the loaded profile (``inputs`` / ``context`` / handlers);
+    ``workbook``   the target workbook (write-only core API). It stays None
+                   during the resolve phase — the orchestrator opens it once
+                   the week (and therefore the template file) is known;
     ``schedule``   timetable lessons, read between resolve and fill;
     ``week``       resolved ``Week`` (or None when no calendar is used);
     ``start_date`` week start (Sunday) the MENU date column is filled from;
@@ -29,8 +31,8 @@ class Context:
                    the orchestrator to read the timetable;
     ``report``     lines printed by the orchestrator after filling.
     """
-    workbook: Workbook
     profile: Profile
+    workbook: Optional[Workbook] = None
     schedule: Optional[Schedule] = None
     week: Optional[Week] = None
     start_date: Optional[date] = None

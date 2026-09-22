@@ -11,10 +11,20 @@
 profile: ali-bin-abu-2026
 
 inputs:
-  # The e-RPH template this profile fills (in place).
-  template: "assets/ALI BIN ABU/12. ERPH/template.xlsx"
+  # The e-RPH workbook this profile fills (in place). {minggu} is replaced
+  # with the resolved week number; "*" covers the monthly subdirectories
+  # (01. JANUARY/M1.xlsx … 07. TMP-NEW/M33.xlsx), so one profile serves the
+  # whole year and the CLI stays week-agnostic:
+  #   ranse fill --profile profiles/ali-bin-abu.yaml --date 2026-09-20
+  template: "assets/ALI BIN ABU/12. ERPH/2026/*/M{minggu}.xlsx"
   # School calendar: date → minggu/siri → timetable file.
   jadual: "config/jadual-minggu.yaml"
+  # Escape hatch: when {minggu} matches more than one workbook (or the file
+  # is named/placed unusually), pin the week explicitly. The error message
+  # lists the candidates, e.g. minggu 18 exists in both 06. JUNE/ and
+  # 07. TMP-NEW/, so it needs an entry here.
+  # templates:
+  #   18: "assets/ALI BIN ABU/12. ERPH/2026/07. TMP-NEW/M18.xlsx"
   # Optional explicit timetable source; when omitted the siri of the week
   # decides (jadual: → the file registered for that siri).
   # timetable: "assets/timetable/jadual-waktu-2026-siri-7.xlsx"

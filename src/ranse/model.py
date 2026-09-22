@@ -98,12 +98,20 @@ class HandlerSpec:
 
 @dataclass(frozen=True)
 class ProfileInputs:
-    """Profile ``inputs:`` — where the files live (decision 10/11)."""
+    """Profile ``inputs:`` — where the files live (decision 10/11).
+
+    ``template`` may contain ``{minggu}`` (resolved once the week is known)
+    and/or glob wildcards, so one profile can serve the whole year:
+    ``"…/2026/*/M{minggu}.xlsx"``. ``templates`` maps a minggu number to an
+    explicit workbook and wins over the pattern (escape hatch for weeks whose
+    file is named or placed differently).
+    """
 
     template: str
     jadual: Optional[str] = None
     timetable: Optional[str] = None
     csv: Optional[str] = None
+    templates: Dict[str, str] = field(default_factory=dict)
 
 
 @dataclass

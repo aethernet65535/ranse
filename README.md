@@ -11,7 +11,7 @@ If you've ever spent time copying class names, periods, and subjects into the e-
 ## Features
 
 - **Preserves original formatting** — Directly edits the xlsx file's internal XML, so all cell styles, merged cells, and borders remain untouched.
-- **Profiles** — One YAML file per teacher/template says where the files live (`inputs`), what is shared between handlers (`context`) and which handlers run (`handlers`).
+- **Profiles** — One YAML file per teacher says where the files live (`inputs`), what is shared between handlers (`context`) and which handlers run (`handlers`). The workbook can be a `{minggu}` pattern (`…/M{minggu}.xlsx`), so one profile serves the whole year.
 - **Two input formats** — Read your timetable from an `.xlsx` file or a `.csv` file.
 - **Automatic period merging** — Consecutive periods with the same class and subject are merged into one row (e.g., two back-to-back Bahasa Cina periods become one entry).
 - **Configurable subject mapping** — Map short codes like `BC` to full names like "BAHASA CINA 华文".
@@ -54,13 +54,13 @@ This installs the `ranse` command. `pip install -e ".[dev]"` also installs pytes
 
 ## Usage
 
-### `ranse fill` — fill the template
+### `ranse fill` — fill this week's workbook
 
 ```bash
-ranse fill --profile profiles/ali-bin-abu.yaml
+ranse fill --profile profiles/ali-bin-abu.yaml --date 2026-09-20
 ```
 
-That single command resolves the week from the calendar, reads that week's timetable, fills the MENU sheet, the fixed cells and the DSKP blocks, and overwrites the template **in place**.
+That single command resolves the week from the calendar, picks that week's workbook, reads the matching timetable, fills the MENU sheet, the fixed cells and the DSKP blocks, and overwrites the workbook **in place**. Nothing has to be edited between weeks.
 
 | Option | Required | Description |
 |---|---|---|
@@ -69,26 +69,23 @@ That single command resolves the week from the calendar, reads that week's timet
 | `--minggu` | No | Override the week number (default: resolved from `--date`) |
 | `--no-dskp-auto` | No | Disable automatic content-standard filling for this run |
 
-There is deliberately no `--xlsx`: the template is a profile input, so a mistake in the shell cannot overwrite the wrong workbook.
-
-```bash
-ranse fill --profile profiles/ali-bin-abu.yaml --date 2026-09-20
-```
+There is deliberately no `--xlsx`: the workbook is a profile input, so a mistake in the shell cannot overwrite the wrong file.
 
 This will:
 1. Resolve the week: `2026-09-20` → **minggu 33**, siri `7` from `config/jadual-minggu.yaml`
-2. Read that week's timetable (`assets/timetable/jadual-waktu-2026-siri-7.xlsx`)
-3. Fill the MENU sheet (the date column gets the week's Sunday)
-4. Fill every matched lesson with two parent-level content standards (left/right), sliding one section per week
-5. Overwrite the template in place
+2. Pick the workbook for minggu 33 (`…/2026/07. TMP-NEW/M33.xlsx`)
+3. Read that week's timetable (`assets/timetable/jadual-waktu-2026-siri-7.xlsx`)
+4. Fill the MENU sheet (the date column gets the week's Sunday)
+5. Fill every matched lesson with two parent-level content standards (left/right), sliding one section per week
+6. Overwrite the workbook in place
 
 ### `ranse write` — one cell
 
 ```bash
-ranse write --profile profiles/ali-bin-abu.yaml MENU!B3 "ALI BIN ABU"
+ranse write --profile profiles/ali-bin-abu.yaml --minggu 33 MENU!B3 "ALI BIN ABU"
 ```
 
-Writes a single cell (`SHEET!CELL`, or `SHEET!FROM:TO` — the top-left of a range or merged range is used) and saves the template. The value is written as text; use `ranse fill` with a `fixed_cells` handler for values that must be numbers.
+Writes a single cell (`SHEET!CELL`, or `SHEET!FROM:TO` — the top-left of a range or merged range is used) and saves the workbook. `--minggu` is only needed when the profile's `template` contains `{minggu}`. The value is written as text; use `ranse fill` with a `fixed_cells` handler for values that must be numbers.
 
 ### `ranse dskp` — parse DSKP content
 
@@ -108,8 +105,9 @@ A profile is the only thing `ranse fill` / `ranse write` need. It has three sect
 profile: ali-bin-abu-2026
 
 inputs:
-  template: "assets/ALI BIN ABU/12. ERPH/template.xlsx"  # required
-  jadual: "config/jadual-minggu.yaml"                     # week calendar
+  template: "assets/ALI BIN ABU/12. ERPH/2026/*/M{minggu}.xlsx"  # required
+  jadual: "config/jadual-minggu.yaml"                            # week calendar
+  # templates: {18: "…/06. JUNE/M18.xlsx"}    # pin one week explicitly
   # timetable: "assets/timetable/jadual-waktu-2026-siri-7.xlsx"  # optional override
   # csv: "timetable.csv"
 
@@ -140,12 +138,29 @@ handlers:
 
 | Key | Description |
 |---|---|
-| `template` | **Required.** The e-RPH xlsx that gets filled in place |
+| `template` | **Required.** The e-RPH workbook that gets filled in place. May contain `{minggu}` and glob wildcards |
+| `templates` | Optional `minggu → path` map; wins over `template` for those weeks |
 | `jadual` | The week calendar (`config/jadual-minggu.yaml`) |
 | `timetable` | Optional explicit timetable xlsx; wins over the siri lookup |
 | `csv` | Optional explicit timetable csv; wins over the siri lookup |
 
 Relative paths are resolved against the profile's own directory, then the current directory, then the repo root — so the shipped profile works no matter where you run it from.
+
+**One profile per year.** `template` is a pattern: `{minggu}` is replaced with the resolved week number, and `*`/`?` wildcards search for the file. The shipped profile therefore finds `01. JANUARY/M1.xlsx`, `02. FEBRUARY/M4.xlsx` and `07. TMP-NEW/M33.xlsx` from one line, and the timetable side is already mapped by the calendar (`jadual_siri` + `jadual`).
+
+If a week cannot be decided automatically, `ranse fill` says so and lists the candidates — then pin it with `templates`:
+
+```text
+Error: 'assets/…/2026/*/M18.xlsx' matches 2 workbooks for minggu 18:
+…/06. JUNE/M18.xlsx, …/07. TMP-NEW/M18.xlsx
+— add an explicit 'inputs.templates' entry to the profile
+```
+
+```yaml
+inputs:
+  templates:
+    18: "assets/ALI BIN ABU/12. ERPH/2026/07. TMP-NEW/M18.xlsx"
+```
 
 ### `context`
 

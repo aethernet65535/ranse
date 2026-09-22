@@ -11,7 +11,7 @@ Jika anda pernah menghabiskan masa menyalin nama kelas, waktu, dan subjek ke dal
 ## Ciri-ciri
 
 - **Mengekalkan format asal** — Mengedit terus XML dalaman fail xlsx, supaya semua gaya sel, sel digabungkan, dan sempadan kekal utuh.
-- **Profil** — Satu fail YAML bagi setiap guru/templat yang menyatakan di mana fail berada (`inputs`), apa yang dikongsi antara handler (`context`) dan handler mana yang dijalankan (`handlers`).
+- **Profil** — Satu fail YAML bagi setiap guru yang menyatakan di mana fail berada (`inputs`), apa yang dikongsi antara handler (`context`) dan handler mana yang dijalankan (`handlers`). Buku kerja boleh menjadi pola `{minggu}` (`…/M{minggu}.xlsx`), jadi satu profil berkhidmat untuk setahun.
 - **Dua format input** — Baca jadual waktu anda dari fail `.xlsx` atau `.csv`.
 - **Penggabungan waktu secara automatik** — Waktu berturut-turut dengan kelas dan subjek yang sama digabungkan menjadi satu baris (contohnya dua waktu Bahasa Cina berturut-turut menjadi satu entri).
 - **Pemetaan subjek yang boleh dikonfigurasi** — Petakan kod pendek seperti `BC` kepada nama penuh seperti "BAHASA CINA 华文".
@@ -54,13 +54,13 @@ Ini memasang arahan `ranse`. `pip install -e ".[dev]"` juga memasang pytest untu
 
 ## Penggunaan
 
-### `ranse fill` — isi templat
+### `ranse fill` — isi buku kerja minggu ini
 
 ```bash
-ranse fill --profile profiles/ali-bin-abu.yaml
+ranse fill --profile profiles/ali-bin-abu.yaml --date 2026-09-20
 ```
 
-Satu arahan itu menyelesaikan minggu daripada kalendar, membaca jadual waktu minggu tersebut, mengisi helaian MENU, sel tetap dan blok DSKP, kemudian menulis semula templat **di tempat asal**.
+Satu arahan itu menyelesaikan minggu daripada kalendar, memilih buku kerja minggu tersebut, membaca jadual waktu yang sepadan, mengisi helaian MENU, sel tetap dan blok DSKP, kemudian menulis semula buku kerja **di tempat asal**. Tiada apa-apa perlu diedit antara minggu.
 
 | Pilihan | Diperlukan | Penerangan |
 |---|---|---|
@@ -69,7 +69,7 @@ Satu arahan itu menyelesaikan minggu daripada kalendar, membaca jadual waktu min
 | `--minggu` | Tidak | Gantikan nombor minggu (lalai: diselesaikan daripada `--date`) |
 | `--no-dskp-auto` | Tidak | Matikan pengisian standard kandungan automatik untuk jalan ini |
 
-Tiada `--xlsx` dengan sengaja: templat ialah input profil, jadi kesilapan pada baris arahan tidak boleh menulis ganti fail yang salah.
+Tiada `--xlsx` dengan sengaja: buku kerja ialah input profil, jadi kesilapan pada baris arahan tidak boleh menulis ganti fail yang salah.
 
 ```bash
 ranse fill --profile profiles/ali-bin-abu.yaml --date 2026-09-20
@@ -77,18 +77,19 @@ ranse fill --profile profiles/ali-bin-abu.yaml --date 2026-09-20
 
 Ini akan:
 1. Menyelesaikan minggu: `2026-09-20` → **minggu 33**, siri `7` daripada `config/jadual-minggu.yaml`
-2. Membaca jadual waktu minggu tersebut (`assets/timetable/jadual-waktu-2026-siri-7.xlsx`)
-3. Mengisi helaian MENU (lajur tarikh mendapat hari Ahad minggu itu)
-4. Mengisi setiap pelajaran yang dipadankan dengan dua standard kandungan peringkat induk (kiri/kanan), bergerak satu seksyen setiap minggu
-5. Menulis semula templat di tempat asal
+2. Memilih buku kerja bagi minggu 33 (`…/2026/07. TMP-NEW/M33.xlsx`)
+3. Membaca jadual waktu minggu tersebut (`assets/timetable/jadual-waktu-2026-siri-7.xlsx`)
+4. Mengisi helaian MENU (lajur tarikh mendapat hari Ahad minggu itu)
+5. Mengisi setiap pelajaran yang dipadankan dengan dua standard kandungan peringkat induk (kiri/kanan), bergerak satu seksyen setiap minggu
+6. Menulis semula buku kerja di tempat asal
 
 ### `ranse write` — satu sel
 
 ```bash
-ranse write --profile profiles/ali-bin-abu.yaml MENU!B3 "ALI BIN ABU"
+ranse write --profile profiles/ali-bin-abu.yaml --minggu 33 MENU!B3 "ALI BIN ABU"
 ```
 
-Menulis satu sel (`SHEET!CELL`, atau `SHEET!FROM:TO` — sudu kiri atas julat atau julat digabungkan digunakan) dan menyimpan templat. Nilai ditulis sebagai teks; gunakan `ranse fill` dengan handler `fixed_cells` untuk nilai yang perlu menjadi nombor.
+Menulis satu sel (`SHEET!CELL`, atau `SHEET!FROM:TO` — sudu kiri atas julat atau julat digabungkan digunakan) dan menyimpan buku kerja. `--minggu` hanya diperlukan apabila `template` profil mengandungi `{minggu}`. Nilai ditulis sebagai teks; gunakan `ranse fill` dengan handler `fixed_cells` untuk nilai yang perlu menjadi nombor.
 
 ### `ranse dskp` — hurai kandungan DSKP
 
@@ -108,8 +109,9 @@ Profil ialah satu-satunya perkara yang diperlukan oleh `ranse fill` / `ranse wri
 profile: ali-bin-abu-2026
 
 inputs:
-  template: "assets/ALI BIN ABU/12. ERPH/template.xlsx"  # wajib
-  jadual: "config/jadual-minggu.yaml"                     # kalendar minggu
+  template: "assets/ALI BIN ABU/12. ERPH/2026/*/M{minggu}.xlsx"  # wajib
+  jadual: "config/jadual-minggu.yaml"                            # kalendar minggu
+  # templates: {18: "…/06. JUNE/M18.xlsx"}    # tetapkan satu minggu secara eksplisit
   # timetable: "assets/timetable/jadual-waktu-2026-siri-7.xlsx"  # gantian pilihan
   # csv: "timetable.csv"
 
@@ -140,12 +142,29 @@ handlers:
 
 | Kunci | Penerangan |
 |---|---|
-| `template` | **Wajib.** Fail e-RPH xlsx yang akan diisi di tempat asal |
+| `template` | **Wajib.** Buku kerja e-RPH yang akan diisi di tempat asal. Boleh mengandungi `{minggu}` dan wildcard glob |
+| `templates` | Peta `minggu → laluan` (pilihan); menang atas `template` bagi minggu tersebut |
 | `jadual` | Kalendar minggu (`config/jadual-minggu.yaml`) |
 | `timetable` | Fail jadual waktu xlsx eksplisit (pilihan); mengalahkan carian siri |
 | `csv` | Fail jadual waktu csv eksplisit (pilihan); mengalahkan carian siri |
 
 Laluan relatif diselesaikan terhadap direktori profil itu sendiri, kemudian direktori semasa, kemudian akar repositori — jadi profil yang disertakan berfungsi di mana-mana sahaja anda menjalankannya.
+
+**Satu profil untuk setahun.** `template` ialah satu pola: `{minggu}` digantikan dengan nombor minggu yang diselesaikan, dan wildcard `*`/`?` mencari fail tersebut. Profil yang disertakan justeru menemui `01. JANUARY/M1.xlsx`, `02. FEBRUARY/M4.xlsx` dan `07. TMP-NEW/M33.xlsx` daripada satu baris, manakala jadual waktu sudah dipetakan oleh kalendar (`jadual_siri` + `jadual`).
+
+Jika sesuatu minggu tidak dapat ditentukan secara automatik, `ranse fill` akan memberitahu dan menyenaraikan calonnya — kemudian tetapkan dengan `templates`:
+
+```text
+Error: 'assets/…/2026/*/M18.xlsx' matches 2 workbooks for minggu 18:
+…/06. JUNE/M18.xlsx, …/07. TMP-NEW/M18.xlsx
+— add an explicit 'inputs.templates' entry to the profile
+```
+
+```yaml
+inputs:
+  templates:
+    18: "assets/ALI BIN ABU/12. ERPH/2026/07. TMP-NEW/M18.xlsx"
+```
 
 ### `context`
 
