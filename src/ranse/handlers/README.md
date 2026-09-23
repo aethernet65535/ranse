@@ -2,7 +2,7 @@
 
 The handler **system** (protocols, registry, two-phase pipeline, profile
 schema) is framework and is documented in [`docs/DESIGN.md`](../../../docs/DESIGN.md)
-§3–§5. This directory holds the four **shipped e-RPH handlers** — the
+S3–S5. This directory holds the four **shipped e-RPH handlers** — the
 business rules that must stay out of `core/` (decision 6). Each handler lives
 in its own folder, with its business rules in that folder's DESIGN.md:
 
@@ -15,7 +15,7 @@ in its own folder, with its business rules in that folder's DESIGN.md:
 
 `base.py` (the `Resolver` / `Filler` protocols + `Context`) and
 `registry.py` (the built-in registry, decision 2) are framework, not
-business, and are documented in `docs/DESIGN.md` §3.2.
+business, and are documented in `docs/DESIGN.md` S3.2.
 
 Risk numbers run project-wide. The framework risks (1–3, 5–6) live in
 [`docs/DESIGN.md`](../../../docs/DESIGN.md) S10; the business risks (4, 7–12)
@@ -29,7 +29,7 @@ are defined in the documents below.
   discovered only from `handlers/registry.py` (decision 2);
 - `phase: "resolve"` handlers compute `ctx` inputs and **write no cells**;
   `phase: "fill"` handlers are the only code allowed to write, and only
-  through `ctx.workbook` (the core write API, `docs/DESIGN.md` §3.1);
+  through `ctx.workbook` (the core write API, `docs/DESIGN.md` S3.1);
 - each handler validates its own `params` at build time — a broken profile
   fails before any cell is touched;
 - errors are reported the handler way: `print(…, file=sys.stderr)` +
@@ -64,7 +64,7 @@ wins on a shared MENU cell.
 | 8 | [`fixed_cells/DESIGN.md`](fixed_cells/DESIGN.md) (`int(value)` at write time) |
 | 9 | this file (fill order, above) |
 | 4, 10 | [`docs/input-formats.md`](../../../docs/input-formats.md) (period tables, Jumaat/Sabtu dropped) |
-| 1, 2, 3, 5, 6 | [`docs/DESIGN.md`](../../../docs/DESIGN.md) §10 (framework) |
+| 1, 2, 3, 5, 6 | [`docs/DESIGN.md`](../../../docs/DESIGN.md) S10 (framework) |
 
 ---
 

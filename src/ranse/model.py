@@ -1,6 +1,6 @@
 """Domain model: lessons, schedules, weeks and the loaded profile.
 
-Deliberately *outside* core (docs/DESIGN.md §2): these types carry timetable / e-RPH
+Deliberately *outside* core (docs/DESIGN.md S2): these types carry timetable / e-RPH
 semantics (day names, tingkatan, handler names) that the write-only workbook
 engine must not know about. ``inputs`` produce them, ``handlers`` consume them.
 """
@@ -116,7 +116,7 @@ class ProfileInputs:
 
 @dataclass
 class Profile:
-    """A loaded profile file (docs/DESIGN.md §3: explicit handler list)."""
+    """A loaded profile file (docs/DESIGN.md S3: explicit handler list)."""
 
     name: str
     inputs: ProfileInputs

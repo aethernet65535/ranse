@@ -1,6 +1,6 @@
 """Profile schema: explicit handlers, unknown names, param validation.
 
-Stage 3 acceptance (docs/DESIGN.md §4): the three failure modes the registry owns —
+Stage 3 acceptance (docs/DESIGN.md S4): the three failure modes the registry owns —
 unknown handler name, missing ``inputs.template`` and invalid handler params
 — plus a check that the shipped profile only names registered handlers.
 No ``assets/`` needed, so these run on a fresh clone.

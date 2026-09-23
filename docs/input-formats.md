@@ -2,7 +2,7 @@
 
 The readers in `src/ranse/inputs/` turn source files into model objects
 (`Schedule`, DSKP section dicts) and never touch the target workbook
-(decision 8, [`docs/DESIGN.md`](DESIGN.md) §8). This document specifies the
+(decision 8, [`docs/DESIGN.md`](DESIGN.md) S8). This document specifies the
 **on-disk formats** those readers accept.
 
 | Input | Format | Reader |
@@ -11,7 +11,7 @@ The readers in `src/ranse/inputs/` turn source files into model objects
 | Timetable | csv | `inputs/timetable.py` → `build_schedule` |
 | DSKP | txt / pdf / JSON | `inputs/dskp.py` |
 | School calendar | yaml | `inputs/yaml.py` → `load_jadual_config` — specified in [`config/README.md`](../config/README.md) |
-| Profile | yaml | `inputs/yaml.py` → `load_profile` — schema in [`docs/DESIGN.md`](DESIGN.md) §3.3 |
+| Profile | yaml | `inputs/yaml.py` → `load_profile` — schema in [`docs/DESIGN.md`](DESIGN.md) S3.3 |
 
 Risk numbers run project-wide. The framework risks (1–3, 5–6) live in
 [`docs/DESIGN.md`](DESIGN.md) S10; risks 4 and 10 are defined below.

@@ -1,7 +1,7 @@
 # The school week calendar — `jadual-minggu.yaml`
 
 This directory holds the standalone **school calendar** data file (decision 11,
-[`docs/DESIGN.md`](../docs/DESIGN.md) §3.3). It is not part of any profile: a
+[`docs/DESIGN.md`](../docs/DESIGN.md) S3.3). It is not part of any profile: a
 profile *references* it via `inputs.jadual`, and the `week` handler reads it
 to answer two questions:
 
@@ -93,5 +93,5 @@ Implemented by the `week` handler; the full rules and error list are in
 
 - Handler rules that consume this file: [`src/ranse/handlers/week/DESIGN.md`](../src/ranse/handlers/week/DESIGN.md)
 - Timetable file formats picked here: [`docs/input-formats.md`](../docs/input-formats.md)
-- Profile schema (`inputs.jadual`): [`docs/DESIGN.md`](../docs/DESIGN.md) §3.3
+- Profile schema (`inputs.jadual`): [`docs/DESIGN.md`](../docs/DESIGN.md) S3.3
 - Example profile: [`profiles/ali-bin-abu/profile.yaml`](../profiles/ali-bin-abu/profile.yaml)

@@ -6,7 +6,7 @@ folder:
 
 | File | Contents |
 |---|---|
-| `profile.yaml` | the profile itself — `inputs` / `context` / `handlers`; schema in [`docs/DESIGN.md`](../../docs/DESIGN.md) §3.3 |
+| `profile.yaml` | the profile itself — `inputs` / `context` / `handlers`; schema in [`docs/DESIGN.md`](../../docs/DESIGN.md) S3.3 |
 | `DESIGN.md` | this profile's business design: the teacher, the template layout, the subject map and the handler pipeline |
 
 ## Running it

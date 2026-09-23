@@ -1,6 +1,6 @@
 # ranse profile — ALI BIN ABU (2026)
 #
-# A profile is the only input the CLI takes (docs/DESIGN.md §3):
+# A profile is the only input the CLI takes (docs/DESIGN.md S3):
 #   inputs:    where the files live (template, calendar, timetable)
 #   context:   values shared by several handlers
 #   handlers:  the explicit, ordered list of built-in handlers to run
