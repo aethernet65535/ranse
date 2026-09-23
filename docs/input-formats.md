@@ -97,7 +97,7 @@ the golden suite proves it:
 **Risk 4** also covers the consumer side: `merge_periods` (in `model.py`)
 treats a **time gap as a new run** — two identical lessons separated by a gap
 never merge. See
-[`src/ranse/handlers/README.md`](../src/ranse/handlers/README.md) (menu).
+[`src/ranse/handlers/menu/README.md`](../src/ranse/handlers/menu/README.md).
 
 ---
 

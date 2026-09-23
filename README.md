@@ -45,7 +45,7 @@ The framework and each business area are documented separately:
 | Document | Contents |
 |---|---|
 | [`docs/DESIGN.md`](docs/DESIGN.md) | core framework design: engine, CLI, handler system, profile schema, pipeline |
-| [`src/ranse/handlers/README.md`](src/ranse/handlers/README.md) | the shipped handlers' business rules (week, MENU, fixed cells, DSKP) |
+| [`src/ranse/handlers/README.md`](src/ranse/handlers/README.md) | shipped handler business rules — index; each handler has its own README in its own folder |
 | [`docs/input-formats.md`](docs/input-formats.md) | source file formats: timetable xlsx/csv, DSKP txt/pdf/json |
 | [`config/README.md`](config/README.md) | the school week calendar (`jadual-minggu.yaml`) |
 | [`docs/translations/ms-MY/README.md`](docs/translations/ms-MY/README.md) | this README in Bahasa Melayu |
@@ -64,7 +64,7 @@ src/ranse/
   model.py                   # Lesson / Schedule / Week / Profile
   core/                      # write-only xlsx engine (no business knowledge)
   inputs/                    # timetable, DSKP and YAML readers
-  handlers/                  # week / menu / fixed_cells / dskp (+ README)
+  handlers/                  # week/ menu/ fixed_cells/ dskp/ — one folder + README each
 tests/                       # unit tests + golden regression baselines
 ```
 
@@ -194,8 +194,8 @@ An explicit, ordered list. Only built-in handlers can be named — an unknown na
 | `fixed_cells` | fill | writes `params.cells` — a list of `[sheet, range, value]` |
 | `dskp` | fill | writes the DSKP standard rows to the day sheets |
 
-Each handler's rules and full `params` reference:
-[`src/ranse/handlers/README.md`](src/ranse/handlers/README.md).
+Each handler's rules and full `params` reference live in that handler's own
+README (index: [`src/ranse/handlers/README.md`](src/ranse/handlers/README.md)).
 
 ## Architecture
 
