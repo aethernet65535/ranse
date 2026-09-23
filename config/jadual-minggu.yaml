@@ -6,8 +6,8 @@
 #   2. Which timetable (siri) does that week use?                → jadual_siri / jadual
 #
 # Usage (referenced by the profile's inputs.jadual; the CLI only overrides date/week):
-#   ranse fill --profile profiles/ali-bin-abu.yaml
-#   ranse fill --profile profiles/ali-bin-abu.yaml --date 2026-09-20
+#   ranse fill --profile profiles/ali-bin-abu/profile.yaml
+#   ranse fill --profile profiles/ali-bin-abu/profile.yaml --date 2026-09-20
 #
 # Notes:
 #   - The minggu table is generated from the DATA sheet (TARIKH → MINGGU) in

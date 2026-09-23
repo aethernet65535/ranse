@@ -36,7 +36,8 @@ Rangka kerja dan setiap kawasan perniagaan didokumenkan secara berasingan:
 
 ```
 profiles/                    # Satu profil bagi setiap guru/templat (mula di sini)
-  ali-bin-abu.yaml
+  ali-bin-abu/               # satu folder bagi setiap profil: profile.yaml + dokumen
+    profile.yaml
 config/jadual-minggu.yaml    # Fail data kalendar sekolah (lihat config/README.md)
 docs/
   DESIGN.md                  # Reka bentuk rangka kerja teras
@@ -70,7 +71,7 @@ Ini memasang arahan `ranse`. `pip install -e ".[dev]"` juga memasang pytest untu
 ### `ranse fill` — isi buku kerja minggu ini
 
 ```bash
-ranse fill --profile profiles/ali-bin-abu.yaml --date 2026-09-20
+ranse fill --profile profiles/ali-bin-abu/profile.yaml --date 2026-09-20
 ```
 
 Satu arahan menyelesaikan input, membuka buku kerja profil, menjalankan handler secara berurutan dan menulis semula buku kerja **di tempat asal**. Tiada apa-apa perlu diedit antara minggu.
@@ -87,7 +88,7 @@ Tiada `--xlsx` dengan sengaja: buku kerja ialah input profil, jadi kesilapan pad
 ### `ranse write` — satu sel
 
 ```bash
-ranse write --profile profiles/ali-bin-abu.yaml --minggu 33 MENU!B3 "ALI BIN ABU"
+ranse write --profile profiles/ali-bin-abu/profile.yaml --minggu 33 MENU!B3 "ALI BIN ABU"
 ```
 
 Menulis satu sel (`SHEET!CELL`, atau `SHEET!FROM:TO` — sudu kiri atas julat atau julat digabungkan digunakan) dan menyimpan buku kerja. `--minggu` hanya diperlukan apabila `template` profil mengandungi `{minggu}`. Nilai ditulis sebagai teks; gunakan `ranse fill` dengan handler `fixed_cells` untuk nilai yang perlu menjadi nombor.

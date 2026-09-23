@@ -42,7 +42,7 @@ GOLDEN_DIR = TESTS_DIR / "golden"
 TEMPLATE_XLSX = REPO_ROOT / "assets" / "ALI BIN ABU" / "12. ERPH" / "template.xlsx"
 TIMETABLE_DIR = REPO_ROOT / "assets" / "timetable"
 DSKP_DIR = REPO_ROOT / "assets" / "bc-dskp"
-PROFILE_YAML = REPO_ROOT / "profiles" / "ali-bin-abu.yaml"
+PROFILE_YAML = REPO_ROOT / "profiles" / "ali-bin-abu" / "profile.yaml"
 JADUAL_YAML = REPO_ROOT / "config" / "jadual-minggu.yaml"
 
 # Stage-0 golden cases (docs/DESIGN.md stage 0): two normal weeks …

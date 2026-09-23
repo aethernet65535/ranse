@@ -17,8 +17,8 @@ inputs:
 ```
 
 ```bash
-ranse fill --profile profiles/ali-bin-abu.yaml                  # this week
-ranse fill --profile profiles/ali-bin-abu.yaml --date 2026-09-20
+ranse fill --profile profiles/ali-bin-abu/profile.yaml                  # this week
+ranse fill --profile profiles/ali-bin-abu/profile.yaml --date 2026-09-20
 ```
 
 ---
@@ -94,4 +94,4 @@ Implemented by the `week` handler; the full rules and error list are in
 - Handler rules that consume this file: [`src/ranse/handlers/week/DESIGN.md`](../src/ranse/handlers/week/DESIGN.md)
 - Timetable file formats picked here: [`docs/input-formats.md`](../docs/input-formats.md)
 - Profile schema (`inputs.jadual`): [`docs/DESIGN.md`](../docs/DESIGN.md) §3.3
-- Example profile: [`profiles/ali-bin-abu.yaml`](../profiles/ali-bin-abu.yaml)
+- Example profile: [`profiles/ali-bin-abu/profile.yaml`](../profiles/ali-bin-abu/profile.yaml)

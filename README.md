@@ -54,7 +54,8 @@ The framework and each business area are documented separately:
 
 ```
 profiles/                    # One profile per teacher/template (start here)
-  ali-bin-abu.yaml
+  ali-bin-abu/               # one folder per profile: profile.yaml + docs
+    profile.yaml
 config/jadual-minggu.yaml    # School calendar data file (see config/README.md)
 docs/
   DESIGN.md                  # Core framework design
@@ -88,7 +89,7 @@ This installs the `ranse` command. `pip install -e ".[dev]"` also installs pytes
 ### `ranse fill` — fill this week's workbook
 
 ```bash
-ranse fill --profile profiles/ali-bin-abu.yaml --date 2026-09-20
+ranse fill --profile profiles/ali-bin-abu/profile.yaml --date 2026-09-20
 ```
 
 One command resolves the inputs, opens the profile's workbook, runs the
@@ -108,7 +109,7 @@ mistake in the shell cannot overwrite the wrong file.
 ### `ranse write` — one cell
 
 ```bash
-ranse write --profile profiles/ali-bin-abu.yaml --minggu 33 MENU!B3 "ALI BIN ABU"
+ranse write --profile profiles/ali-bin-abu/profile.yaml --minggu 33 MENU!B3 "ALI BIN ABU"
 ```
 
 Writes a single cell (`SHEET!CELL`, or `SHEET!FROM:TO` — the top-left of a range or merged range is used) and saves the workbook. `--minggu` is only needed when the profile's `template` contains `{minggu}`. The value is written as text; use `ranse fill` with a `fixed_cells` handler for values that must be numbers.

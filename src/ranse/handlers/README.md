@@ -72,4 +72,4 @@ wins on a shared MENU cell.
 - School calendar consumed by `week`: [`config/README.md`](../../../config/README.md)
 - Timetable / DSKP source formats: [`docs/input-formats.md`](../../../docs/input-formats.md)
 - Framework design: [`docs/DESIGN.md`](../../../docs/DESIGN.md)
-- Example profile naming these handlers: [`profiles/ali-bin-abu.yaml`](../../../profiles/ali-bin-abu.yaml)
+- Example profile naming these handlers: [`profiles/ali-bin-abu/profile.yaml`](../../../profiles/ali-bin-abu/profile.yaml)

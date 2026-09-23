@@ -15,7 +15,7 @@ inputs:
   # with the resolved week number; "*" covers the monthly subdirectories
   # (01. JANUARY/M1.xlsx … 07. TMP-NEW/M33.xlsx), so one profile serves the
   # whole year and the CLI stays week-agnostic:
-  #   ranse fill --profile profiles/ali-bin-abu.yaml --date 2026-09-20
+  #   ranse fill --profile profiles/ali-bin-abu/profile.yaml --date 2026-09-20
   template: "assets/ALI BIN ABU/12. ERPH/2026/*/M{minggu}.xlsx"
   # School calendar: date → minggu/siri → timetable file.
   jadual: "config/jadual-minggu.yaml"
