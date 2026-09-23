@@ -14,7 +14,7 @@ import sys
 from .core.xlsx import Workbook
 from .errors import RanseError
 from .handlers.base import Context
-from .handlers.registry import build_handlers
+from .handlers.registry import build_handlers, cli_options
 from .inputs import dskp as dskp_input
 from .inputs.timetable import DAY_ORDER, load_schedule
 from .inputs.yaml import load_profile, resolve_template
@@ -49,14 +49,9 @@ def _build_parser():
         "fill", help="fill the profile's template (MENU / fixed cells / DSKP)")
     fill.add_argument("--profile", required=True,
                       help="Path to the profile YAML (inputs + handlers)")
-    fill.add_argument("--minggu", type=int, default=None,
-                      help="Override the week number "
-                           "(default: resolved from --date)")
-    fill.add_argument("--no-dskp-auto", action="store_true",
-                      help="Disable automatic DSKP content-standard filling")
-    fill.add_argument("--date",
-                      help="Week start date YYYY-MM-DD "
-                           "(default: the Sunday of the current week)")
+    # Everything else `ranse fill` accepts is declared by a handler.
+    for key, flags, kwargs in cli_options():
+        fill.add_argument(flags, dest=key, **kwargs)
 
     write = subparsers.add_parser(
         "write", help="write a single cell on the profile's template")
@@ -95,11 +90,7 @@ def _run_fill(parser, args):
 
     ctx = Context(
         profile=profile,
-        runtime={
-            "date": args.date,
-            "minggu": args.minggu,
-            "no_dskp_auto": args.no_dskp_auto,
-        },
+        runtime={key: getattr(args, key) for key, _, _ in cli_options()},
     )
 
     # --- Phase one: resolvers compute the inputs (no cell writes) ---

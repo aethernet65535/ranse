@@ -38,3 +38,21 @@ def build_handlers(specs):
             validate(spec.params)
         bound.append((spec, cls()))
     return bound
+
+
+def cli_options():
+    """The ``ranse fill`` options the registered handlers declare.
+
+    Returns ``[(key, flags, kwargs), …]`` in registry order, de-duplicated by
+    key. The orchestrator adds each one with ``dest=key`` and hands
+    ``args.<key>`` back to the handlers through ``ctx.runtime[key]``.
+    """
+    options = []
+    seen = set()
+    for cls in HANDLERS.values():
+        for key, (flags, kwargs) in getattr(cls, "cli_options", {}).items():
+            if key in seen:
+                continue
+            seen.add(key)
+            options.append((key, flags, kwargs))
+    return options

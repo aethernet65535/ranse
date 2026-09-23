@@ -268,6 +268,14 @@ class DskpFiller:
 
     name = "dskp"
     phase = "fill"
+    # The `ranse fill` options this handler needs; the orchestrator adds them
+    # to the parser and hands the values back in `ctx.runtime[key]`.
+    cli_options = {
+        "no_dskp_auto": ("--no-dskp-auto", {
+            "action": "store_true",
+            "help": "Disable automatic DSKP content-standard filling",
+        }),
+    }
 
     @staticmethod
     def validate(params):

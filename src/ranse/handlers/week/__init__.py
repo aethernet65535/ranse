@@ -103,6 +103,19 @@ class WeekResolver:
 
     name = "week"
     phase = "resolve"
+    # The `ranse fill` options this handler needs; the orchestrator adds them
+    # to the parser and hands the values back in `ctx.runtime[key]`.
+    cli_options = {
+        "date": ("--date", {
+            "help": "Week start date YYYY-MM-DD "
+                    "(default: the Sunday of the current week)",
+        }),
+        "minggu": ("--minggu", {
+            "type": int,
+            "help": "Override the week number "
+                    "(default: resolved from --date)",
+        }),
+    }
 
     @staticmethod
     def validate(params):

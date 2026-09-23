@@ -25,8 +25,8 @@ class Context:
     ``start_date`` week start (Sunday) the MENU date column is filled from;
     ``params``     params of the handler currently running (set per handler
                    by the orchestrator);
-    ``runtime``    CLI overrides: ``--date`` / ``--minggu`` /
-                   ``--no-dskp-auto``;
+    ``runtime``    values of the CLI options the handlers declared, keyed by
+                   each handler's own ``cli_options`` names;
     ``timetable_path`` / ``timetable_is_csv``  resolver output, consumed by
                    the orchestrator to read the timetable;
     ``report``     lines printed by the orchestrator after filling.
