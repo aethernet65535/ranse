@@ -55,7 +55,7 @@ TIME_PERIOD = {
     ("13:30", "14:10"): 10,
 }
 
-# NUM_PERIODS + the PAGI/TGH/TPTG suffix cache moved to handlers/menu.py in
+# NUM_PERIODS + the PAGI/TGH/TPTG suffix cache moved to handlers/menu/ in
 # stage 2: decision 12 keeps MENU layout constants in the handler.
 
 CLASS_CODE_RE = re.compile(r"([A-Z]+)[–-](\d+)([A-Za-z]+)")

@@ -1,9 +1,9 @@
 """MENU sheet filling: layout rows, time suffixes, merged periods."""
 
-from ..core.refs import _cell_ref, _date_to_excel
-from ..inputs.timetable import DAY_ORDER
-from ..model import merge_periods
-from .base import Context
+from ...core.refs import _cell_ref, _date_to_excel
+from ...inputs.timetable import DAY_ORDER
+from ...model import merge_periods
+from ..base import Context
 
 # --- MENU layout (decision 12: layout constants stay in the handler) ------
 NUM_PERIODS = 8

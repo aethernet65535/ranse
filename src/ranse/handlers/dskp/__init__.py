@@ -7,12 +7,12 @@ import sys
 from typing import List
 from xml.etree import ElementTree as ET
 
-from .. import _REPO_ROOT
-from ..core.refs import _cell_ref, _resolve_path
-from ..errors import ProfileError
-from ..inputs.timetable import DAY_ORDER
-from ..model import merge_periods
-from .base import Context
+from ... import _REPO_ROOT
+from ...core.refs import _cell_ref, _resolve_path
+from ...errors import ProfileError
+from ...inputs.timetable import DAY_ORDER
+from ...model import merge_periods
+from ..base import Context
 
 _DSKP_CONTENT_CACHE = {}
 
@@ -43,7 +43,7 @@ def _dskp_file_for_tingkatan(tingkatan, params, base_dir=None):
         spec = params.get("dskp_files")
     if spec is None:
         try:
-            from ..inputs import dskp as _gen_dskp_mod
+            from ...inputs import dskp as _gen_dskp_mod
             spec = _gen_dskp_mod.DSKP_FILES
         except ImportError:
             return None
@@ -191,7 +191,7 @@ def load_dskp_content(file_path):
     if parsed is None:
         # Fall back to txt parsing (full sections, no selection)
         try:
-            from ..inputs import dskp as _gen_dskp_mod
+            from ...inputs import dskp as _gen_dskp_mod
             parsed = _gen_dskp_mod.parse_dskp_txt(content)
         except ImportError:
             print("  Warning: gen_dskp.py not found, cannot parse txt",
@@ -338,7 +338,7 @@ class DskpFiller:
             # Resolve selection if provided
             if selection:
                 try:
-                    from ..inputs import dskp as _gen_dskp_mod
+                    from ...inputs import dskp as _gen_dskp_mod
                     content = _gen_dskp_mod.resolve_selection(content, selection)
                 except ImportError:
                     print("  Warning: gen_dskp.py not found, using raw JSON",

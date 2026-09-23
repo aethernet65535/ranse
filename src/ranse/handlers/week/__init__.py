@@ -9,11 +9,11 @@ import os
 import sys
 from datetime import datetime, timedelta
 
-from .. import _REPO_ROOT
-from ..core.refs import _resolve_path
-from ..inputs.yaml import load_jadual_config
-from ..model import Week
-from .base import Context
+from ... import _REPO_ROOT
+from ...core.refs import _resolve_path
+from ...inputs.yaml import load_jadual_config
+from ...model import Week
+from ..base import Context
 
 
 def _sunday_of(dt):

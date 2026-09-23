@@ -3,8 +3,8 @@
 import sys
 from typing import List
 
-from ..errors import ProfileError
-from .base import Context
+from ...errors import ProfileError
+from ..base import Context
 
 
 class FixedCellsFiller:
