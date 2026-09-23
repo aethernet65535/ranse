@@ -20,3 +20,15 @@ documented elsewhere: the profile schema in
 file in [`config/`](../../../config/README.md).
 
 The DSKP reader also runs standalone: `python -m ranse.inputs.dskp`.
+
+## Subcommands a reader declares
+
+A reader may also add a `ranse <name>` subcommand of its own:
+
+| Reader | Subcommand |
+|---|---|
+| [`dskp/`](dskp/) | `ranse dskp` — parse a DSKP txt/pdf into structured JSON |
+
+The spec is `{"name", "help", "add_arguments", "run"}`, collected into
+`SUBCOMMANDS` (`inputs/__init__.py`); `cli.py` adds and dispatches it without
+knowing what it does.

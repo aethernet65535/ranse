@@ -148,7 +148,6 @@ class Context:
     profile; workbook=None; schedule=None; week=None; start_date=None
     params={}          # params of the handler currently running
     runtime={}         # values of the handler-declared CLI options
-    timetable_path=None; timetable_is_csv=False
     report=[]
 
 class Resolver(Protocol):   # phase one: compute inputs, write no cells
@@ -166,7 +165,10 @@ Handlers are looked up by name in `handlers/registry.py` (built-in only, D2),
 and each handler validates its own `params` at build time — an unknown name or
 a malformed `params` fails **before any cell is touched**. A handler may only
 write through `ctx.workbook`, which is the core API of S3.1. A handler may
-also declare the `ranse fill` options it needs (its `cli_options`, S3.4).
+declare what it needs as class attributes: `cli_options` (the `ranse fill`
+options it adds, S3.4), `required_sheets` (sheets the workbook must have
+before any fill) and `needs_schedule` (True when it cannot work without the
+schedule the resolvers read).
 
 The shipped handlers and everything they compute are documented per handler in
 `src/ranse/handlers/<name>/DESIGN.md` (index: `src/ranse/handlers/README.md`).
@@ -219,8 +221,9 @@ ranse fill  --profile P [handler options]
 ranse write --profile P SHEET!CELL VALUE
 ```
 
-`fill` and `write` are the framework subcommands; the example adds an
-input-specific subcommand documented with that input.
+`fill` and `write` are the framework subcommands. Any other subcommand is
+declared by the reader that owns it, so the framework can add it without
+knowing what it does.
 
 `ranse fill` adds only `--profile` itself. Every other option is declared by
 a handler (`cli_options`) and its value reaches that handler through
@@ -269,19 +272,18 @@ handler that owns it.
    (registry): unknown names and bad params fail here, before any I/O to the
    workbook.
 2. **Resolve phase** — every handler with `phase == "resolve"` runs in profile
-   order. Resolvers compute `ctx` inputs (the week, the paths to read) and
-   write no cells.
+   order. Resolvers read the source files and compute `ctx` inputs (the week,
+   the schedule); they write no cells.
 3. **Pick the workbook** — `resolve_template()` substitutes `{week}` and
    resolves glob wildcards; zero matches or several matches are both errors
    that list the candidates and point at `inputs.templates`.
-4. **Open it** (`Workbook.open`) and check that the sheets the profile's
-   handlers need are present.
-5. **Read the source inputs** into model objects. The target workbook stays
+4. **Open it** (`Workbook.open`) and check that the sheets the handlers
+   declared (`required_sheets`) are present. The target workbook stays
    write-only throughout.
-6. **Fill phase** — every handler with `phase == "fill"` runs in profile
+5. **Fill phase** — every handler with `phase == "fill"` runs in profile
    order. **Order is significant**: the last writer wins on a shared cell
    (risk 9, defined with the handlers).
-7. **Save** (`wb.save()` overwrites the template in place) and print the
+6. **Save** (`wb.save()` overwrites the template in place) and print the
    report.
 
 Handlers are stateless between runs: the same inputs produce the same result

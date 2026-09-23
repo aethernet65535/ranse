@@ -41,3 +41,7 @@ week, whose values arrive in `ctx.runtime`:
 |---|---|---|
 | `--date YYYY-MM-DD` | `date` | the week start (default: the Sunday of the current week) |
 | `--minggu N` | `minggu` | overrides the week number resolved from the calendar |
+
+The resolver also reads the resolved timetable into `ctx.schedule` (the
+orchestrator only opens the workbook and runs the fillers) and prints the
+resolved week: `Week: minggu N, siri S (path)`.
