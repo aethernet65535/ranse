@@ -1,9 +1,9 @@
 # Ranse — Design Document
 
-**Status:** as-built design of the **core framework** — the xlsx engine, the
-CLI, the handler system, the profile schema and the pipeline that ties them
-together. Business rules are documented next to the code that implements
-them: one `DESIGN.md` per shipped handler and per shipped profile (see the
+This document describes the **core framework** — the xlsx engine, the CLI, the
+handler system, the profile schema and the pipeline that ties them together.
+Business rules are documented next to the code that implements them: one
+`DESIGN.md` per shipped handler, profile and input reader (see the
 documentation map in S2). The numbered **decisions** and **risks** are stable
 identifiers across the whole doc set, so a comment that cites "decision N" or
 "risk N" means this document or the business document that owns it.
@@ -36,7 +36,7 @@ Framework-level guarantees:
 - **Idempotent re-runs** — handlers are stateless between runs; the same
   inputs always produce the same workbook, so a re-run is always safe.
 
-Non-goals are listed in S12.
+Non-goals are listed in S11.
 
 ---
 
@@ -240,9 +240,9 @@ handler that owns it.
 |---|---|---|
 | D1 | Profile shape | An **explicit ordered `handlers:` list**; do not support both an implicit and an explicit form |
 | D2 | Handler discovery | **Built-in registry only** — no dynamic import paths, no entry-point plugins |
-| D3 | Packaging | An **installable package**; there is no legacy script entry point |
+| D3 | Packaging | An **installable package**; no loose script entry point at the repo root |
 | D4 | Equivalence check | Write the **golden regression tests before touching business code** |
-| D5 | Extra scope | dict → dataclass; README kept in sync with its translation; the standalone generator script absorbed into `inputs/` |
+| D5 | Extra scope | Use dataclasses for the model; keep the README and its translation in sync; generator tooling lives under `inputs/` |
 | D6 | Core constraint | **No business logic in core**: no domain constants, no domain vocabulary, no `sys.exit` |
 | D7 | Core boundary | Core is **write-only** towards the target workbook: `open / sheet / write / save`; **no `read(coord)`** |
 | D8 | Input reading | Lives in a separate **`inputs/` layer** (the source readers + YAML loaders); it never touches the target workbook |
@@ -287,7 +287,7 @@ whatever ran before, so a re-run is always safe.
 - `core` / `inputs` raise `RanseError` subclasses (`ProfileError`,
   `WeekError`, `SheetError`).
 - `cli` catches `RanseError` and prints `Error: <message>` on stderr, exit 1.
-- Handlers keep the legacy style: `print(…, file=sys.stderr)` +
+- Handlers report their own errors: `print(…, file=sys.stderr)` +
   `sys.exit(1)` for business errors, and a `  Warning: …` line for skippable
   problems.
 - argparse usage errors go through `parser.error` and exit 2.
@@ -378,22 +378,7 @@ carries it (see the documentation map, S2).
 
 ---
 
-## 11. Implementation history
-
-The current layout was reached in five stages, one commit each, with the golden
-suite green at every step (D4). Test comments cite these as "stage N":
-
-| Stage | Content |
-|---|---|
-| 0 | Fold in the work-in-progress changes; add `pyproject.toml`, the golden baselines and the pure-function unit tests (baselines taken from the **working tree**, not from the previous commit) |
-| 1 | Pure move into `src/ranse/` — imports and file placement only, no logic or string changes |
-| 2 | De-business-ify `core` (`RanseError` instead of `sys.exit`), extract the example's handlers into their own folders, drop `sys.path.insert` + the dynamic generator import, move the namespace registration into `Workbook` |
-| 3 | Profile schema + two-phase orchestration + dataclasses (`Lesson` / `Schedule` / `Week` / `Profile`) |
-| 4 | Packaging (`ranse` console script), the subcommands, delete `scripts/`, rewrite README + the Malay translation |
-
----
-
-## 12. Out of scope and future work
+## 11. Out of scope and future work
 
 Not to be done with the current design:
 
@@ -402,7 +387,7 @@ Not to be done with the current design:
 - moving layout constants (row formulas, column numbers) into the profile
   (D12);
 - dynamic third-party handler loading (D2);
-- a legacy script entry point (D3);
+- a loose script entry point at the repo root (D3);
 - edits under the example's asset directory.
 
 Planned or possible later:

@@ -14,8 +14,7 @@ class Lesson:
     """One timetable slot: a class studying one subject for one period.
 
     ``cls`` is the timetable's class label (``"1E"``, ``"5SPA"``, …). The
-    field cannot be called ``class`` (Python keyword), which is the only
-    difference from the dict form used before stage 3.
+    field cannot be called ``class`` (a Python keyword).
     """
 
     cls: str

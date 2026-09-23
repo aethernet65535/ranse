@@ -1,8 +1,7 @@
-"""MENU handler behaviour: period merging + time suffixes (docs/DESIGN.md stage 0).
+"""MENU handler behaviour: period merging + time suffixes.
 
-Stage 3 turned the lesson dict into the ``Lesson`` dataclass, so the
-expectations below are built from ``Lesson`` too (``entry["class"]`` →
-``entry.cls``).
+Lessons are ``Lesson`` dataclasses, so the expectations below are built from
+``Lesson`` too (``entry.cls`` rather than a dict key).
 """
 
 from harness import fn
@@ -76,7 +75,7 @@ def test_merge_splits_then_resumes():
 
 
 def test_time_suffix_day_part_boundaries():
-    # PAGI → TGH at 11:00, TGH → TPTG at 14:00 (docs/DESIGN.md stage 0 item 3)
+    # PAGI → TGH at 11:00, TGH → TPTG at 14:00 (menu/DESIGN.md, risk 11)
     assert _time_with_suffix("10:00") == "10:00 PAGI"
     assert _time_with_suffix("11:00") == "11:00 TGH"
     assert _time_with_suffix("13:00") == "13:00 TGH"

@@ -27,7 +27,7 @@ DAY_ORDER = ["Ahad", "Isnin", "Selasa", "Rabu", "Khamis"]
 # the school week, which starts on Sunday/Ahad).
 DAY_BY_WEEKDAY = ["Isnin", "Selasa", "Rabu", "Khamis", "Jumaat", "Sabtu", "Ahad"]
 
-# period number → (start, end)   [was scripts/constants.py]
+# period number → (start, end)
 PERIOD_TIMES = {
     1: ("07:40", "08:20"),
     2: ("08:20", "09:00"),
@@ -41,8 +41,7 @@ PERIOD_TIMES = {
     10: ("13:30", "14:10"),
 }
 
-# (start, end) → period number   [the CSV direction of the legacy
-# PERIOD_TIMES map; renamed because both maps now live in this module]
+# (start, end) → period number — the CSV direction of PERIOD_TIMES.
 TIME_PERIOD = {
     ("07:40", "08:20"): 1,
     ("08:20", "09:00"): 2,
@@ -56,8 +55,8 @@ TIME_PERIOD = {
     ("13:30", "14:10"): 10,
 }
 
-# NUM_PERIODS + the PAGI/TGH/TPTG suffix cache moved to handlers/menu/ in
-# stage 2: decision 12 keeps MENU layout constants in the handler.
+# Decision 12: MENU layout constants (NUM_PERIODS, the PAGI/TGH/TPTG suffix
+# cache) live in handlers/menu/, not here.
 
 CLASS_CODE_RE = re.compile(r"([A-Z]+)[–-](\d+)([A-Za-z]+)")
 

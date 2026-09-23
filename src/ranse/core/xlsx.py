@@ -6,8 +6,8 @@ prefixes, xml declaration flags) must stay byte-identical — the golden
 regression suite checks exactly that (docs/DESIGN.md risk 1-2).
 
 ``ET.register_namespace`` side effects live in ``Workbook.open`` (once per
-open) instead of inside every parse (docs/DESIGN.md stage 2 item 5); the registered
-prefixes/URIs are identical to the original module-level list.
+open) instead of inside every parse; the registered prefixes/URIs must keep
+the templates' original prefixes (risk 1).
 """
 
 import re
@@ -84,8 +84,8 @@ def _read_shared_strings(zip_data):
 def _parse_sheet(xml_bytes):
     """Parse sheet XML bytes → ElementTree root.
 
-    Namespace registration happens in Workbook.open — not here (stage 2
-    removed the module-level side effect).
+    Namespace registration happens in Workbook.open — not here (it must run
+    once per open, not per parse).
     """
     try:
         root = ET.fromstring(xml_bytes)
@@ -244,9 +244,9 @@ class Workbook:
     @classmethod
     def open(cls, path):
         """Open the workbook at path (all zip entries are read into memory)."""
-        # Register namespaces so serialisation keeps the original prefixes.
-        # (Moved here from _parse_sheet — docs/DESIGN.md stage 2 item 5. The
-        # prefixes/URIs must stay identical or the golden suite fails.)
+        # Register namespaces so serialisation keeps the original prefixes:
+        # the prefixes/URIs must stay identical or the golden suite fails
+        # (risk 1).
         ET.register_namespace("", NS[1:-1])  # strip braces
         ET.register_namespace("r", NS_R[1:-1])
         # Also register common xlsx namespaces to prevent 'ns0:' prefixes.
@@ -328,8 +328,8 @@ class Sheet:
         """Write content to coord ('B3' or 'B3:C3').
 
         The top-left cell of the coordinate range is used, and if it falls
-        inside a merged area the write goes to that area's top-left cell —
-        exactly the lookup every fill routine used to do by hand.
+        inside a merged area the write goes to that area's top-left cell, so
+        callers do not have to do the merge lookup by hand.
         """
         top_left = _cell_range_top_left(coord)
         row, col = _parse_cell_ref(top_left)

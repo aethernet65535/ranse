@@ -1,4 +1,4 @@
-"""DSKP handler: the sliding section pair (docs/DESIGN.md stage 0)."""
+"""DSKP handler: the sliding section pair."""
 
 from harness import fn
 

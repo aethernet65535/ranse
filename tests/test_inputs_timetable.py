@@ -1,4 +1,4 @@
-"""Timetable input parsing (docs/DESIGN.md stage 0)."""
+"""Timetable input parsing."""
 
 from harness import fn
 

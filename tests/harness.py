@@ -1,20 +1,16 @@
 """Shared test-support helpers.
 
-Everything the tests need in order to survive the refactor with minimal churn:
-
 - path constants (repo root, template, golden dir, golden case table);
 - ``run_fill``   — the single place that knows how to invoke the fill entry
-  point: stage 3 switched it to ``python -m ranse`` driven by a profile whose
-  ``inputs.template`` points at the temporary workbook copy (the template
-  path is profile-only — decision 10 — and the real asset is read-only);
-- ``fn(name)``   — find a function by name: first in ``src/ranse`` (once it
-  exists). Unit tests call ``fn`` instead of importing a fixed module, so
-  moving code between stages did not require editing the tests (docs/DESIGN.md:
-  "pure-function unit tests stay green"); stage 4 removed ``scripts/``, so it
-  is src-only now;
+  point (``python -m ranse``), driven by a profile whose ``inputs.template``
+  points at the temporary workbook copy — the template path is profile-only
+  (decision 10), so the real asset stays read-only;
+- ``fn(name)``   — find a function by name in ``src/ranse``. Unit tests call
+  ``fn`` instead of importing a fixed module, so moving code between modules
+  does not require editing the tests;
 - ``call_error`` — run a function and return its error text, whether the code
-  reports errors the legacy way (print to stderr + sys.exit) or the stage-2 way
-  (raise a RanseError subclass carrying the same wording);
+  exits (print to stderr + ``sys.exit``) or raises a ``RanseError`` subclass
+  carrying the same wording (decision 13);
 - ``sheet_xml_map`` / ``gzip_bytes`` — per-sheet XML extraction used by the
   golden generator and the regression test (golden compares sheet XML bytes,
   never zip bytes: zip entry order/timestamps would produce false diffs).
@@ -45,7 +41,7 @@ DSKP_DIR = REPO_ROOT / "assets" / "bc-dskp"
 PROFILE_YAML = REPO_ROOT / "profiles" / "ali-bin-abu" / "profile.yaml"
 JADUAL_YAML = REPO_ROOT / "config" / "jadual-minggu" / "jadual-minggu.yaml"
 
-# Stage-0 golden cases (docs/DESIGN.md stage 0): two normal weeks …
+# Golden cases: two normal weeks …
 GOLDEN_CASES = {
     "minggu-33": "2026-09-20",
     "minggu-34": "2026-09-27",
@@ -149,7 +145,7 @@ def gzip_bytes(data):
 
 
 # ---------------------------------------------------------------------------
-# Function lookup (survives code moving between stages)
+# Function lookup
 # ---------------------------------------------------------------------------
 
 _PACKAGE_CANDIDATES = (
@@ -183,16 +179,16 @@ def fn(name):
 
 
 # ---------------------------------------------------------------------------
-# Error assertions (legacy sys.exit vs stage-2 RanseError)
+# Error assertions
 # ---------------------------------------------------------------------------
 
 def call_error(func, *args, **kwargs):
     """Run ``func``; return its error text (stderr output + exception message).
 
-    The legacy code reports errors via ``print(..., file=sys.stderr)`` +
-    ``sys.exit(1)``; stage 2 switches to RanseError exceptions with the same
-    wording (docs/DESIGN.md decision 13). Catching BaseException and concatenating
-    stderr with ``str(exc)`` keeps the assertions valid across both styles.
+    Code reports errors either via ``print(..., file=sys.stderr)`` +
+    ``sys.exit(1)`` or by raising a ``RanseError`` with the same wording
+    (decision 13). Catching BaseException and concatenating stderr with
+    ``str(exc)`` covers both styles.
     """
     buf = io.StringIO()
     try:

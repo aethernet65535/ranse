@@ -1,8 +1,8 @@
-"""Week resolution: cuti / no-minggu / out-of-range errors (docs/DESIGN.md stage 0).
+"""Week resolution: cuti / no-minggu / out-of-range errors.
 
-All error assertions match substrings of the CURRENT wording; docs/DESIGN.md scope
-item "do not reword error messages" guarantees the wording survives the refactor.
-Stage 3 changed the return value from a dict to the ``Week`` dataclass.
+All error assertions match substrings of the current wording, which decision
+13 freezes ("do not reword error messages"). The resolver returns a ``Week``
+dataclass.
 """
 
 from datetime import date, datetime
