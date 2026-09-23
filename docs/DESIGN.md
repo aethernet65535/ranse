@@ -83,7 +83,7 @@ File map:
 | `src/ranse/errors.py` | `RanseError`, `ProfileError`, `WeekError`, `SheetError` |
 | `src/ranse/core/refs.py` | A1 ↔ (row, col), range top-left, date serial, path resolution — pure functions |
 | `src/ranse/core/xlsx.py` | zip container + write-only `Workbook` / `Sheet` |
-| `src/ranse/inputs/` | readers for the example's source files; formats in `docs/input-formats.md` |
+| `src/ranse/inputs/` | readers for the example's source files, one folder each (index: `src/ranse/inputs/README.md`) |
 | `src/ranse/handlers/base.py` | `Resolver` / `Filler` protocols + `Context` |
 | `src/ranse/handlers/registry.py` | the built-in registry (the only discovery, D2) |
 | `src/ranse/handlers/<name>/` | one folder per shipped handler, business rules in that folder's `DESIGN.md` |
@@ -104,7 +104,8 @@ lives:
 | `docs/DESIGN.md` (this file) | core framework: engine, CLI, handler system, profile, pipeline |
 | `src/ranse/handlers/README.md` | index of the shipped handlers; each handler carries its own `DESIGN.md` |
 | `profiles/<name>/DESIGN.md` | one document per shipped profile: its business design and configuration |
-| `docs/input-formats.md` | the on-disk formats the `inputs/` readers accept |
+| `src/ranse/inputs/README.md` | index of the shipped readers; each reader carries its own `DESIGN.md` |
+| `config/README.md` | index of the shipped data files; each folder carries its own `DESIGN.md` |
 | `docs/translations/ms-MY/README.md` | README in Bahasa Melayu |
 
 ---
@@ -326,8 +327,9 @@ exit codes (D6).
 
 `inputs/` turns source files into model objects; it never writes the target
 workbook (D8). It holds the YAML loaders (the profile, and any data file a
-handler references) plus one reader per source format. The formats are
-specified in `docs/input-formats.md`; `core` has no import from this layer.
+handler references) plus one reader per source format. Each reader documents
+the format it accepts in its own `DESIGN.md` (index:
+`src/ranse/inputs/README.md`); `core` has no import from this layer.
 
 ---
 

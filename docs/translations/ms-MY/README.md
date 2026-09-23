@@ -28,8 +28,8 @@ Rangka kerja dan setiap kawasan perniagaan didokumenkan secara berasingan:
 |---|---|
 | [`docs/DESIGN.md`](../../DESIGN.md) | reka bentuk rangka kerja teras: enjin, CLI, sistem handler, skema profil, pipeline |
 | [`src/ranse/handlers/README.md`](../../../src/ranse/handlers/README.md) | peraturan perniagaan handler yang dihantar — indeks; setiap handler mempunyai DESIGN.md sendiri dalam foldernya |
-| [`docs/input-formats.md`](../../input-formats.md) | format fail sumber: jadual waktu xlsx/csv, DSKP txt/pdf/json |
-| [`config/README.md`](../../../config/README.md) | kalendar minggu sekolah (`jadual-minggu.yaml`) |
+| [`src/ranse/inputs/README.md`](../../../src/ranse/inputs/README.md) | indeks pembaca fail sumber; setiap pembaca mempunyai DESIGN.md sendiri |
+| [`config/README.md`](../../../config/README.md) | indeks fail data; setiap folder mempunyai DESIGN.md sendiri |
 | [`README.md`](../../../README.md) | versi English README ini |
 
 ## Struktur Projek
@@ -41,12 +41,11 @@ profiles/                    # Satu profil bagi setiap guru/templat (mula di sin
 config/jadual-minggu/        # Fail data kalendar sekolah (lihat config/README.md)
 docs/
   DESIGN.md                  # Reka bentuk rangka kerja teras
-  input-formats.md           # Format sumber jadual waktu / DSKP
 src/ranse/
   cli.py                     # ranse fill / write / dskp
   model.py                   # Lesson / Schedule / Week / Profile
   core/                      # enjin xlsx tulis-sahaja (tiada pengetahuan perniagaan)
-  inputs/                    # pembaca jadual waktu, DSKP dan YAML
+  inputs/                    # pembaca fail sumber — satu folder + DESIGN.md setiap satu
   handlers/                  # week/ menu/ fixed_cells/ dskp/ — satu folder + DESIGN.md setiap satu
 tests/                       # ujian unit + baseline regresi golden
 ```
@@ -101,7 +100,7 @@ ranse dskp --pdf dskp.pdf --pages 35-45 -o t1.json
 ranse dskp --list
 ```
 
-Menghasilkan JSON berstruktur daripada sumber DSKP txt/pdf. Format: [`docs/input-formats.md`](../../input-formats.md).
+Menghasilkan JSON berstruktur daripada sumber DSKP txt/pdf. Format: [`src/ranse/inputs/dskp/DESIGN.md`](../../../src/ranse/inputs/dskp/DESIGN.md).
 
 ## Konfigurasi (profil)
 

@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Generate structured DSKP content from txt or pdf files.
 
 Outputs JSON with sections containing titles, content standards,

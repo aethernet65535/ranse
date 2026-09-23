@@ -1,6 +1,7 @@
 """Weekly timetable reading (CSV / xlsx) → schedule structures.
 
-Both period tables live here (docs/input-formats.md risk 4, values unchanged):
+Both period tables live here (risk 4 — see DESIGN.md next to this file; values
+unchanged):
 
 - ``PERIOD_TIMES`` (period → time range) fills the MENU rows;
 - ``TIME_PERIOD`` (time range → period) is the CSV direction. The two cannot
@@ -15,10 +16,10 @@ from collections import defaultdict
 from datetime import datetime
 from xml.etree import ElementTree as ET
 
-from ..core.refs import _parse_cell_ref
-from ..core.xlsx import (NS, NS_R, _parse_sheet_names, _parse_sheet_rels,
+from ...core.refs import _parse_cell_ref
+from ...core.xlsx import (NS, NS_R, _parse_sheet_names, _parse_sheet_rels,
                          _read_shared_strings, _read_zip)
-from ..model import Lesson, Schedule
+from ...model import Lesson, Schedule
 
 DAY_ORDER = ["Ahad", "Isnin", "Selasa", "Rabu", "Khamis"]
 

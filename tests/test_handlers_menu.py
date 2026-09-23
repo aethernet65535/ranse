@@ -40,7 +40,8 @@ def test_merge_three_periods_into_one_row():
 
 
 def test_no_merge_when_time_not_contiguous():
-    # same lesson but a gap between periods → two rows (risk 4 in docs/input-formats.md)
+    # same lesson but a gap between periods → two rows
+    # (risk 4, src/ranse/inputs/timetable/DESIGN.md)
     day = {1: _entry("07:40", "08:20"), 3: _entry("09:00", "09:40")}
     assert [p for p, _ in merge_periods(day)] == [1, 3]
 

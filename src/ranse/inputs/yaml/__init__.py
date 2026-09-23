@@ -6,10 +6,10 @@ import sys
 
 import yaml
 
-from .. import _REPO_ROOT
-from ..core.refs import _resolve_path
-from ..errors import ProfileError
-from ..model import HandlerSpec, Profile, ProfileInputs
+from ... import _REPO_ROOT
+from ...core.refs import _resolve_path
+from ...errors import ProfileError
+from ...model import HandlerSpec, Profile, ProfileInputs
 
 
 def load_profile(path):

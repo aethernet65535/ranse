@@ -6,7 +6,7 @@ is exactly why [MENU](../menu/DESIGN.md) can own all time data
 (decision 14).
 
 Protocol/registry contract: [parent index](../README.md).
-Source formats (txt / JSON / pdf): [`docs/input-formats.md`](../../../../docs/input-formats.md).
+Source formats (txt / JSON / pdf): [`inputs/dskp/DESIGN.md`](../../../inputs/dskp/DESIGN.md).
 
 ## Params
 
@@ -59,7 +59,7 @@ cell is touched.
   (risk 9, [fill order](../README.md#fill-order-risk-9)).
 - **`file`** accepts `{tingkatan}` (`t1.txt`, `t2.txt`, …), a per-tingkatan
   map, or nothing — then the built-in `DSKP_FILES` table is used
-  ([formats](../../../../docs/input-formats.md#dskp)).
+  ([formats](../../../inputs/dskp/DESIGN.md)).
 - **Warnings, not errors**: a missing DSKP file, a file with no usable parent
   sections, or an unknown sheet is reported on stderr and skipped, so one bad
   class does not abort the week.

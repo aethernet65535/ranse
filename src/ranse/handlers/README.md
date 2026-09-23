@@ -63,7 +63,7 @@ wins on a shared MENU cell.
 | 7, 11, 12 | [`menu/DESIGN.md`](menu/DESIGN.md) (clearing branch, time suffix, MENU-only time writer) |
 | 8 | [`fixed_cells/DESIGN.md`](fixed_cells/DESIGN.md) (`int(value)` at write time) |
 | 9 | this file (fill order, above) |
-| 4, 10 | [`docs/input-formats.md`](../../../docs/input-formats.md) (period tables, Jumaat/Sabtu dropped) |
+| 4, 10 | [`src/ranse/inputs/timetable/DESIGN.md`](../../../src/ranse/inputs/timetable/DESIGN.md) (period tables, Jumaat/Sabtu dropped) |
 | 1, 2, 3, 5, 6 | [`docs/DESIGN.md`](../../../docs/DESIGN.md) S10 (framework) |
 
 ---
@@ -71,6 +71,6 @@ wins on a shared MENU cell.
 ## Cross-references
 
 - School calendar consumed by `week`: [`config/jadual-minggu/DESIGN.md`](../../../config/jadual-minggu/DESIGN.md)
-- Timetable / DSKP source formats: [`docs/input-formats.md`](../../../docs/input-formats.md)
+- Timetable / DSKP source formats: [`src/ranse/inputs/README.md`](../../../src/ranse/inputs/README.md)
 - Framework design: [`docs/DESIGN.md`](../../../docs/DESIGN.md)
 - Example profile naming these handlers: [`profiles/ali-bin-abu/profile.yaml`](../../../profiles/ali-bin-abu/profile.yaml)

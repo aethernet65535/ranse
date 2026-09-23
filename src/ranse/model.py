@@ -31,7 +31,7 @@ class Schedule:
 
     Day names are the Malay school days (``"Ahad"`` … ``"Khamis"``) — the
     template only has sheets for those, so Jumaat/Sabtu are dropped while
-    reading (docs/input-formats.md risk 10).
+    reading (risk 10, src/ranse/inputs/timetable/DESIGN.md).
     """
 
     days: Dict[str, Dict[int, Lesson]] = field(default_factory=dict)
@@ -53,7 +53,8 @@ def merge_periods(day_schedule: Dict[int, Lesson]) -> List[Tuple[int, Lesson]]:
     """Merge consecutive periods with the same class/subject/tingkatan.
 
     Returns ``[(first_period, lesson_with_merged_end), …]`` in period order.
-    A gap in time ends a run even when the lesson repeats (docs/input-formats.md risk 4).
+    A gap in time ends a run even when the lesson repeats
+    (risk 4, src/ranse/inputs/timetable/DESIGN.md).
     """
     periods = sorted(day_schedule.keys())
     if not periods:

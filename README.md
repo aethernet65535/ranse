@@ -46,7 +46,7 @@ The framework and each business area are documented separately:
 |---|---|
 | [`docs/DESIGN.md`](docs/DESIGN.md) | core framework design: engine, CLI, handler system, profile schema, pipeline |
 | [`src/ranse/handlers/README.md`](src/ranse/handlers/README.md) | shipped handler business rules — index; each handler has its own DESIGN.md in its own folder |
-| [`docs/input-formats.md`](docs/input-formats.md) | source file formats: timetable xlsx/csv, DSKP txt/pdf/json |
+| [`src/ranse/inputs/README.md`](src/ranse/inputs/README.md) | source-file reader index; each reader has its own DESIGN.md |
 | [`config/README.md`](config/README.md) | the school week calendar (`jadual-minggu.yaml`) |
 | [`docs/translations/ms-MY/README.md`](docs/translations/ms-MY/README.md) | this README in Bahasa Melayu |
 
@@ -59,12 +59,11 @@ profiles/                    # One profile per teacher/template (start here)
 config/jadual-minggu/        # School calendar data file (see config/README.md)
 docs/
   DESIGN.md                  # Core framework design
-  input-formats.md           # Timetable / DSKP source formats
 src/ranse/
   cli.py                     # ranse fill / write / dskp
   model.py                   # Lesson / Schedule / Week / Profile
   core/                      # write-only xlsx engine (no business knowledge)
-  inputs/                    # timetable, DSKP and YAML readers
+  inputs/                    # one folder + DESIGN.md per reader (timetable, dskp, yaml)
   handlers/                  # week/ menu/ fixed_cells/ dskp/ — one folder + DESIGN.md each
 tests/                       # unit tests + golden regression baselines
 ```
@@ -123,7 +122,7 @@ ranse dskp --list
 ```
 
 Produces structured JSON from a DSKP txt/pdf source. Formats:
-[`docs/input-formats.md`](docs/input-formats.md).
+[`src/ranse/inputs/dskp/DESIGN.md`](src/ranse/inputs/dskp/DESIGN.md).
 
 ## Configuration (the profile)
 

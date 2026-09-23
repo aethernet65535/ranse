@@ -23,5 +23,5 @@ so re-running a week is safe.
 
 - framework that loads the profile: [`docs/DESIGN.md`](../../docs/DESIGN.md);
 - handler rules the `handlers:` list names: [`src/ranse/handlers/README.md`](../../src/ranse/handlers/README.md);
-- formats the profile's `inputs` point at: [`docs/input-formats.md`](../../docs/input-formats.md);
+- formats the profile's `inputs` point at: [`src/ranse/inputs/README.md`](../../src/ranse/inputs/README.md);
 - school calendar data file: [`config/jadual-minggu/DESIGN.md`](../../config/jadual-minggu/DESIGN.md).

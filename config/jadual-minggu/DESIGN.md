@@ -9,7 +9,7 @@ to answer two questions:
 1. **Which week is today?** `--date` (default: this week's Sunday) → the
    `minggu` table.
 2. **Which timetable does that week use?** `jadual_siri` / `jadual` → the
-   timetable file (formats: [`docs/input-formats.md`](../../docs/input-formats.md)).
+   timetable file (formats: [`src/ranse/inputs/timetable/DESIGN.md`](../../src/ranse/inputs/timetable/DESIGN.md)).
 
 ```yaml
 # in a profile
@@ -94,6 +94,6 @@ In short:
 ## Cross-references
 
 - Handler rules that consume this file: [`src/ranse/handlers/week/DESIGN.md`](../../src/ranse/handlers/week/DESIGN.md)
-- Timetable file formats picked here: [`docs/input-formats.md`](../../docs/input-formats.md)
+- Timetable file formats picked here: [`src/ranse/inputs/timetable/DESIGN.md`](../../src/ranse/inputs/timetable/DESIGN.md)
 - Profile schema (`inputs.jadual`): [`docs/DESIGN.md`](../../docs/DESIGN.md) S3.3
 - Example profile: [`profiles/ali-bin-abu/profile.yaml`](../../profiles/ali-bin-abu/profile.yaml)

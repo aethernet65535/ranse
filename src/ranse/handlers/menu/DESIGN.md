@@ -69,8 +69,8 @@ Two clearing rules keep a re-run honest:
 consecutive periods that have the same class, subject and tingkatan **and**
 contiguous time (`entry.start == previous.end`). Two back-to-back Bahasa Cina
 periods therefore occupy one MENU row covering 07:40–09:00, and a gap in time
-ends a run even when the same lesson resumes (risk 4,
-[`docs/input-formats.md`](../../../../docs/input-formats.md)).
+  ends a run even when the same lesson resumes (risk 4,
+  [`inputs/timetable/DESIGN.md`](../../../inputs/timetable/DESIGN.md)).
 
 The row index `i` is the index of the merged lesson, not the period number:
 merged lesson *i* is written to row `header_row + 1 + i`.
@@ -92,7 +92,7 @@ workbook.
 |---|---|---|
 | this week's date | calendar → `MENU!I6` | `--date 2026-09-20`, or edit the `minggu` records |
 | which timetable a week uses | `jadual_siri` (or `siri:` in the record) | edit `config/jadual-minggu/jadual-minggu.yaml` (see [`config/jadual-minggu/DESIGN.md`](../../../../config/jadual-minggu/DESIGN.md)) |
-| the period times themselves | `PERIOD_TIMES` in `inputs/timetable.py` | edit the table (affects every week at once, risk 4) |
+| the period times themselves | `PERIOD_TIMES` in `inputs/timetable/` | edit the table (affects every week at once, risk 4) |
 | one period's class / time for one week | **MENU sheet**, columns C–G | `ranse write` on that cell — note the next `ranse fill` for the same week rewrites it |
 | the DSKP standards on a day sheet | DSKP blocks | [`dskp` handler](../dskp/DESIGN.md); never a time edit |
 
