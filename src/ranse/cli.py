@@ -108,7 +108,7 @@ def _run_fill(parser, args):
     # --- Phase one: resolvers compute the inputs (no cell writes) ---
     _resolve_phase(handlers, ctx)
 
-    # --- Which workbook is this week's? (profile input; {minggu} patterns) ---
+    # --- Which workbook is this week's? (profile input; {week} patterns) ---
     template = resolve_template(profile, ctx.week.minggu if ctx.week else None)
     wb = Workbook.open(template)
     ctx.workbook = wb

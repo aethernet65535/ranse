@@ -177,7 +177,7 @@ The shipped handlers and everything they compute are documented per handler in
 profile: example-2026
 
 inputs:
-  template: "path/to/*/W{minggu}.xlsx"   # required
+  template: "path/to/*/W{week}.xlsx"   # required
   # every other key is handler-specific; the shipped example adds a calendar
   # file, a timetable and a curriculum source here (see its DESIGN.md)
   # templates: {25: "…/W25.xlsx"}       # pin one week when the pattern matches twice
@@ -206,7 +206,7 @@ handler params raises `ProfileError` from the registry. Relative paths resolve
 against the profile's own directory, then the current directory, then the repo
 root.
 
-`inputs.template` may contain `{minggu}` (substituted once the week number is
+`inputs.template` may contain `{week}` (substituted once the week number is
 known) and glob wildcards; it must match exactly one workbook, otherwise the
 error lists the candidates and points at `inputs.templates` (D10). Standalone
 data files are never inlined into the profile: a profile *references* them
@@ -271,7 +271,7 @@ handler that owns it.
 2. **Resolve phase** — every handler with `phase == "resolve"` runs in profile
    order. Resolvers compute `ctx` inputs (the week, the paths to read) and
    write no cells.
-3. **Pick the workbook** — `resolve_template()` substitutes `{minggu}` and
+3. **Pick the workbook** — `resolve_template()` substitutes `{week}` and
    resolves glob wildcards; zero matches or several matches are both errors
    that list the candidates and point at `inputs.templates`.
 4. **Open it** (`Workbook.open`) and check that the sheets the profile's

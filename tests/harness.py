@@ -86,7 +86,7 @@ def run_fill(xlsx_path, date, extra_args=()):
         raw = yaml.safe_load(PROFILE_YAML.read_text(encoding="utf-8"))
         raw["inputs"]["template"] = str(xlsx_path)
         raw["inputs"]["jadual"] = str(JADUAL_YAML)
-        # The shipped profile's template is a {minggu} pattern; a per-week
+        # The shipped profile's template is a {week} pattern; a per-week
         # override would beat the temp copy, so drop it.
         raw["inputs"].pop("templates", None)
         profile_path = Path(tmp) / "profile.yaml"

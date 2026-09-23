@@ -12,7 +12,7 @@ Ia dihantar bersedia untuk perniagaan pertamanya: mengisi buku kerja **e-RPH** (
 
 - **Mengekalkan format asal** — mengedit XML dalaman fail xlsx terus, jadi semua gaya sel, sel digabungkan dan sempadan kekal utuh. Helaian yang tiada siapa menulis disalin terus bait demi bait.
 - **Teras tulis-sahaja** — enjin tidak boleh membaca semula sel; ia tiada pengetahuan tentang hari, subjek atau susun atur, dan tiada apa daripada itu boleh bocor ke dalamnya.
-- **Dipacu profil** — satu YAML bagi setiap guru/templat menyatakan `inputs` (di mana fail berada), `context` (nilai dikongsi) dan `handlers` (pipeline eksplisit, berurutan). Buku kerja boleh menjadi pola `{minggu}` (`…/M{minggu}.xlsx`), jadi satu profil berkhidmat untuk setahun.
+- **Dipacu profil** — satu YAML bagi setiap guru/templat menyatakan `inputs` (di mana fail berada), `context` (nilai dikongsi) dan `handlers` (pipeline eksplisit, berurutan). Buku kerja boleh menjadi pola `{week}` (`…/M{week}.xlsx`), jadi satu profil berkhidmat untuk setahun.
 - **Pipeline dua fasa** — handler `resolve` mengira input dahulu, handler `fill` menulis sel kemudian; nama dan params handler disahkan sebelum apa-apa disentuh, dan penulis terakhir menang pada sel berkongsi.
 - **Dua format input** — baca jadual waktu daripada `.xlsx` atau `.csv`.
 - **Penulisan satu sel** — `ranse write MENU!B3 "ALI BIN ABU"` untuk pembetulan sekali sahaja.
@@ -119,7 +119,7 @@ Profil ialah satu-satunya perkara yang diperlukan oleh `ranse fill` / `ranse wri
 profile: ali-bin-abu-2026
 
 inputs:
-  template: "assets/ALI BIN ABU/12. ERPH/2026/*/M{minggu}.xlsx"  # wajib
+  template: "assets/ALI BIN ABU/12. ERPH/2026/*/M{week}.xlsx"  # wajib
   jadual: "config/jadual-minggu/jadual-minggu.yaml"              # kalendar minggu
   # templates: {18: "…/06. JUNE/M18.xlsx"}    # tetapkan satu minggu secara eksplisit
   # timetable: "assets/timetable/jadual-waktu-2026-siri-7.xlsx"  # gantian pilihan
@@ -146,7 +146,7 @@ handlers:
 
 | Kunci | Penerangan |
 |---|---|
-| `template` | **Wajib.** Buku kerja yang akan diisi di tempat asal. Boleh mengandungi `{minggu}` dan wildcard glob |
+| `template` | **Wajib.** Buku kerja yang akan diisi di tempat asal. Boleh mengandungi `{week}` dan wildcard glob |
 | `templates` | Peta `minggu → laluan` (pilihan); menang atas `template` bagi minggu tersebut |
 | `jadual` | Fail data kalendar minggu (didokumenkan dalam [`config/jadual-minggu/DESIGN.md`](../../../config/jadual-minggu/DESIGN.md)) |
 | `timetable` | Fail jadual waktu xlsx eksplisit (pilihan); mengalahkan carian siri |
@@ -154,7 +154,7 @@ handlers:
 
 Laluan relatif diselesaikan terhadap direktori profil itu sendiri, kemudian direktori semasa, kemudian akar repositori — jadi profil yang disertakan berfungsi di mana-mana sahaja anda menjalankannya.
 
-**Satu profil untuk setahun.** `template` ialah satu pola: `{minggu}` digantikan dengan nombor minggu yang diselesaikan, dan wildcard `*`/`?` mencari fail tersebut. Pola mesti sepadan dengan **tepat satu** buku kerja; jika ia sepadan dua (contohnya minggu lama disalin ke folder lain), `ranse fill` menyenaraikan calonnya dan anda tetapkan minggu itu:
+**Satu profil untuk setahun.** `template` ialah satu pola: `{week}` digantikan dengan nombor minggu yang diselesaikan, dan wildcard `*`/`?` mencari fail tersebut. Pola mesti sepadan dengan **tepat satu** buku kerja; jika ia sepadan dua (contohnya minggu lama disalin ke folder lain), `ranse fill` menyenaraikan calonnya dan anda tetapkan minggu itu:
 
 ```yaml
 inputs:

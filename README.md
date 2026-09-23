@@ -23,8 +23,8 @@ handlers and data files, never in the core framework described below.
   knowledge of days, subjects or layouts, and none of that can leak into it.
 - **Profile-driven** — one YAML per teacher/template declares `inputs`
   (where the files are), `context` (shared values) and `handlers` (the
-  explicit, ordered pipeline). The workbook can be a `{minggu}`
-  pattern (`…/M{minggu}.xlsx`), so one profile serves the whole year.
+  explicit, ordered pipeline). The workbook can be a `{week}`
+  pattern (`…/M{week}.xlsx`), so one profile serves the whole year.
 - **Two-phase pipeline** — `resolve` handlers compute inputs first, `fill`
   handlers write cells second; handler names and params are validated before
   anything is touched, and the last writer wins on a shared cell.
@@ -142,7 +142,7 @@ sections:
 profile: ali-bin-abu-2026
 
 inputs:
-  template: "assets/ALI BIN ABU/12. ERPH/2026/*/M{minggu}.xlsx"  # required
+  template: "assets/ALI BIN ABU/12. ERPH/2026/*/M{week}.xlsx"  # required
   jadual: "config/jadual-minggu/jadual-minggu.yaml"              # week calendar
   # templates: {18: "…/06. JUNE/M18.xlsx"}    # pin one week explicitly
   # timetable: "assets/timetable/jadual-waktu-2026-siri-7.xlsx"  # optional override
@@ -169,7 +169,7 @@ handlers:
 
 | Key | Description |
 |---|---|
-| `template` | **Required.** The workbook that gets filled in place. May contain `{minggu}` and glob wildcards |
+| `template` | **Required.** The workbook that gets filled in place. May contain `{week}` and glob wildcards |
 | `templates` | Optional `minggu → path` map; wins over `template` for those weeks |
 | `jadual` | The week calendar data file (documented in [`config/jadual-minggu/DESIGN.md`](config/jadual-minggu/DESIGN.md)) |
 | `timetable` | Optional explicit timetable xlsx; wins over the siri lookup |
@@ -177,7 +177,7 @@ handlers:
 
 Relative paths are resolved against the profile's own directory, then the current directory, then the repo root — so the shipped profile works no matter where you run it from.
 
-**One profile per year.** `template` is a pattern: `{minggu}` is replaced with the resolved week number, and `*`/`?` wildcards search for the file. The pattern must match **exactly one** workbook; if it matches two (e.g. an old week copied into another folder), `ranse fill` lists the candidates and you pin that week:
+**One profile per year.** `template` is a pattern: `{week}` is replaced with the resolved week number, and `*`/`?` wildcards search for the file. The pattern must match **exactly one** workbook; if it matches two (e.g. an old week copied into another folder), `ranse fill` lists the candidates and you pin that week:
 
 ```yaml
 inputs:

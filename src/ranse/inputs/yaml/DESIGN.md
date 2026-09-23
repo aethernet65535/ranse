@@ -14,5 +14,5 @@ rather than here:
 | the school calendar | `load_jadual_config` | [`config/jadual-minggu/DESIGN.md`](../../../../config/jadual-minggu/DESIGN.md) |
 
 `resolve_template` (framework, decision 10) picks the workbook: the
-`inputs.templates` override first, then `inputs.template` with `{minggu}`
+`inputs.templates` override first, then `inputs.template` with `{week}`
 substituted and glob wildcards expanded.

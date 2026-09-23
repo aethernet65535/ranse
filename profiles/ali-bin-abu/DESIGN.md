@@ -9,13 +9,13 @@ list names are indexed in
 ## What it fills
 
 The e-RPH workbook of one teacher, one file per week:
-`assets/ALI BIN ABU/12. ERPH/2026/*/M{minggu}.xlsx`. `{minggu}` is replaced
+`assets/ALI BIN ABU/12. ERPH/2026/*/M{week}.xlsx`. `{week}` is replaced
 with the resolved week number, so a single profile serves the whole year and
 the CLI stays week-agnostic.
 
 | Input | Points at | Read by |
 |---|---|---|
-| `template` | `assets/ALI BIN ABU/12. ERPH/2026/*/M{minggu}.xlsx` | `resolve_template` (framework) |
+| `template` | `assets/ALI BIN ABU/12. ERPH/2026/*/M{week}.xlsx` | `resolve_template` (framework) |
 | `jadual` | `config/jadual-minggu/jadual-minggu.yaml` — the school calendar | the `week` handler |
 
 ## Shared context

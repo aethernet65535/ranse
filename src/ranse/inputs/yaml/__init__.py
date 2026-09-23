@@ -41,7 +41,7 @@ def load_profile(path):
         jadual=_text(raw_inputs.get("jadual"), path, "inputs.jadual"),
         timetable=_text(raw_inputs.get("timetable"), path, "inputs.timetable"),
         csv=_text(raw_inputs.get("csv"), path, "inputs.csv"),
-        templates=_minggu_map(raw_inputs.get("templates"), path),
+        templates=_week_map(raw_inputs.get("templates"), path),
     )
 
     raw_handlers = raw.get("handlers")
@@ -84,24 +84,24 @@ def _text(value, path, key):
     return value.strip()
 
 
-def _minggu_map(value, path):
-    """``inputs.templates``: minggu number → workbook path (keys → str)."""
+def _week_map(value, path):
+    """``inputs.templates``: week number → workbook path (keys → str)."""
     if value is None:
         return {}
     if not isinstance(value, dict):
         raise ProfileError(f"{path}: 'inputs.templates' must be a mapping "
-                           f"of minggu number → path")
+                           f"of week number → path")
     out = {}
     for key, raw_path in value.items():
         try:
-            minggu = int(key)
+            week = int(key)
         except (TypeError, ValueError):
             raise ProfileError(
                 f"{path}: 'inputs.templates' key {key!r} is not a week number")
         if not isinstance(raw_path, str) or not raw_path.strip():
             raise ProfileError(
                 f"{path}: 'inputs.templates.{key}' must be a non-empty string")
-        out[str(minggu)] = raw_path.strip()
+        out[str(week)] = raw_path.strip()
     return out
 
 
@@ -110,24 +110,24 @@ def _input_bases(profile):
     return [profile.base_dir, os.getcwd(), _REPO_ROOT]
 
 
-def resolve_template(profile, minggu):
-    """Pick the workbook to fill (decision 10 + ``{minggu}`` patterns).
+def resolve_template(profile, week):
+    """Pick the workbook to fill (decision 10 + ``{week}`` patterns).
 
-    Order: ``inputs.templates[minggu]`` → ``inputs.template`` with
-    ``{minggu}`` substituted. A pattern may contain glob wildcards; it must
-    match exactly one existing workbook, otherwise the error lists the
-    candidates and points at ``inputs.templates``.
+    Order: ``inputs.templates[week]`` → ``inputs.template`` with ``{week}``
+    substituted. A pattern may contain glob wildcards; it must match exactly
+    one existing workbook, otherwise the error lists the candidates and
+    points at ``inputs.templates``.
     """
     inputs = profile.inputs
-    override = inputs.templates.get(str(minggu)) if minggu is not None else None
+    override = inputs.templates.get(str(week)) if week is not None else None
     raw = override or inputs.template
 
-    if "{minggu}" in raw:
-        if minggu is None:
+    if "{week}" in raw:
+        if week is None:
             raise ProfileError(
-                "the profile's template needs a week number ({minggu}) but "
+                "the profile's template needs a week number ({week}) but "
                 "none is known — set inputs.jadual in the profile")
-        raw = raw.replace("{minggu}", str(minggu))
+        raw = raw.replace("{week}", str(week))
 
     if not glob.has_magic(raw):
         path = _resolve_path(raw, _input_bases(profile))
@@ -144,10 +144,10 @@ def resolve_template(profile, minggu):
     if not matches:
         raise ProfileError(
             f"no workbook matched {raw!r}"
-            + (f" for minggu {minggu}" if minggu is not None else ""))
+            + (f" for week {week}" if week is not None else ""))
     if len(matches) > 1:
         raise ProfileError(
-            f"{raw!r} matches {len(matches)} workbooks for minggu {minggu}: "
+            f"{raw!r} matches {len(matches)} workbooks for week {week}: "
             + ", ".join(matches)
             + " — add an explicit 'inputs.templates' entry to the profile")
     return matches[0]

@@ -100,9 +100,9 @@ class HandlerSpec:
 class ProfileInputs:
     """Profile ``inputs:`` — where the files live (decision 10/11).
 
-    ``template`` may contain ``{minggu}`` (resolved once the week is known)
+    ``template`` may contain ``{week}`` (resolved once the week is known)
     and/or glob wildcards, so one profile can serve the whole year:
-    ``"…/2026/*/M{minggu}.xlsx"``. ``templates`` maps a minggu number to an
+    ``"…/2026/*/M{week}.xlsx"``. ``templates`` maps a week number to an
     explicit workbook and wins over the pattern (escape hatch for weeks whose
     file is named or placed differently).
     """
