@@ -4,14 +4,14 @@ The handler **system** (protocols, registry, two-phase pipeline, profile
 schema) is framework and is documented in [`docs/DESIGN.md`](../../../docs/DESIGN.md)
 §3–§5. This directory holds the four **shipped e-RPH handlers** — the
 business rules that must stay out of `core/` (decision 6). Each handler lives
-in its own folder, with its business rules in that folder's README:
+in its own folder, with its business rules in that folder's DESIGN.md:
 
 | Handler | Phase | Rules |
 |---|---|---|
-| [`week/`](week/) | resolve | date → minggu/siri → timetable path ([`week/README.md`](week/README.md)) |
-| [`menu/`](menu/) | fill | the MENU sheet owns all time data (decision 14), layout, clearing ([`menu/README.md`](menu/README.md)) |
-| [`fixed_cells/`](fixed_cells/) | fill | constant cells, `int(value)` timing ([`fixed_cells/README.md`](fixed_cells/README.md)) |
-| [`dskp/`](dskp/) | fill | day-sheet DSKP blocks, automatic section pair ([`dskp/README.md`](dskp/README.md)) |
+| [`week/`](week/) | resolve | date → minggu/siri → timetable path ([`week/DESIGN.md`](week/DESIGN.md)) |
+| [`menu/`](menu/) | fill | the MENU sheet owns all time data (decision 14), layout, clearing ([`menu/DESIGN.md`](menu/DESIGN.md)) |
+| [`fixed_cells/`](fixed_cells/) | fill | constant cells, `int(value)` timing ([`fixed_cells/DESIGN.md`](fixed_cells/DESIGN.md)) |
+| [`dskp/`](dskp/) | fill | day-sheet DSKP blocks, automatic section pair ([`dskp/DESIGN.md`](dskp/DESIGN.md)) |
 
 `base.py` (the `Resolver` / `Filler` protocols + `Context`) and
 `registry.py` (the built-in registry, decision 2) are framework, not
@@ -59,8 +59,8 @@ wins on a shared MENU cell.
 
 | Risks | Defined in |
 |---|---|
-| 7, 11, 12 | [`menu/README.md`](menu/README.md) (clearing branch, time suffix, MENU-only time writer) |
-| 8 | [`fixed_cells/README.md`](fixed_cells/README.md) (`int(value)` at write time) |
+| 7, 11, 12 | [`menu/DESIGN.md`](menu/DESIGN.md) (clearing branch, time suffix, MENU-only time writer) |
+| 8 | [`fixed_cells/DESIGN.md`](fixed_cells/DESIGN.md) (`int(value)` at write time) |
 | 9 | this file (fill order, above) |
 | 4, 10 | [`docs/input-formats.md`](../../../docs/input-formats.md) (period tables, Jumaat/Sabtu dropped) |
 | 1, 2, 3, 5, 6 | [`docs/DESIGN.md`](../../../docs/DESIGN.md) §10 (framework) |

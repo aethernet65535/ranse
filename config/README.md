@@ -62,7 +62,7 @@ Each `minggu` record:
 ## Resolution rules
 
 Implemented by the `week` handler; the full rules and error list are in
-[`src/ranse/handlers/week/README.md`](../src/ranse/handlers/week/README.md). In short:
+[`src/ranse/handlers/week/DESIGN.md`](../src/ranse/handlers/week/DESIGN.md). In short:
 
 - records are sorted by `start`; the chosen record is the last one whose
   `start ≤ date`;
@@ -91,7 +91,7 @@ Implemented by the `week` handler; the full rules and error list are in
 
 ## Cross-references
 
-- Handler rules that consume this file: [`src/ranse/handlers/week/README.md`](../src/ranse/handlers/week/README.md)
+- Handler rules that consume this file: [`src/ranse/handlers/week/DESIGN.md`](../src/ranse/handlers/week/DESIGN.md)
 - Timetable file formats picked here: [`docs/input-formats.md`](../docs/input-formats.md)
 - Profile schema (`inputs.jadual`): [`docs/DESIGN.md`](../docs/DESIGN.md) §3.3
 - Example profile: [`profiles/ali-bin-abu.yaml`](../profiles/ali-bin-abu.yaml)

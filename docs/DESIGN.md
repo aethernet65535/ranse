@@ -169,7 +169,7 @@ a malformed `params` fails **before any cell is touched**. A handler may only
 write through `ctx.workbook`, which is the core API of §3.1.
 
 The shipped handlers (`week`, `menu`, `fixed_cells`, `dskp`) and everything
-they compute are documented per handler in `src/ranse/handlers/<name>/README.md`
+they compute are documented per handler in `src/ranse/handlers/<name>/DESIGN.md`
 (index: `src/ranse/handlers/README.md`).
 
 ### 3.3 Profile schema
@@ -233,7 +233,7 @@ mistake in the shell cannot overwrite the wrong file (D10).
 
 `ranse write` always writes **text**; a value that must stay a number (a year,
 an amount) belongs in a `fixed_cells` handler, which keeps the `int(value)`
-path (risk 8, `src/ranse/handlers/fixed_cells/README.md`).
+path (risk 8, `src/ranse/handlers/fixed_cells/DESIGN.md`).
 
 ---
 
@@ -257,7 +257,7 @@ identifiers D1–D14 are cited from code and tests as "decision N".
 | D11 | Calendar file | `jadual-minggu.yaml` is a **standalone data file** referenced by the profile via `inputs.jadual`; it is not merged into the profile |
 | D12 | Layout constants | MENU row `5 + day_idx*10`, columns 3–7, `NUM_PERIODS=8`, `CLASS_BLOCK_SIZE=31`, … **stay in the handlers for v1**; they do not go into the profile |
 | D13 | Error handling | Core raises `RanseError` subclasses; the CLI maps them to `Error: …` + exit code 1. Handlers and inputs keep `print(..., file=sys.stderr)`; **no logging framework** |
-| D14 | Time ownership (business) | **All time-related data is written to the MENU sheet** — the shipped e-RPH rule, defined in `src/ranse/handlers/menu/README.md` |
+| D14 | Time ownership (business) | **All time-related data is written to the MENU sheet** — the shipped e-RPH rule, defined in `src/ranse/handlers/menu/DESIGN.md` |
 
 ---
 
@@ -400,12 +400,12 @@ Business risks (defined at the target, numbering continues from above):
 | Risk | Concern | Defined in |
 |---|---|---|
 | 4 | the two period tables keep their values; a time gap ends a merged run | `docs/input-formats.md` |
-| 7 | `menu` writes empty rows as `""` to clear a previous run — do not delete that branch | `src/ranse/handlers/menu/README.md` |
-| 8 | `fixed_cells` converts `int(value)` at write time, not at profile-load time | `src/ranse/handlers/fixed_cells/README.md` |
+| 7 | `menu` writes empty rows as `""` to clear a previous run — do not delete that branch | `src/ranse/handlers/menu/DESIGN.md` |
+| 8 | `fixed_cells` converts `int(value)` at write time, not at profile-load time | `src/ranse/handlers/fixed_cells/DESIGN.md` |
 | 9 | order matters in the fill phase (last writer wins) | `src/ranse/handlers/README.md` |
 | 10 | Jumaat/Sabtu are dropped while reading the timetable | `docs/input-formats.md` |
-| 11 | the PAGI/TGH/TPTG suffix only applies to `HH:00` keys | `src/ranse/handlers/menu/README.md` |
-| 12 | MENU is the only place time-related data is written (D14) | `src/ranse/handlers/menu/README.md` |
+| 11 | the PAGI/TGH/TPTG suffix only applies to `HH:00` keys | `src/ranse/handlers/menu/DESIGN.md` |
+| 12 | MENU is the only place time-related data is written (D14) | `src/ranse/handlers/menu/DESIGN.md` |
 
 ---
 

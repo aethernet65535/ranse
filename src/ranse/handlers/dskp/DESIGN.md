@@ -2,7 +2,7 @@
 
 Fills the standard rows of each class block on the day sheets. It is the only
 handler that writes to `AHAD`–`KHAMIS`, and it writes **content only** — which
-is exactly why [MENU](../menu/README.md) can own all time data
+is exactly why [MENU](../menu/DESIGN.md) can own all time data
 (decision 14).
 
 Protocol/registry contract: [parent index](../README.md).

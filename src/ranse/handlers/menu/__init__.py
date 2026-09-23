@@ -70,7 +70,7 @@ class MenuFiller:
                         sheet.write(_cell_ref(row, col), val)
                 else:
                     # Empty rows are written as "" — that CLEARS the results
-                    # of a previous run (handlers/menu/README.md risk 7). Keep this branch.
+                    # of a previous run (handlers/menu/DESIGN.md risk 7). Keep this branch.
                     for col in range(3, 8):
                         sheet.write(_cell_ref(row, col), "")
 

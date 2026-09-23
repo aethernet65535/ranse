@@ -27,7 +27,7 @@ Rangka kerja dan setiap kawasan perniagaan didokumenkan secara berasingan:
 | Dokumen | Kandungan |
 |---|---|
 | [`docs/DESIGN.md`](../../DESIGN.md) | reka bentuk rangka kerja teras: enjin, CLI, sistem handler, skema profil, pipeline |
-| [`src/ranse/handlers/README.md`](../../../src/ranse/handlers/README.md) | peraturan perniagaan handler yang dihantar — indeks; setiap handler mempunyai README sendiri dalam foldernya |
+| [`src/ranse/handlers/README.md`](../../../src/ranse/handlers/README.md) | peraturan perniagaan handler yang dihantar — indeks; setiap handler mempunyai DESIGN.md sendiri dalam foldernya |
 | [`docs/input-formats.md`](../../input-formats.md) | format fail sumber: jadual waktu xlsx/csv, DSKP txt/pdf/json |
 | [`config/README.md`](../../../config/README.md) | kalendar minggu sekolah (`jadual-minggu.yaml`) |
 | [`README.md`](../../../README.md) | versi English README ini |
@@ -46,7 +46,7 @@ src/ranse/
   model.py                   # Lesson / Schedule / Week / Profile
   core/                      # enjin xlsx tulis-sahaja (tiada pengetahuan perniagaan)
   inputs/                    # pembaca jadual waktu, DSKP dan YAML
-  handlers/                  # week/ menu/ fixed_cells/ dskp/ — satu folder + README setiap satu
+  handlers/                  # week/ menu/ fixed_cells/ dskp/ — satu folder + DESIGN.md setiap satu
 tests/                       # ujian unit + baseline regresi golden
 ```
 
@@ -170,7 +170,7 @@ Senarai eksplisit dan tersusun. Hanya handler terbina dalam boleh dinamakan — 
 | `fixed_cells` | fill | menulis `params.cells` — senarai `[sheet, range, value]` |
 | `dskp` | fill | menulis baris standard DSKP ke helaian hari |
 
-Peraturan setiap handler dan rujukan `params` penuh hidup dalam README
+Peraturan setiap handler dan rujukan `params` penuh hidup dalam DESIGN.md
 handler itu sendiri (indeks: [`src/ranse/handlers/README.md`](../../../src/ranse/handlers/README.md)).
 
 ## Seni Bina
