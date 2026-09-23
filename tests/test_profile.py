@@ -39,7 +39,9 @@ def test_shipped_profile_resolves_its_inputs_against_itself():
     profile = load_profile(str(PROFILE_YAML))
     assert profile.inputs.template.endswith(".xlsx")
     assert profile.inputs.jadual.endswith("jadual-minggu.yaml")
-    assert Path(profile.base_dir).name == "profiles"
+    # Each profile has its own folder (profiles/ali-bin-abu/profile.yaml), and
+    # its relative inputs must still resolve against that folder.
+    assert Path(profile.base_dir).name == "ali-bin-abu"
 
 
 # --- structural errors -----------------------------------------------------
