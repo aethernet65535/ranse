@@ -320,6 +320,9 @@ survive untouched.
 - `save()` re-serializes **only the sheets that received a write**; every other
   zip entry is copied through **byte-for-byte**, so untouched parts of the
   template cannot drift.
+- `save()` builds the zip in a **temporary file next to the target** and
+  renames it into place, so a run stopped mid-write (Ctrl+C, a crash) leaves
+  the previous workbook intact instead of a truncated one.
 - Serialized sheets keep the original declaration and formatting:
   `xml_declaration=True, encoding="UTF-8", short_empty_elements=False`.
 - Writes are merge-aware: the coordinate's top-left cell is used, and if it

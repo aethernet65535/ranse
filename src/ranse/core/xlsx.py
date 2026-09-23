@@ -10,7 +10,9 @@ open) instead of inside every parse; the registered prefixes/URIs must keep
 the templates' original prefixes (risk 1).
 """
 
+import os
 import re
+import tempfile
 import zipfile
 from xml.etree import ElementTree as ET
 
@@ -28,6 +30,15 @@ NS_R = "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}"
 def _read_zip(path):
     with zipfile.ZipFile(path, "r") as zf:
         return {info.filename: zf.read(info.filename) for info in zf.infolist()}
+
+
+def _file_mode(target):
+    """Mode to give a replaced file: the target's, else the umask default."""
+    if os.path.exists(target):
+        return os.stat(target).st_mode
+    mask = os.umask(0)
+    os.umask(mask)
+    return 0o666 & ~mask
 
 
 def _parse_sheet_rels(zip_data):
@@ -292,17 +303,34 @@ class Workbook:
 
         Only sheets with dirty state are re-serialized; every other zip
         entry is copied through byte-for-byte.
+
+        The zip is built in a temporary file next to the target and renamed
+        into place, so an interrupted run (Ctrl+C, a crash) leaves the target
+        workbook as it was instead of half-written.
         """
-        out = self._path if path is None else str(path)
-        with zipfile.ZipFile(out, "w",
-                             compression=zipfile.ZIP_DEFLATED) as zf:
-            for name, data in self._zip_data.items():
-                if name in self._dirty:
-                    data = ET.tostring(self._roots[name],
-                                       xml_declaration=True,
-                                       encoding="UTF-8",
-                                       short_empty_elements=False)
-                zf.writestr(name, data)
+        target = self._path if path is None else str(path)
+        directory = os.path.dirname(os.path.abspath(target)) or "."
+        handle, tmp = tempfile.mkstemp(dir=directory, prefix=".ranse-",
+                                       suffix=".tmp")
+        os.close(handle)
+        try:
+            with zipfile.ZipFile(tmp, "w",
+                                 compression=zipfile.ZIP_DEFLATED) as zf:
+                for name, data in self._zip_data.items():
+                    if name in self._dirty:
+                        data = ET.tostring(self._roots[name],
+                                           xml_declaration=True,
+                                           encoding="UTF-8",
+                                           short_empty_elements=False)
+                    zf.writestr(name, data)
+            os.chmod(tmp, _file_mode(target))
+            os.replace(tmp, target)
+        except BaseException:
+            try:
+                os.remove(tmp)
+            except OSError:
+                pass
+            raise
 
     # -- internal helpers used by Sheet ------------------------------------
     def _root(self, zip_path):
