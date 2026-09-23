@@ -1,4 +1,4 @@
-"""Error hierarchy: core failures raise from here (DESIGN.md decision 13).
+"""Error hierarchy: core failures raise from here (docs/DESIGN.md decision 13).
 
 The CLI catches ``RanseError`` and turns it into ``Error: <msg>`` on stderr
 plus exit code 1. Handlers and inputs keep their existing

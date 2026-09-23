@@ -1,6 +1,6 @@
 """Cell/area reference helpers and low-level path resolution.
 
-Pure functions only — no business knowledge (DESIGN.md decision 6).
+Pure functions only — no business knowledge (docs/DESIGN.md decision 6).
 """
 
 import os

@@ -1,4 +1,4 @@
-"""Handler protocols + shared context (DESIGN.md §3).
+"""Handler protocols + shared context (docs/DESIGN.md §3).
 
 Business logic lives behind these two protocols, which is what keeps it out
 of core (decision 6): a Filler can only touch cells through ``ctx.workbook``.

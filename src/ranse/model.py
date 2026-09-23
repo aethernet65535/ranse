@@ -1,6 +1,6 @@
 """Domain model: lessons, schedules, weeks and the loaded profile.
 
-Deliberately *outside* core (DESIGN.md §2): these types carry timetable / e-RPH
+Deliberately *outside* core (docs/DESIGN.md §2): these types carry timetable / e-RPH
 semantics (day names, tingkatan, handler names) that the write-only workbook
 engine must not know about. ``inputs`` produce them, ``handlers`` consume them.
 """
@@ -31,7 +31,7 @@ class Schedule:
 
     Day names are the Malay school days (``"Ahad"`` … ``"Khamis"``) — the
     template only has sheets for those, so Jumaat/Sabtu are dropped while
-    reading (DESIGN.md risk 10).
+    reading (docs/input-formats.md risk 10).
     """
 
     days: Dict[str, Dict[int, Lesson]] = field(default_factory=dict)
@@ -53,7 +53,7 @@ def merge_periods(day_schedule: Dict[int, Lesson]) -> List[Tuple[int, Lesson]]:
     """Merge consecutive periods with the same class/subject/tingkatan.
 
     Returns ``[(first_period, lesson_with_merged_end), …]`` in period order.
-    A gap in time ends a run even when the lesson repeats (DESIGN.md risk 4).
+    A gap in time ends a run even when the lesson repeats (docs/input-formats.md risk 4).
     """
     periods = sorted(day_schedule.keys())
     if not periods:
@@ -116,7 +116,7 @@ class ProfileInputs:
 
 @dataclass
 class Profile:
-    """A loaded profile file (DESIGN.md §3: explicit handler list)."""
+    """A loaded profile file (docs/DESIGN.md §3: explicit handler list)."""
 
     name: str
     inputs: ProfileInputs

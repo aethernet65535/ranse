@@ -247,7 +247,7 @@ class DskpFiller:
 
     Entry order is significant: static entries come first, automatic ones
     are appended after them, so on the same cell the automatic entry wins
-    (DESIGN.md risk 9).
+    (handlers/README.md risk 9).
 
     Profile form::
 

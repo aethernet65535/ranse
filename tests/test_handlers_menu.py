@@ -1,4 +1,4 @@
-"""MENU handler behaviour: period merging + time suffixes (DESIGN.md stage 0).
+"""MENU handler behaviour: period merging + time suffixes (docs/DESIGN.md stage 0).
 
 Stage 3 turned the lesson dict into the ``Lesson`` dataclass, so the
 expectations below are built from ``Lesson`` too (``entry["class"]`` →
@@ -40,7 +40,7 @@ def test_merge_three_periods_into_one_row():
 
 
 def test_no_merge_when_time_not_contiguous():
-    # same lesson but a gap between periods → two rows (risk 4 in DESIGN.md)
+    # same lesson but a gap between periods → two rows (risk 4 in docs/input-formats.md)
     day = {1: _entry("07:40", "08:20"), 3: _entry("09:00", "09:40")}
     assert [p for p, _ in merge_periods(day)] == [1, 3]
 
@@ -75,7 +75,7 @@ def test_merge_splits_then_resumes():
 
 
 def test_time_suffix_day_part_boundaries():
-    # PAGI → TGH at 11:00, TGH → TPTG at 14:00 (DESIGN.md stage 0 item 3)
+    # PAGI → TGH at 11:00, TGH → TPTG at 14:00 (docs/DESIGN.md stage 0 item 3)
     assert _time_with_suffix("10:00") == "10:00 PAGI"
     assert _time_with_suffix("11:00") == "11:00 TGH"
     assert _time_with_suffix("13:00") == "13:00 TGH"

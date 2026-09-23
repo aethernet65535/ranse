@@ -9,7 +9,7 @@ Everything the tests need in order to survive the refactor with minimal churn:
   path is profile-only — decision 10 — and the real asset is read-only);
 - ``fn(name)``   — find a function by name: first in ``src/ranse`` (once it
   exists). Unit tests call ``fn`` instead of importing a fixed module, so
-  moving code between stages did not require editing the tests (DESIGN.md:
+  moving code between stages did not require editing the tests (docs/DESIGN.md:
   "pure-function unit tests stay green"); stage 4 removed ``scripts/``, so it
   is src-only now;
 - ``call_error`` — run a function and return its error text, whether the code
@@ -45,7 +45,7 @@ DSKP_DIR = REPO_ROOT / "assets" / "bc-dskp"
 PROFILE_YAML = REPO_ROOT / "profiles" / "ali-bin-abu.yaml"
 JADUAL_YAML = REPO_ROOT / "config" / "jadual-minggu.yaml"
 
-# Stage-0 golden cases (DESIGN.md stage 0): two normal weeks …
+# Stage-0 golden cases (docs/DESIGN.md stage 0): two normal weeks …
 GOLDEN_CASES = {
     "minggu-33": "2026-09-20",
     "minggu-34": "2026-09-27",
@@ -191,7 +191,7 @@ def call_error(func, *args, **kwargs):
 
     The legacy code reports errors via ``print(..., file=sys.stderr)`` +
     ``sys.exit(1)``; stage 2 switches to RanseError exceptions with the same
-    wording (DESIGN.md decision 13). Catching BaseException and concatenating
+    wording (docs/DESIGN.md decision 13). Catching BaseException and concatenating
     stderr with ``str(exc)`` keeps the assertions valid across both styles.
     """
     buf = io.StringIO()

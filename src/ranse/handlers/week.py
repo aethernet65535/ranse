@@ -1,7 +1,7 @@
 """Week/date resolution: date → minggu/siri → timetable path.
 
 Business rules (cuti weeks, missing minggu, dates outside the calendar) live
-here in the handler layer, never in core (DESIGN.md decision 6). Error
+here in the handler layer, never in core (docs/DESIGN.md decision 6). Error
 reporting keeps the handler style: print to stderr + exit (decision 13).
 """
 

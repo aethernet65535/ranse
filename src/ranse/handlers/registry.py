@@ -23,7 +23,7 @@ def build_handlers(specs):
     """Profile handler specs → ``[(spec, handler_instance), …]``.
 
     Unknown names and invalid params raise :class:`ProfileError`; handler
-    order in the profile is preserved (see DESIGN.md risk 9: static DSKP
+    order in the profile is preserved (see handlers/README.md risk 9: static DSKP
     entries are written before the automatic ones).
     """
     bound = []
