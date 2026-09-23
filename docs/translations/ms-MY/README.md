@@ -96,10 +96,10 @@ Tiada `--xlsx` dengan sengaja: buku kerja ialah input profil, jadi kesilapan pad
 ### `ranse write` — satu sel
 
 ```bash
-ranse write --profile profiles/ali-bin-abu/profile.yaml --minggu 33 MENU!B3 "ALI BIN ABU"
+ranse write --profile profiles/ali-bin-abu/profile.yaml MENU!B3 "ALI BIN ABU"
 ```
 
-Menulis satu sel (`SHEET!CELL`, atau `SHEET!FROM:TO` — sudu kiri atas julat atau julat digabungkan digunakan) dan menyimpan buku kerja. `--minggu` hanya diperlukan apabila `template` profil mengandungi `{minggu}`. Nilai ditulis sebagai teks; gunakan `ranse fill` dengan handler `fixed_cells` untuk nilai yang perlu menjadi nombor.
+Menulis satu sel (`SHEET!CELL`, atau `SHEET!FROM:TO` — sudu kiri atas julat atau julat digabungkan digunakan) dan menyimpan buku kerja. Ia tiada pilihan selain `--profile`: ia menjalankan fasa resolve profil, jadi buku kerja minggu mana yang ditulis ditentukan sama seperti `ranse fill`. Nilai ditulis sebagai teks; gunakan `ranse fill` dengan handler `fixed_cells` untuk nilai yang perlu menjadi nombor.
 
 ### `ranse dskp` — hurai kandungan DSKP
 

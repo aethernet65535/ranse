@@ -126,7 +126,7 @@ def resolve_template(profile, minggu):
         if minggu is None:
             raise ProfileError(
                 "the profile's template needs a week number ({minggu}) but "
-                "none is known — pass --minggu N or set inputs.jadual")
+                "none is known — set inputs.jadual in the profile")
         raw = raw.replace("{minggu}", str(minggu))
 
     if not glob.has_magic(raw):

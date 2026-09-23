@@ -22,7 +22,7 @@ Consequences:
   `dskp` are not used for times in the shipped profile.
 - A correction to time-related data is a **MENU-sheet edit**: change the
   timetable (or the calendar) and re-run, or use the single-cell escape hatch
-  `ranse write --profile P --minggu N MENU!<cell> "<value>"` (decision 9).
+  `ranse write --profile P MENU!<cell> "<value>"` (decision 9).
 - Because everything time-related lives on one sheet, a wrong week cannot
   half-apply: MENU is either fully rewritten for the week or left untouched.
 

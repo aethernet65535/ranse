@@ -216,7 +216,7 @@ from `inputs`, and the handlers that read them own their formats (D11).
 
 ```
 ranse fill  --profile P [handler options]
-ranse write --profile P [--minggu N] SHEET!CELL VALUE
+ranse write --profile P SHEET!CELL VALUE
 ```
 
 `fill` and `write` are the framework subcommands; the example adds an
@@ -224,9 +224,9 @@ input-specific subcommand documented with that input.
 
 `ranse fill` adds only `--profile` itself. Every other option is declared by
 a handler (`cli_options`) and its value reaches that handler through
-`ctx.runtime`; the handler's own `DESIGN.md` says what it means. `write` keeps
-`--minggu` because it resolves a `{minggu}` template without running the
-handlers.
+`ctx.runtime`; the handler's own `DESIGN.md` says what it means. `ranse write`
+has no options of its own either: it runs the profile's resolve phase to find
+the workbook, then writes the one cell.
 
 There is deliberately **no `--xlsx`**: the workbook is a profile input, so a
 mistake in the shell cannot overwrite the wrong file (D10).

@@ -57,11 +57,8 @@ def _build_parser():
         "write", help="write a single cell on the profile's template")
     write.add_argument("--profile", required=True,
                        help="Path to the profile YAML (inputs + handlers)")
-    write.add_argument("--minggu", type=int, default=None,
-                       help="Week number, needed only when the profile's "
-                            "template contains {minggu}")
     write.add_argument("ref", metavar="SHEET!CELL",
-                       help="Cell to write, e.g. MENU!B3 or MENU!B3:C3")
+                       help="Cell to write, e.g. SHEET!B3 or SHEET!B3:C3")
     write.add_argument("value", help="Value to write (written as text)")
 
     dskp = subparsers.add_parser(
@@ -72,13 +69,28 @@ def _build_parser():
 
 
 def _run_write(args):
-    """``ranse write`` — one cell through the core write API (decision 9)."""
+    """``ranse write`` — one cell through the core write API (decision 9).
+
+    ``write`` has no options of its own: the profile names the workbook, and
+    the profile's resolve-phase handlers decide which week's file that is.
+    """
     profile = load_profile(args.profile)
-    template = resolve_template(profile, args.minggu)
+    ctx = Context(profile=profile)
+    _resolve_phase(build_handlers(profile.handlers), ctx)
+    template = resolve_template(profile, ctx.week.minggu if ctx.week else None)
     wb = Workbook.open(template)
     wb.write(args.ref, args.value)
     wb.save()
     print(f"Done: {args.ref} = {args.value!r} ({template})")
+
+
+def _resolve_phase(handlers, ctx):
+    """Run every resolve-phase handler in profile order (no cell writes)."""
+    for spec, handler in handlers:
+        if handler.phase != "resolve":
+            continue
+        ctx.params = spec.params
+        handler.resolve(ctx)
 
 
 def _run_fill(parser, args):
@@ -94,11 +106,7 @@ def _run_fill(parser, args):
     )
 
     # --- Phase one: resolvers compute the inputs (no cell writes) ---
-    for spec, handler in handlers:
-        if handler.phase != "resolve":
-            continue
-        ctx.params = spec.params
-        handler.resolve(ctx)
+    _resolve_phase(handlers, ctx)
 
     # --- Which workbook is this week's? (profile input; {minggu} patterns) ---
     template = resolve_template(profile, ctx.week.minggu if ctx.week else None)

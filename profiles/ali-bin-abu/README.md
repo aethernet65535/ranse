@@ -13,7 +13,7 @@ folder:
 
 ```bash
 ranse fill  --profile profiles/ali-bin-abu/profile.yaml --date 2026-09-20
-ranse write --profile profiles/ali-bin-abu/profile.yaml --minggu 33 MENU!B3 "ALI BIN ABU"
+ranse write --profile profiles/ali-bin-abu/profile.yaml MENU!B3 "ALI BIN ABU"
 ```
 
 `ranse fill` is idempotent: the same week always produces the same workbook,
