@@ -1,39 +1,70 @@
 # Ranse
 
-**Auto-fill e-RPH xlsx templates with your weekly timetable data — in one command.**
+**Fill spreadsheet templates in place from your weekly data — with one command.**
 
 ## What is Ranse?
 
-Ranse is a command-line tool designed for Malaysian school teachers. It takes your weekly class timetable (in xlsx or csv format) and automatically fills in the **e-RPH** (electronic Rancangan Pengajaran Harian) Excel template, so you don't have to do it manually every week.
+Ranse is a command-line tool that fills an Excel (xlsx) workbook **in place**
+from source data files, without disturbing any cell it does not write. It is
+driven entirely by a YAML **profile**: where the files are, what is shared,
+and which **handlers** run, in order.
 
-If you've ever spent time copying class names, periods, and subjects into the e-RPH form by hand, Ranse can save you that effort.
+It ships configured for its first business: filling Malaysian **e-RPH**
+(*Rancangan Pengajaran Harian*) workbooks from a weekly timetable. That
+business — and every other business you could configure — lives entirely in
+handlers and data files, never in the core framework described below.
 
 ## Features
 
-- **Preserves original formatting** — Directly edits the xlsx file's internal XML, so all cell styles, merged cells, and borders remain untouched.
-- **Profiles** — One YAML file per teacher says where the files live (`inputs`), what is shared between handlers (`context`) and which handlers run (`handlers`). The workbook can be a `{minggu}` pattern (`…/M{minggu}.xlsx`), so one profile serves the whole year.
-- **Two input formats** — Read your timetable from an `.xlsx` file or a `.csv` file.
-- **Automatic period merging** — Consecutive periods with the same class and subject are merged into one row (e.g., two back-to-back Bahasa Cina periods become one entry).
-- **Configurable subject mapping** — Map short codes like `BC` to full names like "BAHASA CINA 华文".
-- **Fixed cell values** — Write constant values (e.g., teacher name) to specific cells.
-- **Single-cell writes** — `ranse write MENU!B3 "ALI BIN ABU"` for one-off corrections.
-- **Date-aware** — The date defaults to the Sunday of the current week; override it with `--date`.
-- **Week-aware (minggu → siri)** — The week number is resolved from the date, the matching timetable (siri 1, 7, …) is picked automatically, and holiday weeks are reported instead of silently filling the wrong week.
-- **Automatic content standards** — Every matched lesson is filled with two parent-level content standards side by side (left/right columns), sliding forward one section per week: `1+2 → 2+3 → … → wrap back to 1+2`.
-- **DSKP toolkit** — `ranse dskp` parses a DSKP txt/pdf into structured JSON for the manual entries.
+- **Preserves original formatting** — edits the xlsx file's internal XML
+  directly, so all cell styles, merged cells and borders remain untouched.
+  Sheets nobody writes to are copied through byte-for-byte.
+- **Write-only core** — the engine cannot read a cell back; it has no
+  knowledge of days, subjects or layouts, and none of that can leak into it.
+- **Profile-driven** — one YAML per teacher/template declares `inputs`
+  (where the files are), `context` (shared values) and `handlers` (the
+  explicit, ordered pipeline). The workbook can be a `{minggu}`
+  pattern (`…/M{minggu}.xlsx`), so one profile serves the whole year.
+- **Two-phase pipeline** — `resolve` handlers compute inputs first, `fill`
+  handlers write cells second; handler names and params are validated before
+  anything is touched, and the last writer wins on a shared cell.
+- **Two input formats** — read the timetable from `.xlsx` or `.csv`.
+- **Single-cell writes** — `ranse write MENU!B3 "ALI BIN ABU"` for one-off
+  corrections.
+- **Date-aware** — the date defaults to the Sunday of the current week;
+  override it with `--date`.
+- **Deterministic re-runs** — handlers are stateless; running a week twice
+  produces the same workbook.
+- **Typed errors** — failures print `Error: …` on stderr and exit 1; usage
+  mistakes exit 2.
+
+## Documentation
+
+The framework and each business area are documented separately:
+
+| Document | Contents |
+|---|---|
+| [`docs/DESIGN.md`](docs/DESIGN.md) | core framework design: engine, CLI, handler system, profile schema, pipeline |
+| [`src/ranse/handlers/README.md`](src/ranse/handlers/README.md) | the shipped handlers' business rules (week, MENU, fixed cells, DSKP) |
+| [`docs/input-formats.md`](docs/input-formats.md) | source file formats: timetable xlsx/csv, DSKP txt/pdf/json |
+| [`config/README.md`](config/README.md) | the school week calendar (`jadual-minggu.yaml`) |
+| [`docs/translations/ms-MY/README.md`](docs/translations/ms-MY/README.md) | this README in Bahasa Melayu |
 
 ## Project Structure
 
 ```
 profiles/                    # One profile per teacher/template (start here)
   ali-bin-abu.yaml
-config/jadual-minggu.yaml    # School calendar: date → minggu → siri → timetable
+config/jadual-minggu.yaml    # School calendar data file (see config/README.md)
+docs/
+  DESIGN.md                  # Core framework design
+  input-formats.md           # Timetable / DSKP source formats
 src/ranse/
   cli.py                     # ranse fill / write / dskp
   model.py                   # Lesson / Schedule / Week / Profile
-  core/                      # write-only xlsx engine (no school knowledge)
+  core/                      # write-only xlsx engine (no business knowledge)
   inputs/                    # timetable, DSKP and YAML readers
-  handlers/                  # week / menu / fixed_cells / dskp
+  handlers/                  # week / menu / fixed_cells / dskp (+ README)
 tests/                       # unit tests + golden regression baselines
 ```
 
@@ -60,24 +91,19 @@ This installs the `ranse` command. `pip install -e ".[dev]"` also installs pytes
 ranse fill --profile profiles/ali-bin-abu.yaml --date 2026-09-20
 ```
 
-That single command resolves the week from the calendar, picks that week's workbook, reads the matching timetable, fills the MENU sheet, the fixed cells and the DSKP blocks, and overwrites the workbook **in place**. Nothing has to be edited between weeks.
+One command resolves the inputs, opens the profile's workbook, runs the
+handlers in order and overwrites the workbook **in place**. Nothing has to be
+edited between weeks.
 
 | Option | Required | Description |
 |---|---|---|
 | `--profile` | Yes | Path to the profile YAML (`inputs` + `handlers`) |
 | `--date` | No | Week start date in `YYYY-MM-DD` (default: **the Sunday of the current week**; other days are rolled back to their Sunday) |
 | `--minggu` | No | Override the week number (default: resolved from `--date`) |
-| `--no-dskp-auto` | No | Disable automatic content-standard filling for this run |
+| `--no-dskp-auto` | No | Disable the handlers' automatic filling for this run |
 
-There is deliberately no `--xlsx`: the workbook is a profile input, so a mistake in the shell cannot overwrite the wrong file.
-
-This will:
-1. Resolve the week: `2026-09-20` → **minggu 33**, siri `7` from `config/jadual-minggu.yaml`
-2. Pick the workbook for minggu 33 (`…/2026/07. TMP-NEW/M33.xlsx`)
-3. Read that week's timetable (`assets/timetable/jadual-waktu-2026-siri-7.xlsx`)
-4. Fill the MENU sheet (the date column gets the week's Sunday)
-5. Fill every matched lesson with two parent-level content standards (left/right), sliding one section per week
-6. Overwrite the workbook in place
+There is deliberately no `--xlsx`: the workbook is a profile input, so a
+mistake in the shell cannot overwrite the wrong file.
 
 ### `ranse write` — one cell
 
@@ -95,11 +121,13 @@ ranse dskp --pdf dskp.pdf --pages 35-45 -o t1.json
 ranse dskp --list
 ```
 
-Produces the structured JSON that the manual `dskp` entries reference.
+Produces structured JSON from a DSKP txt/pdf source. Formats:
+[`docs/input-formats.md`](docs/input-formats.md).
 
 ## Configuration (the profile)
 
-A profile is the only thing `ranse fill` / `ranse write` need. It has three sections:
+A profile is the only thing `ranse fill` / `ranse write` need. It has three
+sections:
 
 ```yaml
 profile: ali-bin-abu-2026
@@ -125,36 +153,22 @@ handlers:
   - name: dskp
     params:
       mode: auto
-      file: "assets/bc-dskp/t{tingkatan}.txt"
-      match_codes: [BC]
-      match_names: ["BAHASA CINA", "华文"]
-      cs: 1
-      ls: 1
-      left_col: 2
-      right_col: 5
+      # … handler-specific params, see src/ranse/handlers/README.md
 ```
 
 ### `inputs`
 
 | Key | Description |
 |---|---|
-| `template` | **Required.** The e-RPH workbook that gets filled in place. May contain `{minggu}` and glob wildcards |
+| `template` | **Required.** The workbook that gets filled in place. May contain `{minggu}` and glob wildcards |
 | `templates` | Optional `minggu → path` map; wins over `template` for those weeks |
-| `jadual` | The week calendar (`config/jadual-minggu.yaml`) |
+| `jadual` | The week calendar data file (documented in [`config/README.md`](config/README.md)) |
 | `timetable` | Optional explicit timetable xlsx; wins over the siri lookup |
 | `csv` | Optional explicit timetable csv; wins over the siri lookup |
 
 Relative paths are resolved against the profile's own directory, then the current directory, then the repo root — so the shipped profile works no matter where you run it from.
 
-**One profile per year.** `template` is a pattern: `{minggu}` is replaced with the resolved week number, and `*`/`?` wildcards search for the file. The shipped profile therefore finds `01. JANUARY/M1.xlsx`, `02. FEBRUARY/M4.xlsx` and `07. TMP-NEW/M33.xlsx` from one line, and the timetable side is already mapped by the calendar (`jadual_siri` + `jadual`).
-
-If a week cannot be decided automatically — typically because an old week was copied into another folder, leaving two files called `M<minggu>.xlsx` — `ranse fill` says so and lists the candidates, and you pin that week with `templates`:
-
-```text
-Error: 'assets/…/2026/*/M25.xlsx' matches 2 workbooks for minggu 25:
-…/05. MAY/M25.xlsx, …/07. TMP-NEW/M25.xlsx
-— add an explicit 'inputs.templates' entry to the profile
-```
+**One profile per year.** `template` is a pattern: `{minggu}` is replaced with the resolved week number, and `*`/`?` wildcards search for the file. The pattern must match **exactly one** workbook; if it matches two (e.g. an old week copied into another folder), `ranse fill` lists the candidates and you pin that week:
 
 ```yaml
 inputs:
@@ -162,136 +176,48 @@ inputs:
     25: "assets/ALI BIN ABU/12. ERPH/2026/07. TMP-NEW/M25.xlsx"
 ```
 
-Keeping exactly one file per week number makes the pattern unambiguous for the whole year; a week whose workbook does not exist yet (say you fill week 34 before creating `M34.xlsx`) is reported the same way, with `no workbook matched`.
+A week whose workbook does not exist yet is reported the same way, with `no workbook matched`.
 
 ### `context`
 
-Values shared by several handlers. `subjects` maps subject codes to the names written into the template; a code that is not listed is written as-is.
-
-```yaml
-context:
-  subjects:
-    BC: "BAHASA CINA 华 文"
-    BI: "ENGLISH"
-```
+Values shared by several handlers — e.g. one `subjects` map used by two
+handlers, so it is written once instead of duplicated into both params.
 
 ### `handlers`
 
-An explicit, ordered list. Only built-in handlers can be named — an unknown name is an error, and every handler validates its own `params` before anything is written.
+An explicit, ordered list. Only built-in handlers can be named — an unknown name is an error, and every handler validates its own `params` before anything is written. On a shared cell, **the last handler in the list wins**.
 
 | Handler | Phase | What it does |
 |---|---|---|
-| `week` | resolve | date → minggu/siri → timetable path (holiday weeks are an error) |
-| `menu` | fill | MENU rows: class, times with PAGI/TGH/TPTG suffix, subject name, tingkatan |
+| `week` | resolve | date → week number/siri → timetable path (holiday weeks are an error) |
+| `menu` | fill | writes the week's time data to the MENU sheet |
 | `fixed_cells` | fill | writes `params.cells` — a list of `[sheet, range, value]` |
-| `dskp` | fill | DSKP blocks: manual `entries` first, then the automatic week-based pair |
+| `dskp` | fill | writes the DSKP standard rows to the day sheets |
 
-#### `fixed_cells` params
+Each handler's rules and full `params` reference:
+[`src/ranse/handlers/README.md`](src/ranse/handlers/README.md).
 
-```yaml
-- name: fixed_cells
-  params:
-    cells:
-      - [MENU, "B3:C3", "ALI BIN ABU"]   # writes to the top-left of the range
-      - [MENU, "B4", 2026]                # numbers stay numbers
-```
-
-#### `dskp` params
-
-```yaml
-- name: dskp
-  params:
-    mode: auto                            # auto (default) | static
-    entries:                              # manual entries, written first
-      - {sheet: ISNIN, class: 1, file: t1.json,
-         selection: [1, 1, 1], col_start: 2}
-    file: "assets/bc-dskp/t{tingkatan}.txt"  # source for the automatic pair
-    match_codes: [BC]                     # subject codes in the timetable xlsx
-    match_names: ["BAHASA CINA", "华文"]   # matched when reading a CSV
-    cs: 1                                 # which content standard inside a section
-    ls: 1                                 # which learning standard
-    left_col: 2                           # left half  = column B
-    right_col: 5                          # right half = column E
-```
-
-`file` accepts a `{tingkatan}` placeholder (T1 → `t1.txt`, T2 → `t2.txt`, …), a per-tingkatan map, or nothing at all — in which case the built-in `assets/bc-dskp/t1.txt` … `t5.txt` table is used. The same source formats as the manual entries are supported: a txt file, or JSON produced by `ranse dskp`.
-
-Automatic entries are appended **after** the manual ones, so on the same cell the automatic entry wins. `--no-dskp-auto` (or `mode: static`) turns the automatic part off for a run.
-
-## Week calendar (`config/jadual-minggu.yaml`)
-
-The week-aware mode is driven by the calendar referenced from `inputs.jadual`:
-
-```yaml
-jadual:                 # siri number → timetable file
-  1: assets/timetable/jadual-waktu-2026-siri-1.xlsx
-  7: assets/timetable/jadual-waktu-2026-siri-7.xlsx
-
-jadual_siri:            # minggu → siri (fill this in)
-  33: 1
-  34: 7
-
-minggu:                 # each record takes effect from its start date
-  - start: 2026-09-20
-    minggu: 33
-  - start: 2026-09-27
-    minggu: 34
-```
-
-- `minggu` records are pre-filled from the school calendar (M01…M43); holiday weeks are marked with `cuti` and produce a clear error instead of silently filling the wrong week.
-- `jadual_siri` is the minggu → siri table; you can also put `siri: 7` directly inside a `minggu` record (it wins over `jadual_siri`).
-- Weeks without a configured siri are an error unless `inputs.timetable` / `inputs.csv` is set in the profile.
-
-## Automatic content standards
-
-For each merged lesson of the matched subject, two **parent-level** sections of the DSKP (the `X.0` headings) are written side by side — left column first, right column second:
+## Architecture
 
 ```
-week 1 → 1.0 Listening and Speaking  |  2.0 Reading
-week 2 → 2.0 Reading  |  3.0 Writing
-week 3 → 3.0 Writing  |  4.0 Fun with Chinese
-...
-no next section → wrap back to 1.0 + 2.0
+cli.py ──▶ handlers/ ──▶ core/        (write-only Workbook / Sheet API)
+              │
+              └──────▶ inputs/        (read source files, never the workbook)
 ```
 
-The pair is computed from the week number alone, so re-running any week always produces the same result. Each side writes the section title (the skill row), the content standard row, and the learning standard row of its class block.
+- **`core/`** — an xlsx is a zip of XML parts; Ranse skips `openpyxl` and
+  edits the sheet XML directly, preserving every attribute it does not
+  deliberately change. It is strictly write-only and knows nothing about
+  school weeks, subjects or layouts.
+- **`inputs/`** — readers that turn the calendar, timetable and DSKP files
+  into model objects; they never touch the target workbook.
+- **`handlers/`** — all business rules, implementing the two protocols
+  (`resolve` / `fill`) and looked up from a built-in registry.
+- **`cli.py`** — argparse plus the pipeline order; a `RanseError` becomes
+  `Error: …` + exit 1.
 
-## How It Works
-
-Ranse bypasses libraries like `openpyxl` and works directly with the xlsx file's internal XML. An xlsx file is actually a ZIP archive containing XML files. Ranse:
-
-1. **Unzips** the xlsx file
-2. **Parses** the sheet XML using Python's built-in `xml.etree.ElementTree`
-3. **Modifies** only the cell values (`<v>` elements) while keeping every original attribute (style, number format, etc.) intact
-4. **Re-zips** everything back into a valid xlsx file
-
-The workbook engine is deliberately write-only — it has no way to read a cell value — and knows nothing about school weeks, subjects or layouts. All of that lives in the handlers, which write through the engine. Sheets nobody wrote to are copied through byte-for-byte, so untouched parts of the template cannot drift.
-
-## Timetable Input Format
-
-### xlsx format
-
-The timetable xlsx should have the following layout:
-
-| | A | B | C | D | E | F |
-|---|---|---|---|---|---|---|
-| 1 | Period | Ahad | Isnin | Selasa | Rabu | Khamis |
-| 2 | 1 | BC-1A | BI-2B | ... | ... | ... |
-| 3 | 2 | ... | ... | ... | ... | ... |
-
-- **Row 1** is the header row with day names
-- **Column A** contains the period number
-- **Other columns** contain class codes in the format `<SUBJECT>-<TINGKATAN><CLASS>` (e.g., `BC-1A` means Bahasa Cina, Tingkatan 1, Class A)
-
-Friday and Saturday columns are ignored: the template only has sheets for Ahad–Khamis.
-
-### csv format
-
-The CSV should have these columns:
-
-```
-Date,Class,Start Time,End Time,Subject,Tingkatan
-```
+Full design (interfaces, decisions, lifecycle, risks):
+[`docs/DESIGN.md`](docs/DESIGN.md).
 
 ## Development
 
