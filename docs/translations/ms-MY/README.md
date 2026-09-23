@@ -1,39 +1,52 @@
 # Ranse
 
-**Isi borang e-RPH xlsx secara automatik dengan data jadual waktu mingguan anda — dengan satu arahan sahaja.**
+**Isi templat hamparan secara langsung (*in place*) daripada data mingguan anda — dengan satu arahan sahaja.**
 
 ## Apa itu Ranse?
 
-Ranse ialah alatan baris arahan yang direka untuk guru-guru sekolah di Malaysia. Ia mengambil jadual waktu kelas mingguan anda (dalam format xlsx atau csv) dan mengisi templat Excel **e-RPH** (Rancangan Pengajaran Harian elektronik) secara automatik, supaya anda tidak perlu melakukannya setiap minggu secara manual.
+Ranse ialah alatan baris arahan yang mengisi buku kerja Excel (xlsx) **di tempat asal** daripada fail data sumber, tanpa mengganggu sebarang sel yang tidak ditulisnya. Ia dipacu sepenuhnya oleh satu **profil** YAML: di mana fail berada, apa yang dikongsi, dan **handler** mana yang dijalankan, secara berurutan.
 
-Jika anda pernah menghabiskan masa menyalin nama kelas, waktu, dan subjek ke dalam borang e-RPH dengan tangan, Ranse boleh menjimatkan usaha anda.
+Ia dihantar bersedia untuk perniagaan pertamanya: mengisi buku kerja **e-RPH** (*Rancangan Pengajaran Harian*) Malaysia daripada jadual waktu mingguan. Perniagaan itu — dan mana-mana perniagaan lain yang boleh anda konfigurasi — hidup sepenuhnya dalam handler dan fail data, langsung bukan dalam rangka kerja teras yang diterangkan di bawah.
 
 ## Ciri-ciri
 
-- **Mengekalkan format asal** — Mengedit terus XML dalaman fail xlsx, supaya semua gaya sel, sel digabungkan, dan sempadan kekal utuh.
-- **Profil** — Satu fail YAML bagi setiap guru yang menyatakan di mana fail berada (`inputs`), apa yang dikongsi antara handler (`context`) dan handler mana yang dijalankan (`handlers`). Buku kerja boleh menjadi pola `{minggu}` (`…/M{minggu}.xlsx`), jadi satu profil berkhidmat untuk setahun.
-- **Dua format input** — Baca jadual waktu anda dari fail `.xlsx` atau `.csv`.
-- **Penggabungan waktu secara automatik** — Waktu berturut-turut dengan kelas dan subjek yang sama digabungkan menjadi satu baris (contohnya dua waktu Bahasa Cina berturut-turut menjadi satu entri).
-- **Pemetaan subjek yang boleh dikonfigurasi** — Petakan kod pendek seperti `BC` kepada nama penuh seperti "BAHASA CINA 华文".
-- **Nilai sel tetap** — Tulis nilai tetap (contohnya nama guru) ke sel tertentu.
+- **Mengekalkan format asal** — mengedit XML dalaman fail xlsx terus, jadi semua gaya sel, sel digabungkan dan sempadan kekal utuh. Helaian yang tiada siapa menulis disalin terus bait demi bait.
+- **Teras tulis-sahaja** — enjin tidak boleh membaca semula sel; ia tiada pengetahuan tentang hari, subjek atau susun atur, dan tiada apa daripada itu boleh bocor ke dalamnya.
+- **Dipacu profil** — satu YAML bagi setiap guru/templat menyatakan `inputs` (di mana fail berada), `context` (nilai dikongsi) dan `handlers` (pipeline eksplisit, berurutan). Buku kerja boleh menjadi pola `{minggu}` (`…/M{minggu}.xlsx`), jadi satu profil berkhidmat untuk setahun.
+- **Pipeline dua fasa** — handler `resolve` mengira input dahulu, handler `fill` menulis sel kemudian; nama dan params handler disahkan sebelum apa-apa disentuh, dan penulis terakhir menang pada sel berkongsi.
+- **Dua format input** — baca jadual waktu daripada `.xlsx` atau `.csv`.
 - **Penulisan satu sel** — `ranse write MENU!B3 "ALI BIN ABU"` untuk pembetulan sekali sahaja.
-- **Sedar tarikh** — Tarikh lalai ialah hari Ahad minggu semasa; gantikan dengan `--date`.
-- **Sedar minggu (minggu → siri)** — Nombor minggu diselesaikan daripada tarikh, jadual waktu yang sepadan (siri 1, 7, …) dipilih secara automatik, dan minggu cuti dilaporkan dan bukannya mengisi minggu yang salah secara senyap.
-- **Standard kandungan automatik** — Setiap pelajaran yang dipadankan diisi dengan dua standard kandungan peringkat induk bersebelahan (lajur kiri/kanan), bergerak ke hadapan satu seksyen setiap minggu: `1+2 → 2+3 → … → pusing balik ke 1+2`.
-- **Kit DSKP** — `ranse dskp` menghurai DSKP txt/pdf menjadi JSON berstruktur untuk entri manual.
+- **Sedar tarikh** — tarikh lalai ialah hari Ahad minggu semasa; gantikan dengan `--date`.
+- **Jalanan semula tentatif** — handler tanpa keadaan; menjalankan minggu yang sama dua kali menghasilkan buku kerja yang sama.
+- **Ralat bertipus** — kegagalan mencetak `Error: …` pada stderr dan keluar dengan kod 1; kesilapan penggunaan keluar dengan kod 2.
+
+## Dokumentasi
+
+Rangka kerja dan setiap kawasan perniagaan didokumenkan secara berasingan:
+
+| Dokumen | Kandungan |
+|---|---|
+| [`docs/DESIGN.md`](../../DESIGN.md) | reka bentuk rangka kerja teras: enjin, CLI, sistem handler, skema profil, pipeline |
+| [`src/ranse/handlers/README.md`](../../../src/ranse/handlers/README.md) | peraturan perniagaan handler yang dihantar (week, MENU, sel tetap, DSKP) |
+| [`docs/input-formats.md`](../../input-formats.md) | format fail sumber: jadual waktu xlsx/csv, DSKP txt/pdf/json |
+| [`config/README.md`](../../../config/README.md) | kalendar minggu sekolah (`jadual-minggu.yaml`) |
+| [`README.md`](../../../README.md) | versi English README ini |
 
 ## Struktur Projek
 
 ```
 profiles/                    # Satu profil bagi setiap guru/templat (mula di sini)
   ali-bin-abu.yaml
-config/jadual-minggu.yaml    # Kalendar sekolah: tarikh → minggu → siri → jadual waktu
+config/jadual-minggu.yaml    # Fail data kalendar sekolah (lihat config/README.md)
+docs/
+  DESIGN.md                  # Reka bentuk rangka kerja teras
+  input-formats.md           # Format sumber jadual waktu / DSKP
 src/ranse/
   cli.py                     # ranse fill / write / dskp
   model.py                   # Lesson / Schedule / Week / Profile
-  core/                      # enjin xlsx tulis-sahaja (tiada pengetahuan sekolah)
+  core/                      # enjin xlsx tulis-sahaja (tiada pengetahuan perniagaan)
   inputs/                    # pembaca jadual waktu, DSKP dan YAML
-  handlers/                  # week / menu / fixed_cells / dskp
+  handlers/                  # week / menu / fixed_cells / dskp (+ README)
 tests/                       # ujian unit + baseline regresi golden
 ```
 
@@ -60,28 +73,16 @@ Ini memasang arahan `ranse`. `pip install -e ".[dev]"` juga memasang pytest untu
 ranse fill --profile profiles/ali-bin-abu.yaml --date 2026-09-20
 ```
 
-Satu arahan itu menyelesaikan minggu daripada kalendar, memilih buku kerja minggu tersebut, membaca jadual waktu yang sepadan, mengisi helaian MENU, sel tetap dan blok DSKP, kemudian menulis semula buku kerja **di tempat asal**. Tiada apa-apa perlu diedit antara minggu.
+Satu arahan menyelesaikan input, membuka buku kerja profil, menjalankan handler secara berurutan dan menulis semula buku kerja **di tempat asal**. Tiada apa-apa perlu diedit antara minggu.
 
 | Pilihan | Diperlukan | Penerangan |
 |---|---|---|
 | `--profile` | Ya | Laluan ke fail profil YAML (`inputs` + `handlers`) |
 | `--date` | Tidak | Tarikh mula minggu dalam format `YYYY-MM-DD` (lalai: **hari Ahad minggu semasa**; hari lain dikembalikan ke Ahadnya) |
 | `--minggu` | Tidak | Gantikan nombor minggu (lalai: diselesaikan daripada `--date`) |
-| `--no-dskp-auto` | Tidak | Matikan pengisian standard kandungan automatik untuk jalan ini |
+| `--no-dskp-auto` | Tidak | Matikan pengisian automatik handler untuk jalan ini |
 
 Tiada `--xlsx` dengan sengaja: buku kerja ialah input profil, jadi kesilapan pada baris arahan tidak boleh menulis ganti fail yang salah.
-
-```bash
-ranse fill --profile profiles/ali-bin-abu.yaml --date 2026-09-20
-```
-
-Ini akan:
-1. Menyelesaikan minggu: `2026-09-20` → **minggu 33**, siri `7` daripada `config/jadual-minggu.yaml`
-2. Memilih buku kerja bagi minggu 33 (`…/2026/07. TMP-NEW/M33.xlsx`)
-3. Membaca jadual waktu minggu tersebut (`assets/timetable/jadual-waktu-2026-siri-7.xlsx`)
-4. Mengisi helaian MENU (lajur tarikh mendapat hari Ahad minggu itu)
-5. Mengisi setiap pelajaran yang dipadankan dengan dua standard kandungan peringkat induk (kiri/kanan), bergerak satu seksyen setiap minggu
-6. Menulis semula buku kerja di tempat asal
 
 ### `ranse write` — satu sel
 
@@ -99,7 +100,7 @@ ranse dskp --pdf dskp.pdf --pages 35-45 -o t1.json
 ranse dskp --list
 ```
 
-Menghasilkan JSON berstruktur yang dirujuk oleh entri `dskp` manual.
+Menghasilkan JSON berstruktur daripada sumber DSKP txt/pdf. Format: [`docs/input-formats.md`](../../input-formats.md).
 
 ## Konfigurasi (profil)
 
@@ -129,36 +130,22 @@ handlers:
   - name: dskp
     params:
       mode: auto
-      file: "assets/bc-dskp/t{tingkatan}.txt"
-      match_codes: [BC]
-      match_names: ["BAHASA CINA", "华文"]
-      cs: 1
-      ls: 1
-      left_col: 2
-      right_col: 5
+      # … params khusus handler, lihat src/ranse/handlers/README.md
 ```
 
 ### `inputs`
 
 | Kunci | Penerangan |
 |---|---|
-| `template` | **Wajib.** Buku kerja e-RPH yang akan diisi di tempat asal. Boleh mengandungi `{minggu}` dan wildcard glob |
+| `template` | **Wajib.** Buku kerja yang akan diisi di tempat asal. Boleh mengandungi `{minggu}` dan wildcard glob |
 | `templates` | Peta `minggu → laluan` (pilihan); menang atas `template` bagi minggu tersebut |
-| `jadual` | Kalendar minggu (`config/jadual-minggu.yaml`) |
+| `jadual` | Fail data kalendar minggu (didokumenkan dalam [`config/README.md`](../../../config/README.md)) |
 | `timetable` | Fail jadual waktu xlsx eksplisit (pilihan); mengalahkan carian siri |
 | `csv` | Fail jadual waktu csv eksplisit (pilihan); mengalahkan carian siri |
 
 Laluan relatif diselesaikan terhadap direktori profil itu sendiri, kemudian direktori semasa, kemudian akar repositori — jadi profil yang disertakan berfungsi di mana-mana sahaja anda menjalankannya.
 
-**Satu profil untuk setahun.** `template` ialah satu pola: `{minggu}` digantikan dengan nombor minggu yang diselesaikan, dan wildcard `*`/`?` mencari fail tersebut. Profil yang disertakan justeru menemui `01. JANUARY/M1.xlsx`, `02. FEBRUARY/M4.xlsx` dan `07. TMP-NEW/M33.xlsx` daripada satu baris, manakala jadual waktu sudah dipetakan oleh kalendar (`jadual_siri` + `jadual`).
-
-Jika sesuatu minggu tidak dapat ditentukan secara automatik — biasanya kerana minggu lama disalin ke folder lain sehingga terdapat dua fail bernama `M<minggu>.xlsx` — `ranse fill` akan memberitahu dan menyenaraikan calonnya, dan anda tetapkan minggu itu dengan `templates`:
-
-```text
-Error: 'assets/…/2026/*/M25.xlsx' matches 2 workbooks for minggu 25:
-…/05. MAY/M25.xlsx, …/07. TMP-NEW/M25.xlsx
-— add an explicit 'inputs.templates' entry to the profile
-```
+**Satu profil untuk setahun.** `template` ialah satu pola: `{minggu}` digantikan dengan nombor minggu yang diselesaikan, dan wildcard `*`/`?` mencari fail tersebut. Pola mesti sepadan dengan **tepat satu** buku kerja; jika ia sepadan dua (contohnya minggu lama disalin ke folder lain), `ranse fill` menyenaraikan calonnya dan anda tetapkan minggu itu:
 
 ```yaml
 inputs:
@@ -166,136 +153,41 @@ inputs:
     25: "assets/ALI BIN ABU/12. ERPH/2026/07. TMP-NEW/M25.xlsx"
 ```
 
-Menyimpan tepat satu fail bagi setiap nombor minggu menjadikan pola itu tidak kabur sepanjang tahun; minggu yang buku kerjanya belum wujud (contohnya mengisi minggu 34 sebelum `M34.xlsx` dicipta) dilaporkan dengan cara yang sama, dengan `no workbook matched`.
+Minggu yang buku kerjanya belum wujud dilaporkan dengan cara yang sama, dengan `no workbook matched`.
 
 ### `context`
 
-Nilai yang dikongsi oleh beberapa handler. `subjects` memetakan kod subjek kepada nama yang ditulis ke dalam templat; kod yang tidak tersenarai ditulis seadanya.
-
-```yaml
-context:
-  subjects:
-    BC: "BAHASA CINA 华 文"
-    BI: "ENGLISH"
-```
+Nilai yang dikongsi oleh beberapa handler — contohnya satu peta `subjects` yang digunakan oleh dua handler, jadi ia ditulis sekali dan bukannya diduplikasi ke dalam params kedua-duanya.
 
 ### `handlers`
 
-Senarai eksplisit dan tersusun. Hanya handler terbina dalam boleh dinamakan — nama yang tidak dikenali ialah ralat, dan setiap handler mengesahkan `params`nya sendiri sebelum apa-apa ditulis.
+Senarai eksplisit dan tersusun. Hanya handler terbina dalam boleh dinamakan — nama yang tidak dikenali ialah ralat, dan setiap handler mengesahkan `params`nya sendiri sebelum apa-apa ditulis. Pada sel berkongsi, **handler terakhir dalam senarai menang**.
 
 | Handler | Fasa | Apa yang dilakukannya |
 |---|---|---|
-| `week` | resolve | tarikh → minggu/siri → laluan jadual waktu (minggu cuti ialah ralat) |
-| `menu` | fill | Baris MENU: kelas, waktu dengan akhiran PAGI/TGH/TPTG, nama subjek, tingkatan |
+| `week` | resolve | tarikh → nombor minggu/siri → laluan jadual waktu (minggu cuti ialah ralat) |
+| `menu` | fill | menulis data waktu minggu ke helaian MENU |
 | `fixed_cells` | fill | menulis `params.cells` — senarai `[sheet, range, value]` |
-| `dskp` | fill | Blok DSKP: `entries` manual dahulu, kemudian pasangan automatik mengikut minggu |
+| `dskp` | fill | menulis baris standard DSKP ke helaian hari |
 
-#### Param `fixed_cells`
+Peraturan setiap handler dan rujukan `params` penuh:
+[`src/ranse/handlers/README.md`](../../../src/ranse/handlers/README.md).
 
-```yaml
-- name: fixed_cells
-  params:
-    cells:
-      - [MENU, "B3:C3", "ALI BIN ABU"]   # menulis ke sudu kiri atas julat
-      - [MENU, "B4", 2026]                # nombor kekal nombor
-```
-
-#### Param `dskp`
-
-```yaml
-- name: dskp
-  params:
-    mode: auto                            # auto (lalai) | static
-    entries:                              # entri manual, ditulis dahulu
-      - {sheet: ISNIN, class: 1, file: t1.json,
-         selection: [1, 1, 1], col_start: 2}
-    file: "assets/bc-dskp/t{tingkatan}.txt"  # sumber bagi pasangan automatik
-    match_codes: [BC]                     # kod subjek dalam jadual waktu xlsx
-    match_names: ["BAHASA CINA", "华文"]   # dipadankan semasa membaca CSV
-    cs: 1                                 # standard kandungan dalam sesuatu seksyen
-    ls: 1                                 # standard pembelajaran
-    left_col: 2                           # separuh kiri  = lajur B
-    right_col: 5                          # separuh kanan = lajur E
-```
-
-`file` menerima pemegang tempat `{tingkatan}` (T1 → `t1.txt`, T2 → `t2.txt`, …), peta bagi setiap tingkatan, atau tiada langsung — dalam kes itu jadual terbina dalam `assets/bc-dskp/t1.txt` … `t5.txt` digunakan. Format sumber yang sama seperti entri manual disokong: fail txt, atau JSON yang dihasilkan oleh `ranse dskp`.
-
-Entri automatik ditambah **selepas** entri manual, jadi pada sel yang sama entri automatik menang. `--no-dskp-auto` (atau `mode: static`) mematikan bahagian automatik untuk satu jalan.
-
-## Kalendar minggu (`config/jadual-minggu.yaml`)
-
-Mod sedar minggu dipandu oleh kalendar yang dirujuk daripada `inputs.jadual`:
-
-```yaml
-jadual:                 # nombor siri → fail jadual waktu
-  1: assets/timetable/jadual-waktu-2026-siri-1.xlsx
-  7: assets/timetable/jadual-waktu-2026-siri-7.xlsx
-
-jadual_siri:            # minggu → siri (isi bahagian ini)
-  33: 1
-  34: 7
-
-minggu:                 # setiap rekod berkuat kuasa dari tarikh mula
-  - start: 2026-09-20
-    minggu: 33
-  - start: 2026-09-27
-    minggu: 34
-```
-
-- Rekod `minggu` telah diisi awal daripada kalendar sekolah (M01…M43); minggu cuti ditandakan dengan `cuti` dan menghasilkan ralat yang jelas dan bukannya mengisi minggu yang salah secara senyap.
-- `jadual_siri` ialah jadual minggu → siri; anda juga boleh meletakkan `siri: 7` terus di dalam rekod `minggu` (ia menang atas `jadual_siri`).
-- Minggu tanpa siri yang dikonfigurasi ialah ralat melainkan `inputs.timetable` / `inputs.csv` ditetapkan dalam profil.
-
-## Standard kandungan automatik
-
-Untuk setiap pelajaran bergabung bagi subjek yang dipadankan, dua seksyen **peringkat induk** DSKP (tajuk `X.0`) ditulis bersebelahan — lajur kiri dahulu, lajur kanan kemudian:
+## Seni Bina
 
 ```
-minggu 1 → 1.0 Listening and Speaking  |  2.0 Reading
-minggu 2 → 2.0 Reading  |  3.0 Writing
-minggu 3 → 3.0 Writing  |  4.0 Fun with Chinese
-...
-tiada seksyen seterusnya → pusing balik ke 1.0 + 2.0
+cli.py ──▶ handlers/ ──▶ core/        (API Workbook / Sheet tulis-sahaja)
+              │
+              └──────▶ inputs/        (baca fail sumber, bukan buku kerja)
 ```
 
-Pasangan itu dikira daripada nombor minggu sahaja, jadi menjalankan semula mana-mana minggu sentiasa menghasilkan keputusan yang sama. Setiap bahagian menulis tajuk seksyen (baris kemahiran), baris standard kandungan, dan baris standard pembelajaran blok kelasnya.
+- **`core/`** — xlsx ialah arkib ZIP bahagian XML; Ranse memintas `openpyxl` dan mengedit XML helaian terus, mengekalkan setiap atribut yang tidak diubah secara sengaja. Ia tulis-sahaja dan tiada pengetahuan tentang minggu sekolah, subjek atau susun atur.
+- **`inputs/`** — pembaca yang mengubah fail kalendar, jadual waktu dan DSKP menjadi objek model; mereka tidak menyentuh buku kerja sasaran.
+- **`handlers/`** — semua peraturan perniagaan, melaksanakan dua protokol (`resolve` / `fill`) dan ditemui daripada registri terbina dalam.
+- **`cli.py`** — argparse serta susunan pipeline; `RanseError` menjadi `Error: …` + keluar 1.
 
-## Bagaimana Ia Berfungsi
-
-Ranse memintas pustaka seperti `openpyxl` dan bekerja terus dengan XML dalaman fail xlsx. Fail xlsx sebenarnya ialah arkib ZIP yang mengandungi fail XML. Ranse:
-
-1. **Membuka zip** fail xlsx
-2. **Menghurai** XML helaian menggunakan `xml.etree.ElementTree` terbina dalam Python
-3. **Mengubah suai** hanya nilai sel (`<v>`) sambil mengekalkan setiap atribut asal (gaya, format nombor, dsb.) dengan sempurna
-4. **Semula zip** semuanya kembali menjadi fail xlsx yang sah
-
-Enjin buku kerja ini sengaja tulis-sahaja — ia tiada cara untuk membaca nilai sel — dan tidak mengetahui apa-apa tentang minggu sekolah, subjek atau susun atur. Semua itu berada dalam handler, yang menulis melalui enjin tersebut. Helaian yang tidak ditulis oleh sesiapa disalin terus bait demi bait, jadi bahagian templat yang tidak disentuh tidak boleh berubah.
-
-## Format Input Jadual Waktu
-
-### Format xlsx
-
-Jadual waktu xlsx harus mempunyai susun atur berikut:
-
-| | A | B | C | D | E | F |
-|---|---|---|---|---|---|---|
-| 1 | Waktu | Ahad | Isnin | Selasa | Rabu | Khamis |
-| 2 | 1 | BC-1A | BI-2B | ... | ... | ... |
-| 3 | 2 | ... | ... | ... | ... | ... |
-
-- **Baris 1** ialah baris pengepala dengan nama hari
-- **Lajur A** mengandungi nombor waktu
-- **Lajur lain** mengandungi kod kelas dalam format `<SUBJEK>-<TINGKATAN><KELAS>` (contohnya, `BC-1A` bermaksud Bahasa Cina, Tingkatan 1, Kelas A)
-
-Lajur Jumaat dan Sabtu diabaikan: templat hanya mempunyai helaian untuk Ahad–Khamis.
-
-### Format csv
-
-CSV harus mempunyai lajur ini:
-
-```
-Date,Class,Start Time,End Time,Subject,Tingkatan
-```
+Reka bentuk penuh (antara muka, keputusan, kitaran hayat, risiko):
+[`docs/DESIGN.md`](../../DESIGN.md).
 
 ## Pembangunan
 
@@ -308,4 +200,4 @@ pytest
 
 ## Lesen
 
-Projek ini dilesenkan di bawah [Lesen Awam Umum GNU v2.0](LICENSE).
+Projek ini dilesenkan di bawah [Lesen Awam Umum GNU v2.0](../../../LICENSE).
