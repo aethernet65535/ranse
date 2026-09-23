@@ -78,13 +78,18 @@ Satu arahan menyelesaikan input, membuka buku kerja profil, menjalankan handler 
 | Pilihan | Diperlukan | Penerangan |
 |---|---|---|
 | `--profile` | Ya | Laluan ke fail profil YAML (`inputs` + `handlers`) |
-| `--date` | Tidak | Tarikh mula minggu dalam format `YYYY-MM-DD` (lalai: **hari Ahad minggu semasa**; hari lain dikembalikan ke Ahadnya) |
-| `--minggu` | Tidak | Gantikan nombor minggu (lalai: diselesaikan daripada `--date`) |
-| `--no-dskp-auto` | Tidak | Matikan pengisian automatik handler untuk jalan ini |
 
-`--date` dan `--minggu` diisytiharkan oleh handler `week` dan `--no-dskp-auto`
-oleh handler `dskp`: `ranse fill` sendiri hanya menambah `--profile`, dan
-setiap handler mendokumenkan pilihannya sendiri.
+`--profile` sahaja pilihan yang ditambah oleh `ranse fill` sendiri. Semua
+pilihan lain datang daripada handler yang diaktifkan profil, dan setiap
+handler mendokumenkan pilihannya sendiri dalam `DESIGN.md` (indeks:
+[`src/ranse/handlers/README.md`](../../../src/ranse/handlers/README.md)).
+Dengan profil yang dihantar, itu bermakna:
+
+| Pilihan | Diisytiharkan oleh | Penerangan |
+|---|---|---|
+| `--date YYYY-MM-DD` | [`week`](../../../src/ranse/handlers/week/DESIGN.md) | Permulaan minggu (lalai: hari Ahad minggu semasa; hari lain dikembalikan ke Ahadnya) |
+| `--minggu N` | [`week`](../../../src/ranse/handlers/week/DESIGN.md) | Gantikan nombor minggu (lalai: diselesaikan daripada `--date`) |
+| `--no-dskp-auto` | [`dskp`](../../../src/ranse/handlers/dskp/DESIGN.md) | Langkau pengisian automatik handler itu untuk jalan ini |
 
 Tiada `--xlsx` dengan sengaja: buku kerja ialah input profil, jadi kesilapan pada baris arahan tidak boleh menulis ganti fail yang salah.
 

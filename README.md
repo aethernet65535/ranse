@@ -98,13 +98,18 @@ edited between weeks.
 | Option | Required | Description |
 |---|---|---|
 | `--profile` | Yes | Path to the profile YAML (`inputs` + `handlers`) |
-| `--date` | No | Week start date in `YYYY-MM-DD` (default: **the Sunday of the current week**; other days are rolled back to their Sunday) |
-| `--minggu` | No | Override the week number (default: resolved from `--date`) |
-| `--no-dskp-auto` | No | Disable the handlers' automatic filling for this run |
 
-`--date` and `--minggu` are declared by the `week` handler and
-`--no-dskp-auto` by the `dskp` handler: `ranse fill` itself adds only
-`--profile`, and each handler documents its own options.
+`--profile` is the only option `ranse fill` adds itself. Every other option
+comes from a handler the profile enables, and each handler documents its own
+in its `DESIGN.md` (index:
+[`src/ranse/handlers/README.md`](src/ranse/handlers/README.md)). With the
+shipped profile that is:
+
+| Option | Declared by | Description |
+|---|---|---|
+| `--date YYYY-MM-DD` | [`week`](src/ranse/handlers/week/DESIGN.md) | Week start (default: the Sunday of the current week; other days roll back to their Sunday) |
+| `--minggu N` | [`week`](src/ranse/handlers/week/DESIGN.md) | Override the week number (default: resolved from `--date`) |
+| `--no-dskp-auto` | [`dskp`](src/ranse/handlers/dskp/DESIGN.md) | Skip that handler's automatic filling for this run |
 
 There is deliberately no `--xlsx`: the workbook is a profile input, so a
 mistake in the shell cannot overwrite the wrong file.
