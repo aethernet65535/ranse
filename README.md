@@ -102,6 +102,10 @@ edited between weeks.
 | `--minggu` | No | Override the week number (default: resolved from `--date`) |
 | `--no-dskp-auto` | No | Disable the handlers' automatic filling for this run |
 
+`--date` and `--minggu` are declared by the `week` handler and
+`--no-dskp-auto` by the `dskp` handler: `ranse fill` itself adds only
+`--profile`, and each handler documents its own options.
+
 There is deliberately no `--xlsx`: the workbook is a profile input, so a
 mistake in the shell cannot overwrite the wrong file.
 

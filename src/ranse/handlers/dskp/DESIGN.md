@@ -63,8 +63,9 @@ cell is touched.
 - **Warnings, not errors**: a missing DSKP file, a file with no usable parent
   sections, or an unknown sheet is reported on stderr and skipped, so one bad
   class does not abort the week.
-- `--no-dskp-auto` (or `mode: static`) disables the automatic part for a run;
-  with no week known the handler prints a note instead of guessing.
+- `--no-dskp-auto` (the option this handler declares — it arrives as
+  `ctx.runtime["no_dskp_auto"]`) or `mode: static` disables the automatic part
+  for a run; with no week known the handler prints a note instead of guessing.
 
 Risk numbers run project-wide; the framework risks (1–3, 5–6) live in
 [`docs/DESIGN.md`](../../../../docs/DESIGN.md) S10. This handler's own pitfall

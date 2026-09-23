@@ -44,7 +44,7 @@ Non-goals are listed in S11.
 
 ```
 +-- CLI (cli.py) ----------------------------------+
-|  ranse fill  --profile p.yaml [--date][--minggu] |  <- no --xlsx: the
+|  ranse fill  --profile p.yaml [handler options]  |  <- no --xlsx: the
 |  ranse write --profile p.yaml SHEET!CELL "value" |     workbook is a
 |  <input-specific subcommands>                    |     profile input (D10)
 +--------------+-----------------------------------+
@@ -147,7 +147,7 @@ Rules:
 class Context:
     profile; workbook=None; schedule=None; week=None; start_date=None
     params={}          # params of the handler currently running
-    runtime={}         # CLI overrides, set by the orchestrator
+    runtime={}         # values of the handler-declared CLI options
     timetable_path=None; timetable_is_csv=False
     report=[]
 
@@ -165,7 +165,8 @@ class Filler(Protocol):     # phase two: write cells through core only
 Handlers are looked up by name in `handlers/registry.py` (built-in only, D2),
 and each handler validates its own `params` at build time — an unknown name or
 a malformed `params` fails **before any cell is touched**. A handler may only
-write through `ctx.workbook`, which is the core API of S3.1.
+write through `ctx.workbook`, which is the core API of S3.1. A handler may
+also declare the `ranse fill` options it needs (its `cli_options`, S3.4).
 
 The shipped handlers and everything they compute are documented per handler in
 `src/ranse/handlers/<name>/DESIGN.md` (index: `src/ranse/handlers/README.md`).
@@ -214,12 +215,18 @@ from `inputs`, and the handlers that read them own their formats (D11).
 ### 3.4 CLI
 
 ```
-ranse fill  --profile P [--date YYYY-MM-DD] [--minggu N] [handler flags]
+ranse fill  --profile P [handler options]
 ranse write --profile P [--minggu N] SHEET!CELL VALUE
 ```
 
 `fill` and `write` are the framework subcommands; the example adds an
 input-specific subcommand documented with that input.
+
+`ranse fill` adds only `--profile` itself. Every other option is declared by
+a handler (`cli_options`) and its value reaches that handler through
+`ctx.runtime`; the handler's own `DESIGN.md` says what it means. `write` keeps
+`--minggu` because it resolves a `{minggu}` template without running the
+handlers.
 
 There is deliberately **no `--xlsx`**: the workbook is a profile input, so a
 mistake in the shell cannot overwrite the wrong file (D10).

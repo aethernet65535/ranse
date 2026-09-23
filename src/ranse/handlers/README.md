@@ -32,6 +32,9 @@ are defined in the documents below.
   through `ctx.workbook` (the core write API, `docs/DESIGN.md` S3.1);
 - each handler validates its own `params` at build time — a broken profile
   fails before any cell is touched;
+- a handler that needs a command-line switch declares it in `cli_options`
+  (`{runtime_key: (flags, argparse_kwargs)}`); `ranse fill` adds them and the
+  parsed value comes back in `ctx.runtime[runtime_key]`;
 - errors are reported the handler way: `print(…, file=sys.stderr)` +
   `sys.exit(1)` for business errors, `  Warning: …` + skip for skippable
   problems (decision 13).

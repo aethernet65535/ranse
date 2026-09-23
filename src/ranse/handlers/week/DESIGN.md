@@ -31,7 +31,13 @@ run (printed to stderr + exit 1, decision 13):
 - the week has no `siri` configured and no explicit timetable input;
 - the resolved file does not exist.
 
-## Params
+## Params and CLI options
 
-The week handler has no params of its own — everything it reads lives in the
-profile's `inputs:` and the runtime `--date` / `--minggu`.
+The week handler has no `params` of its own — everything it reads lives in the
+profile's `inputs:`. It declares the two `ranse fill` options that shape the
+week, whose values arrive in `ctx.runtime`:
+
+| Option | Runtime key | Effect |
+|---|---|---|
+| `--date YYYY-MM-DD` | `date` | the week start (default: the Sunday of the current week) |
+| `--minggu N` | `minggu` | overrides the week number resolved from the calendar |

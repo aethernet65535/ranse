@@ -82,6 +82,10 @@ Satu arahan menyelesaikan input, membuka buku kerja profil, menjalankan handler 
 | `--minggu` | Tidak | Gantikan nombor minggu (lalai: diselesaikan daripada `--date`) |
 | `--no-dskp-auto` | Tidak | Matikan pengisian automatik handler untuk jalan ini |
 
+`--date` dan `--minggu` diisytiharkan oleh handler `week` dan `--no-dskp-auto`
+oleh handler `dskp`: `ranse fill` sendiri hanya menambah `--profile`, dan
+setiap handler mendokumenkan pilihannya sendiri.
+
 Tiada `--xlsx` dengan sengaja: buku kerja ialah input profil, jadi kesilapan pada baris arahan tidak boleh menulis ganti fail yang salah.
 
 ### `ranse write` — satu sel
