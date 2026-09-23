@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 
 from ... import _REPO_ROOT
 from ...core.refs import _resolve_path
+from ...inputs.timetable import load_schedule
 from ...inputs.yaml import load_jadual_config
 from ...model import Week
 from ..base import Context
@@ -97,7 +98,7 @@ class WeekResolver:
 
     Reads the profile's ``inputs:`` (jadual calendar, optional timetable /
     csv override) plus the runtime ``--date`` / ``--minggu`` overrides, and
-    fills ``ctx.start_date``, ``ctx.week`` and the timetable path — it never
+    fills ``ctx.start_date``, ``ctx.week`` and ``ctx.schedule`` — it never
     writes a cell.
     """
 
@@ -154,14 +155,13 @@ class WeekResolver:
 
         # --- Timetable source: an explicit input wins, else siri from the week ---
         if inputs.timetable:
-            tt_path, tt_is_csv = _resolve_path(inputs.timetable, bases), False
+            tt_path = _resolve_path(inputs.timetable, bases)
         elif inputs.csv:
-            tt_path, tt_is_csv = _resolve_path(inputs.csv, bases), True
+            tt_path = _resolve_path(inputs.csv, bases)
         elif ctx.week is not None and ctx.week.siri is not None:
             tt_path = siri_to_timetable(jadual_cfg, ctx.week.siri)
-            tt_is_csv = tt_path.lower().endswith(".csv")
         else:
-            tt_path, tt_is_csv = None, False
+            tt_path = None
 
         if (jadual_cfg is not None and not tt_path
                 and ctx.week is not None and ctx.week.siri is None):
@@ -175,5 +175,11 @@ class WeekResolver:
             print(f"Error: file not found: {tt_path}", file=sys.stderr)
             sys.exit(1)
 
-        ctx.timetable_path = tt_path
-        ctx.timetable_is_csv = tt_is_csv
+        # Read the timetable here: a resolver may read inputs, the
+        # orchestrator only opens the workbook and runs the fillers.
+        if tt_path:
+            ctx.schedule = load_schedule(tt_path)
+        if ctx.week is not None:
+            siri_txt = ctx.week.siri if ctx.week.siri is not None else "-"
+            print(f"Week: minggu {ctx.week.minggu}, siri {siri_txt}"
+                  + (f" ({tt_path})" if tt_path else ""))

@@ -23,7 +23,7 @@ def build_handlers(specs):
     """Profile handler specs → ``[(spec, handler_instance), …]``.
 
     Unknown names and invalid params raise :class:`ProfileError`; handler
-    order in the profile is preserved (see handlers/README.md risk 9: static DSKP
+    order in the profile is preserved (see handlers/README.md risk 9: static
     entries are written before the automatic ones).
     """
     bound = []
@@ -56,3 +56,13 @@ def cli_options():
             seen.add(key)
             options.append((key, flags, kwargs))
     return options
+
+
+def required_sheets(handlers):
+    """The sheets the built ``handlers`` need, in declaration order, no dups."""
+    sheets = []
+    for _, handler in handlers:
+        for name in getattr(handler, "required_sheets", ()):
+            if name not in sheets:
+                sheets.append(name)
+    return sheets

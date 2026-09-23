@@ -34,8 +34,8 @@ def load_profile(path):
     template = raw_inputs.get("template")
     if not isinstance(template, str) or not template.strip():
         raise ProfileError(
-            f"{path}: profile is missing 'inputs.template' (the e-RPH "
-            f"template xlsx)")
+            f"{path}: profile is missing 'inputs.template' (the workbook "
+            f"to fill)")
     inputs = ProfileInputs(
         template=template.strip(),
         jadual=_text(raw_inputs.get("jadual"), path, "inputs.jadual"),

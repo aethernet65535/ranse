@@ -268,6 +268,7 @@ class DskpFiller:
 
     name = "dskp"
     phase = "fill"
+    required_sheets = tuple(d.upper() for d in DAY_ORDER)
     # The `ranse fill` options this handler needs; the orchestrator adds them
     # to the parser and hands the values back in `ctx.runtime[key]`.
     cli_options = {

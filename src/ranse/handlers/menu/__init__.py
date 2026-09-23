@@ -30,6 +30,9 @@ class MenuFiller:
 
     name = "menu"
     phase = "fill"
+    required_sheets = ("MENU",)
+    # Without a timetable there is nothing for the menu to write.
+    needs_schedule = True
 
     @staticmethod
     def validate(params):

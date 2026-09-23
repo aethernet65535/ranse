@@ -272,3 +272,13 @@ def main(argv=None):
 
 if __name__ == "__main__":
     main()
+
+
+# The ``ranse dskp`` subcommand, declared here so ``cli.py`` can stay
+# generic: {"name", "help", "add_arguments", "run"}.
+SUBCOMMAND = {
+    "name": "dskp",
+    "help": "parse a DSKP txt/pdf into structured JSON",
+    "add_arguments": add_arguments,
+    "run": run,
+}

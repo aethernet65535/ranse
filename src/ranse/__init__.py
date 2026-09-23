@@ -1,4 +1,4 @@
-"""ranse — fill Malaysian e-RPH Excel templates from weekly timetables."""
+"""ranse — fill spreadsheet templates in place, driven by a profile."""
 
 import os
 

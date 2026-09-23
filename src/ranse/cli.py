@@ -1,9 +1,10 @@
-"""Command-line orchestration: ``ranse fill`` / ``write`` / ``dskp``.
+"""Command-line orchestration: ``ranse fill`` / ``ranse write``.
 
 Only orchestration lives here: argparse, the pipeline order, printing the
 report and turning a RanseError into ``Error: …`` + exit code 1 (decision
-13). Every business decision belongs to a handler, which is what keeps this
-file free of timetable/DSKP knowledge.
+13). Anything business-specific is declared where it lives — the extra
+options and the required sheets come from the handlers, and the extra
+subcommands come from the readers.
 
 There is no ``--xlsx``: the target template is a profile input (decision 10).
 """
@@ -14,12 +15,15 @@ import sys
 from .core.xlsx import Workbook
 from .errors import RanseError
 from .handlers.base import Context
-from .handlers.registry import build_handlers, cli_options
-from .inputs import dskp as dskp_input
-from .inputs.timetable import DAY_ORDER, load_schedule
+from .handlers.registry import build_handlers, cli_options, required_sheets
+from .inputs import SUBCOMMANDS
 from .inputs.yaml import load_profile, resolve_template
 
-REQUIRED_SHEETS = ["MENU"] + [d.upper() for d in DAY_ORDER]
+# The subcommands the framework itself provides; every other one is
+# declared by the reader that owns it (`inputs/__init__.py`).
+_COMMANDS = ("fill", "write")
+_SUBCOMMANDS = {spec["name"]: spec for spec in SUBCOMMANDS}
+_PROFILE_HELP = "Path to the profile YAML (inputs + handlers)"
 
 
 def main(argv=None):
@@ -32,38 +36,36 @@ def main(argv=None):
         elif args.command == "write":
             _run_write(args)
         else:
-            dskp_input.run(args, parser)
+            _SUBCOMMANDS[args.command]["run"](args, parser)
     except RanseError as e:
         print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)
 
 
 def _build_parser():
+    names = list(_COMMANDS) + [spec["name"] for spec in SUBCOMMANDS]
     parser = argparse.ArgumentParser(
         prog="ranse",
-        description="Fill e-RPH xlsx templates from a weekly timetable")
+        description="Fill spreadsheet templates in place, driven by a profile")
     subparsers = parser.add_subparsers(dest="command", required=True,
-                                       metavar="{fill,write,dskp}")
+                                       metavar="{" + ",".join(names) + "}")
 
-    fill = subparsers.add_parser(
-        "fill", help="fill the profile's template (MENU / fixed cells / DSKP)")
-    fill.add_argument("--profile", required=True,
-                      help="Path to the profile YAML (inputs + handlers)")
+    fill = subparsers.add_parser("fill", help="fill the profile's template")
+    fill.add_argument("--profile", required=True, help=_PROFILE_HELP)
     # Everything else `ranse fill` accepts is declared by a handler.
     for key, flags, kwargs in cli_options():
         fill.add_argument(flags, dest=key, **kwargs)
 
     write = subparsers.add_parser(
         "write", help="write a single cell on the profile's template")
-    write.add_argument("--profile", required=True,
-                       help="Path to the profile YAML (inputs + handlers)")
+    write.add_argument("--profile", required=True, help=_PROFILE_HELP)
     write.add_argument("ref", metavar="SHEET!CELL",
                        help="Cell to write, e.g. SHEET!B3 or SHEET!B3:C3")
     write.add_argument("value", help="Value to write (written as text)")
 
-    dskp = subparsers.add_parser(
-        "dskp", help="parse a DSKP txt/pdf into structured JSON")
-    dskp_input.add_arguments(dskp)
+    for spec in SUBCOMMANDS:
+        spec["add_arguments"](
+            subparsers.add_parser(spec["name"], help=spec["help"]))
 
     return parser
 
@@ -113,24 +115,13 @@ def _run_fill(parser, args):
     wb = Workbook.open(template)
     ctx.workbook = wb
 
-    missing = [s for s in REQUIRED_SHEETS if s not in wb.sheets]
+    missing = [name for name in required_sheets(handlers)
+               if name not in wb.sheets]
     if missing:
         print(f"Error: missing sheets: {', '.join(missing)}", file=sys.stderr)
         sys.exit(1)
 
-    if not ctx.timetable_path and not any(spec.name == "dskp"
-                                          for spec, _ in handlers):
-        parser.error("Nothing to do: set inputs.timetable / inputs.csv or "
-                     "inputs.jadual in the profile, or add a dskp handler")
-
-    # --- Read the timetable (inputs layer; target workbook stays write-only) ---
-    if ctx.timetable_path:
-        ctx.schedule = load_schedule(ctx.timetable_path)
-
-    if ctx.week is not None:
-        siri_txt = ctx.week.siri if ctx.week.siri is not None else "-"
-        print(f"Week: minggu {ctx.week.minggu}, siri {siri_txt}"
-              + (f" ({ctx.timetable_path})" if ctx.timetable_path else ""))
+    _require_something_to_do(parser, handlers, ctx)
 
     # --- Phase two: fillers (the only code allowed to touch cells) ---
     for spec, handler in handlers:
@@ -143,3 +134,13 @@ def _run_fill(parser, args):
 
     wb.save()
     print(f"Done: {template}")
+
+
+def _require_something_to_do(parser, handlers, ctx):
+    """Error when no input was read and no filler can run without one."""
+    if ctx.schedule is not None:
+        return
+    if any(not getattr(handler, "needs_schedule", False)
+           for _, handler in handlers if handler.phase == "fill"):
+        return
+    parser.error("nothing to do: every filler needs a timetable")
