@@ -66,6 +66,6 @@ cell is touched.
 - `--no-dskp-auto` (or `mode: static`) disables the automatic part for a run;
   with no week known the handler prints a note instead of guessing.
 
-Risk numbering continues the global list in
-[`docs/DESIGN.md`](../../../../docs/DESIGN.md) §10; this handler's own
-pitfalls are covered by risk 9 in the [parent index](../README.md#fill-order-risk-9).
+Risk numbers run project-wide; the framework risks (1–3, 5–6) live in
+[`docs/DESIGN.md`](../../../../docs/DESIGN.md) S10. This handler's own pitfall
+is covered by risk 9 in the [parent index](../README.md#fill-order-risk-9).

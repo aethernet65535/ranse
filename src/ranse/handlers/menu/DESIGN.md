@@ -104,5 +104,5 @@ workbook.
 | 11 | **The PAGI/TGH/TPTG suffix only applies to `HH:00`**; real period times fall back to `PAGI`, and the templates rely on it — changing it changes every filled workbook |
 | 12 | **MENU is the only time writer** (decision 14): adding a time write somewhere else (a day sheet, a new handler) breaks the invariant that one sheet decides the week's dates and periods |
 
-Risk numbering continues the global list in
-[`docs/DESIGN.md`](../../../../docs/DESIGN.md) §10.
+Risk numbers run project-wide; the framework risks (1–3, 5–6) live in
+[`docs/DESIGN.md`](../../../../docs/DESIGN.md) S10, the business risks here.

@@ -17,8 +17,9 @@ in its own folder, with its business rules in that folder's DESIGN.md:
 `registry.py` (the built-in registry, decision 2) are framework, not
 business, and are documented in `docs/DESIGN.md` §3.2.
 
-Risk numbers (4, 7–12) continue the global list in
-[`docs/DESIGN.md`](../../../docs/DESIGN.md) §10.
+Risk numbers run project-wide. The framework risks (1–3, 5–6) live in
+[`docs/DESIGN.md`](../../../docs/DESIGN.md) S10; the business risks (4, 7–12)
+are defined in the documents below.
 
 ---
 

@@ -13,8 +13,8 @@ The readers in `src/ranse/inputs/` turn source files into model objects
 | School calendar | yaml | `inputs/yaml.py` → `load_jadual_config` — specified in [`config/README.md`](../config/README.md) |
 | Profile | yaml | `inputs/yaml.py` → `load_profile` — schema in [`docs/DESIGN.md`](DESIGN.md) §3.3 |
 
-Risk numbers (4, 10) continue the global list in
-[`docs/DESIGN.md`](DESIGN.md) §10.
+Risk numbers run project-wide. The framework risks (1–3, 5–6) live in
+[`docs/DESIGN.md`](DESIGN.md) S10; risks 4 and 10 are defined below.
 
 ---
 

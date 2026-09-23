@@ -38,5 +38,5 @@ Framework design: [`docs/DESIGN.md`](../../../../docs/DESIGN.md).
 |---|---|
 | 8 | **Values pass through an `int(value)` attempt at write time**, not at profile-load time; keep that timing or a type change breaks golden |
 
-Risk numbering continues the global list in
-[`docs/DESIGN.md`](../../../../docs/DESIGN.md) §10.
+Risk numbers run project-wide; the framework risks (1–3, 5–6) live in
+[`docs/DESIGN.md`](../../../../docs/DESIGN.md) S10, the business risks here.
