@@ -6,7 +6,7 @@ cell. Business rules live here in the handler layer, never in core
 
 Protocol/registry contract: [parent index](../README.md).
 Calendar format it consumes: [`config/jadual-minggu/DESIGN.md`](../../../../config/jadual-minggu/DESIGN.md).
-Timetable formats it resolves to: [`inputs/timetable/DESIGN.md`](../../../inputs/timetable/DESIGN.md).
+Timetable formats it resolves to: [`inputs/timetable/DESIGN.md`](../../inputs/timetable/DESIGN.md).
 
 ## Resolution rules
 

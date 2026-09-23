@@ -70,7 +70,7 @@ consecutive periods that have the same class, subject and tingkatan **and**
 contiguous time (`entry.start == previous.end`). Two back-to-back Bahasa Cina
 periods therefore occupy one MENU row covering 07:40–09:00, and a gap in time
   ends a run even when the same lesson resumes (risk 4,
-  [`inputs/timetable/DESIGN.md`](../../../inputs/timetable/DESIGN.md)).
+  [`inputs/timetable/DESIGN.md`](../../inputs/timetable/DESIGN.md)).
 
 The row index `i` is the index of the merged lesson, not the period number:
 merged lesson *i* is written to row `header_row + 1 + i`.
