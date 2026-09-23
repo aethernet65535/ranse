@@ -16,7 +16,7 @@ the CLI stays week-agnostic.
 | Input | Points at | Read by |
 |---|---|---|
 | `template` | `assets/ALI BIN ABU/12. ERPH/2026/*/M{minggu}.xlsx` | `resolve_template` (framework) |
-| `jadual` | `config/jadual-minggu.yaml` — the school calendar | the `week` handler |
+| `jadual` | `config/jadual-minggu/jadual-minggu.yaml` — the school calendar | the `week` handler |
 
 ## Shared context
 

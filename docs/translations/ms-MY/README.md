@@ -38,7 +38,7 @@ Rangka kerja dan setiap kawasan perniagaan didokumenkan secara berasingan:
 profiles/                    # Satu profil bagi setiap guru/templat (mula di sini)
   ali-bin-abu/               # satu folder bagi setiap profil: profile.yaml + dokumen
     profile.yaml
-config/jadual-minggu.yaml    # Fail data kalendar sekolah (lihat config/README.md)
+config/jadual-minggu/        # Fail data kalendar sekolah (lihat config/README.md)
 docs/
   DESIGN.md                  # Reka bentuk rangka kerja teras
   input-formats.md           # Format sumber jadual waktu / DSKP
@@ -112,7 +112,7 @@ profile: ali-bin-abu-2026
 
 inputs:
   template: "assets/ALI BIN ABU/12. ERPH/2026/*/M{minggu}.xlsx"  # wajib
-  jadual: "config/jadual-minggu.yaml"                            # kalendar minggu
+  jadual: "config/jadual-minggu/jadual-minggu.yaml"              # kalendar minggu
   # templates: {18: "…/06. JUNE/M18.xlsx"}    # tetapkan satu minggu secara eksplisit
   # timetable: "assets/timetable/jadual-waktu-2026-siri-7.xlsx"  # gantian pilihan
   # csv: "timetable.csv"
@@ -140,7 +140,7 @@ handlers:
 |---|---|
 | `template` | **Wajib.** Buku kerja yang akan diisi di tempat asal. Boleh mengandungi `{minggu}` dan wildcard glob |
 | `templates` | Peta `minggu → laluan` (pilihan); menang atas `template` bagi minggu tersebut |
-| `jadual` | Fail data kalendar minggu (didokumenkan dalam [`config/README.md`](../../../config/README.md)) |
+| `jadual` | Fail data kalendar minggu (didokumenkan dalam [`config/jadual-minggu/DESIGN.md`](../../../config/jadual-minggu/DESIGN.md)) |
 | `timetable` | Fail jadual waktu xlsx eksplisit (pilihan); mengalahkan carian siri |
 | `csv` | Fail jadual waktu csv eksplisit (pilihan); mengalahkan carian siri |
 

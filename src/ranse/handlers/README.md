@@ -70,7 +70,7 @@ wins on a shared MENU cell.
 
 ## Cross-references
 
-- School calendar consumed by `week`: [`config/README.md`](../../../config/README.md)
+- School calendar consumed by `week`: [`config/jadual-minggu/DESIGN.md`](../../../config/jadual-minggu/DESIGN.md)
 - Timetable / DSKP source formats: [`docs/input-formats.md`](../../../docs/input-formats.md)
 - Framework design: [`docs/DESIGN.md`](../../../docs/DESIGN.md)
 - Example profile naming these handlers: [`profiles/ali-bin-abu/profile.yaml`](../../../profiles/ali-bin-abu/profile.yaml)

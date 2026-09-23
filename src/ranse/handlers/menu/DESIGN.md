@@ -91,7 +91,7 @@ workbook.
 | I want to change … | It lives in | How |
 |---|---|---|
 | this week's date | calendar → `MENU!I6` | `--date 2026-09-20`, or edit the `minggu` records |
-| which timetable a week uses | `jadual_siri` (or `siri:` in the record) | edit `config/jadual-minggu.yaml` (see [`config/README.md`](../../../../config/README.md)) |
+| which timetable a week uses | `jadual_siri` (or `siri:` in the record) | edit `config/jadual-minggu/jadual-minggu.yaml` (see [`config/jadual-minggu/DESIGN.md`](../../../../config/jadual-minggu/DESIGN.md)) |
 | the period times themselves | `PERIOD_TIMES` in `inputs/timetable.py` | edit the table (affects every week at once, risk 4) |
 | one period's class / time for one week | **MENU sheet**, columns C–G | `ranse write` on that cell — note the next `ranse fill` for the same week rewrites it |
 | the DSKP standards on a day sheet | DSKP blocks | [`dskp` handler](../dskp/DESIGN.md); never a time edit |

@@ -18,7 +18,7 @@ inputs:
   #   ranse fill --profile profiles/ali-bin-abu/profile.yaml --date 2026-09-20
   template: "assets/ALI BIN ABU/12. ERPH/2026/*/M{minggu}.xlsx"
   # School calendar: date → minggu/siri → timetable file.
-  jadual: "config/jadual-minggu.yaml"
+  jadual: "config/jadual-minggu/jadual-minggu.yaml"
   # Escape hatch: if {minggu} ever matches more than one workbook (e.g. an
   # old week copied into another folder) or a file is named/placed
   # unusually, pin that week explicitly — the error message lists the

@@ -56,7 +56,7 @@ The framework and each business area are documented separately:
 profiles/                    # One profile per teacher/template (start here)
   ali-bin-abu/               # one folder per profile: profile.yaml + docs
     profile.yaml
-config/jadual-minggu.yaml    # School calendar data file (see config/README.md)
+config/jadual-minggu/        # School calendar data file (see config/README.md)
 docs/
   DESIGN.md                  # Core framework design
   input-formats.md           # Timetable / DSKP source formats
@@ -135,7 +135,7 @@ profile: ali-bin-abu-2026
 
 inputs:
   template: "assets/ALI BIN ABU/12. ERPH/2026/*/M{minggu}.xlsx"  # required
-  jadual: "config/jadual-minggu.yaml"                            # week calendar
+  jadual: "config/jadual-minggu/jadual-minggu.yaml"              # week calendar
   # templates: {18: "…/06. JUNE/M18.xlsx"}    # pin one week explicitly
   # timetable: "assets/timetable/jadual-waktu-2026-siri-7.xlsx"  # optional override
   # csv: "timetable.csv"
@@ -163,7 +163,7 @@ handlers:
 |---|---|
 | `template` | **Required.** The workbook that gets filled in place. May contain `{minggu}` and glob wildcards |
 | `templates` | Optional `minggu → path` map; wins over `template` for those weeks |
-| `jadual` | The week calendar data file (documented in [`config/README.md`](config/README.md)) |
+| `jadual` | The week calendar data file (documented in [`config/jadual-minggu/DESIGN.md`](config/jadual-minggu/DESIGN.md)) |
 | `timetable` | Optional explicit timetable xlsx; wins over the siri lookup |
 | `csv` | Optional explicit timetable csv; wins over the siri lookup |
 
