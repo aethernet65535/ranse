@@ -1,0 +1,83 @@
+# Profile design — ALI BIN ABU (2026)
+
+Business design of the profile in [`profile.yaml`](profile.yaml). The
+framework that loads it is documented in
+[`docs/DESIGN.md`](../../../../docs/DESIGN.md); the handler rules the `handlers:`
+list names are indexed in
+[`README.md`](../../README.md).
+
+## What it fills
+
+The e-RPH workbook of one teacher, one file per week:
+`assets/ALI BIN ABU/12. ERPH/2026/*/M{week}.xlsx`. `{week}` is replaced
+with the resolved week number, so a single profile serves the whole year and
+the CLI stays week-agnostic.
+
+| Input | Points at | Read by |
+|---|---|---|
+| `template` | `assets/ALI BIN ABU/12. ERPH/2026/*/M{week}.xlsx` | `resolve_template` (framework) |
+| `calendar` | `../../config/school-weeks/school-weeks.yaml` — the school calendar | the `week` handler |
+| `period_times` | `../../config/period-times/period-times.yaml` — period → [start, end] | the `week` handler (passed to the timetable reader) |
+
+## Shared context
+
+`context.subjects` maps a subject code to the name written into the
+workbook; `context.days` declares the day blocks this template has. Both
+are read by two handlers each, so they are written once here (risk 3,
+framework):
+
+```yaml
+context:
+  days: [Sunday, Monday, Tuesday, Wednesday, Thursday]
+  subjects:
+    BC: "BAHASA CINA 华 文"
+    BI: "ENGLISH"
+```
+
+- **`days` (risk 10)** — the template has sheets only for Sunday … Thursday, so
+  Friday/Saturday must never be written. The timetable reader keeps every day
+  the source carries (it must not know the workbook's layout, decision 8);
+  `menu` walks these day blocks for its MENU rows and `dskp` walks them for
+  the day sheets. One declaration, two consumers (risk 3).
+
+## Pipeline
+
+| # | Handler | Phase | Why here |
+|---|---|---|---|
+| 1 | `week` | resolve | date → week number/series → timetable path ([rules](../../handlers/week/DESIGN.md)) |
+| 2 | `menu` | fill | writes the week's time data to the MENU sheet ([rules](../../handlers/menu/DESIGN.md)) |
+| 3 | `fixed_cells` | fill | writes the teacher's name into `MENU!B3:C3` ([rules](../../handlers/fixed_cells/DESIGN.md)) |
+| 4 | `dskp` | fill | writes the DSKP standards to the day sheets ([rules](../../handlers/dskp/DESIGN.md)) |
+
+Order is load-bearing (risk 9): `menu` writes first, `fixed_cells` may
+override a MENU cell afterwards, and `dskp` runs last so a static entry never
+beats an automatic one.
+
+## Business assumptions
+
+- **MENU owns all time data** (D14, risk 12): the week's date and the period
+  times live on the MENU sheet and nowhere else — the day sheets carry content
+  only.
+- **One profile per year** — the template pattern must match exactly one
+  workbook per week. If a week matches two files (an old copy in another
+  folder), pin it with `inputs.templates`:
+
+  ```yaml
+  inputs:
+    templates:
+      25: "assets/ALI BIN ABU/12. ERPH/2026/07. TMP-NEW/M25.xlsx"
+  ```
+
+- A single value is corrected with the escape hatch, not a code change —
+  note the next `ranse fill` for the same week rewrites it:
+
+  ```bash
+  ranse write --profile plugins/erph/profiles/ali-bin-abu/profile.yaml MENU!B3 "ALI BIN ABU"
+  ```
+
+## Risks defined here
+
+The framework risks (1–3, 5–6) are in
+[`docs/DESIGN.md`](../../../../docs/DESIGN.md) S10; this profile relies on the
+business risks **4, 7–12**, each defined with the handler or input document
+that owns it (see the pipeline table above).

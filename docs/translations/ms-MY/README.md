@@ -27,26 +27,30 @@ Rangka kerja dan setiap kawasan perniagaan didokumenkan secara berasingan:
 | Dokumen | Kandungan |
 |---|---|
 | [`docs/DESIGN.md`](../../DESIGN.md) | reka bentuk rangka kerja teras: enjin, CLI, sistem handler, skema profil, pipeline |
-| [`src/ranse/handlers/README.md`](../../../src/ranse/handlers/README.md) | peraturan perniagaan handler yang dihantar — indeks; setiap handler mempunyai DESIGN.md sendiri dalam foldernya |
-| [`src/ranse/inputs/README.md`](../../../src/ranse/inputs/README.md) | indeks pembaca fail sumber; setiap pembaca mempunyai DESIGN.md sendiri |
-| [`config/README.md`](../../../config/README.md) | indeks fail data; setiap folder mempunyai DESIGN.md sendiri |
+| [`plugins/erph/README.md`](../../../plugins/erph/README.md) | perniagaan yang dihantar — indeks handler, pembaca, profil dan fail datanya |
+| [`src/ranse/inputs/README.md`](../../../src/ranse/inputs/README.md) | pembaca rangka kerja sendiri (profil YAML); setiap pembaca lain hidup dalam plugin |
+| [`plugins/erph/config/`](../../../plugins/erph/config/) | fail data yang dirujuk profil yang dihantar; setiap folder mempunyai DESIGN.md sendiri |
 | [`README.md`](../../../README.md) | versi English README ini |
 
 ## Struktur Projek
 
 ```
-profiles/                    # Satu profil bagi setiap guru/templat (mula di sini)
-  ali-bin-abu/               # satu folder bagi setiap profil: profile.yaml + dokumen
-    profile.yaml
-config/school-weeks/          # Fail data kalendar sekolah (lihat config/README.md)
+plugins/                     # Satu folder bagi setiap perniagaan — rangka kerja mengimbasnya
+  erph/                      # perniagaan yang dihantar: buku kerja e-RPH
+    domain.py                # jenisnya (Lesson / Schedule / Week)
+    handlers/                # week/ menu/ fixed_cells/ dskp/ — folder = nama
+    inputs/                  # calendar/ timetable/ dskp/ — folder = nama
+    profiles/ali-bin-abu/    # satu folder bagi setiap profil: profile.yaml + dokumen
+    config/                  # fail data yang dirujuk profil itu
 docs/
   DESIGN.md                  # Reka bentuk rangka kerja teras
 src/ranse/
   cli.py                     # ranse fill / write
-  model.py                   # Lesson / Schedule / Week / Profile
+  model.py                   # Profile / ProfileInputs / HandlerSpec
+  plugins.py                 # penemuan plugin (./plugins)
   core/                      # enjin xlsx tulis-sahaja (tiada pengetahuan perniagaan)
-  inputs/                    # pembaca fail sumber — satu folder + DESIGN.md setiap satu
-  handlers/                  # week/ menu/ fixed_cells/ dskp/ — satu folder + DESIGN.md setiap satu
+  inputs/yaml/               # pembaca rangka kerja sendiri: profil
+  handlers/                  # base.py (protokol) + loader.py (registri)
 tests/                       # ujian unit + baseline regresi golden
 ```
 
@@ -70,7 +74,7 @@ Ini memasang arahan `ranse`. `pip install -e ".[dev]"` juga memasang pytest untu
 ### `ranse fill` — isi buku kerja minggu ini
 
 ```bash
-ranse fill --profile profiles/ali-bin-abu/profile.yaml --date 2026-09-20
+ranse fill --profile plugins/erph/profiles/ali-bin-abu/profile.yaml --date 2026-09-20
 ```
 
 Satu arahan menyelesaikan input, membuka buku kerja profil, menjalankan handler secara berurutan dan menulis semula buku kerja **di tempat asal**. Tiada apa-apa perlu diedit antara minggu.
@@ -82,34 +86,34 @@ Satu arahan menyelesaikan input, membuka buku kerja profil, menjalankan handler 
 `--profile` sahaja pilihan yang ditambah oleh `ranse fill` sendiri. Semua
 pilihan lain datang daripada handler yang diaktifkan profil, dan setiap
 handler mendokumenkan pilihannya sendiri dalam `DESIGN.md` (indeks:
-[`src/ranse/handlers/README.md`](../../../src/ranse/handlers/README.md)).
+[`plugins/erph/README.md`](../../../plugins/erph/README.md)).
 Dengan profil yang dihantar, itu bermakna:
 
 | Pilihan | Diisytiharkan oleh | Penerangan |
 |---|---|---|
-| `--date YYYY-MM-DD` | [`week`](../../../src/ranse/handlers/week/DESIGN.md) | Permulaan minggu (lalai: hari Ahad minggu semasa; hari lain dikembalikan ke Ahadnya) |
-| `--week N` | [`week`](../../../src/ranse/handlers/week/DESIGN.md) | Gantikan nombor minggu (lalai: diselesaikan daripada `--date`) |
-| `--no-dskp-auto` | [`dskp`](../../../src/ranse/handlers/dskp/DESIGN.md) | Langkau pengisian automatik handler itu untuk jalan ini |
+| `--date YYYY-MM-DD` | [`week`](../../../plugins/erph/handlers/week/DESIGN.md) | Permulaan minggu (lalai: hari Ahad minggu semasa; hari lain dikembalikan ke Ahadnya) |
+| `--week N` | [`week`](../../../plugins/erph/handlers/week/DESIGN.md) | Gantikan nombor minggu (lalai: diselesaikan daripada `--date`) |
+| `--no-dskp-auto` | [`dskp`](../../../plugins/erph/handlers/dskp/DESIGN.md) | Langkau pengisian automatik handler itu untuk jalan ini |
 
 Tiada `--xlsx` dengan sengaja: buku kerja ialah input profil, jadi kesilapan pada baris arahan tidak boleh menulis ganti fail yang salah.
 
 ### `ranse write` — satu sel
 
 ```bash
-ranse write --profile profiles/ali-bin-abu/profile.yaml MENU!B3 "ALI BIN ABU"
+ranse write --profile plugins/erph/profiles/ali-bin-abu/profile.yaml MENU!B3 "ALI BIN ABU"
 ```
 
 Menulis satu sel (`SHEET!CELL`, atau `SHEET!FROM:TO` — sudu kiri atas julat atau julat digabungkan digunakan) dan menyimpan buku kerja. Ia tiada pilihan selain `--profile`: ia menjalankan fasa resolve profil, jadi buku kerja minggu mana yang ditulis ditentukan sama seperti `ranse fill`. Nilai ditulis sebagai teks; gunakan `ranse fill` dengan handler `fixed_cells` untuk nilai yang perlu menjadi nombor.
 
-### `python -m ranse.inputs.dskp` — hurai kandungan DSKP
+### `python -m erph.inputs.dskp` — hurai kandungan DSKP
 
 ```bash
-python -m ranse.inputs.dskp --txt assets/bc-dskp/t1.txt --select 1 1 1 -o t1.json
-python -m ranse.inputs.dskp --pdf dskp.pdf --pages 35-45 -o t1.json
-python -m ranse.inputs.dskp --list
+PYTHONPATH=plugins python -m erph.inputs.dskp --txt assets/bc-dskp/t1.txt --select 1 1 1 -o t1.json
+PYTHONPATH=plugins python -m erph.inputs.dskp --pdf dskp.pdf --pages 35-45 -o t1.json
+PYTHONPATH=plugins python -m erph.inputs.dskp --list
 ```
 
-Menghasilkan JSON berstruktur daripada sumber DSKP txt/pdf. Pembaca ini berjalan sebagai modulnya sendiri supaya `ranse --help` hanya menyenaraikan `fill` / `write` rangka kerja. Format: [`src/ranse/inputs/dskp/DESIGN.md`](../../../src/ranse/inputs/dskp/DESIGN.md).
+Menghasilkan JSON berstruktur daripada sumber DSKP txt/pdf. Pembaca ini berjalan sebagai modulnya sendiri supaya `ranse --help` hanya menyenaraikan `fill` / `write` rangka kerja. Format: [`plugins/erph/inputs/dskp/DESIGN.md`](../../../plugins/erph/inputs/dskp/DESIGN.md).
 
 ## Konfigurasi (profil)
 
@@ -120,8 +124,8 @@ profile: ali-bin-abu-2026
 
 inputs:
   template: "assets/ALI BIN ABU/12. ERPH/2026/*/M{week}.xlsx"  # wajib
-  calendar: "config/school-weeks/school-weeks.yaml"            # kalendar minggu
-  period_times: "config/period-times/period-times.yaml"          #jadual tempoh
+  calendar: "../../config/school-weeks/school-weeks.yaml"            # kalendar minggu
+  period_times: "../../config/period-times/period-times.yaml"          #jadual tempoh
   # templates: {18: "…/06. JUNE/M18.xlsx"}    # tetapkan satu minggu secara eksplisit
   # timetable: "assets/timetable/jadual-waktu-2026-siri-7.xlsx"  # gantian pilihan
   # csv: "timetable.csv"
@@ -141,7 +145,7 @@ handlers:
   - name: dskp
     params:
       mode: auto
-      # … params khusus handler, lihat src/ranse/handlers/README.md
+      # … params khusus handler, lihat plugins/erph/README.md
 ```
 
 ### `inputs`
@@ -150,10 +154,10 @@ handlers:
 |---|---|
 | `template` | **Wajib.** Buku kerja yang akan diisi di tempat asal. Boleh mengandungi `{week}` dan wildcard glob |
 | `templates` | Peta `minggu → laluan` (pilihan); menang atas `template` bagi minggu tersebut |
-| `calendar` | Fail data kalendar minggu (didokumenkan dalam [`config/school-weeks/DESIGN.md`](../../../config/school-weeks/DESIGN.md)) |
+| `calendar` | Fail data kalendar minggu (didokumenkan dalam [`plugins/erph/config/school-weeks/DESIGN.md`](../../../plugins/erph/config/school-weeks/DESIGN.md)) |
 | `timetable` | Fail jadual waktu xlsx eksplisit (pilihan); mengalahkan carian siri |
 | `csv` | Fail jadual waktu csv eksplisit (pilihan); mengalahkan carian siri |
-| `period_times` | Jadual tempoh pilihan (tempoh → `[mula, tamat]`); menggantikan jadual terbina dalam (didokumenkan dalam [`config/period-times/DESIGN.md`](../../../config/period-times/DESIGN.md)) |
+| `period_times` | Jadual tempoh pilihan (tempoh → `[mula, tamat]`); menggantikan jadual terbina dalam (didokumenkan dalam [`plugins/erph/config/period-times/DESIGN.md`](../../../plugins/erph/config/period-times/DESIGN.md)) |
 
 Laluan relatif diselesaikan terhadap direktori profil itu sendiri, kemudian direktori semasa, kemudian akar repositori (langkah terakhir hanya dalam checkout sumber — pemasangan pakej tiada akar repositori) — jadi profil yang disertakan berfungsi di mana-mana sahaja anda menjalankannya.
 
@@ -173,7 +177,7 @@ Nilai yang dikongsi oleh beberapa handler — ditulis sekali dan bukannya didupl
 
 ### `handlers`
 
-Senarai eksplisit dan tersusun. Hanya handler terbina dalam boleh dinamakan — nama yang tidak dikenali ialah ralat, dan setiap handler mengesahkan `params`nya sendiri sebelum apa-apa ditulis. Pada sel berkongsi, **handler terakhir dalam senarai menang**.
+Senarai eksplisit dan tersusun. Hanya handler yang disediakan plugin di bawah `plugins/` boleh dinamakan — nama yang tidak dikenali ialah ralat yang menyenaraikan apa yang ditemui, dan setiap handler mengesahkan `params`nya sendiri sebelum apa-apa ditulis. Pada sel berkongsi, **handler terakhir dalam senarai menang**.
 
 | Handler | Fasa | Apa yang dilakukannya |
 |---|---|---|
@@ -183,19 +187,20 @@ Senarai eksplisit dan tersusun. Hanya handler terbina dalam boleh dinamakan — 
 | `dskp` | fill | menulis baris standard DSKP ke helaian hari |
 
 Peraturan setiap handler dan rujukan `params` penuh hidup dalam DESIGN.md
-handler itu sendiri (indeks: [`src/ranse/handlers/README.md`](../../../src/ranse/handlers/README.md)).
+handler itu sendiri (indeks: [`plugins/erph/README.md`](../../../plugins/erph/README.md)).
 
 ## Seni Bina
 
 ```
-cli.py ──▶ handlers/ ──▶ core/        (API Workbook / Sheet tulis-sahaja)
-              │
-              └──────▶ inputs/        (baca fail sumber, bukan buku kerja)
+plugins/erph/  ──▶  cli.py ──▶ handlers/ ──▶ core/   (API Workbook tulis-sahaja)
+                       │          │
+                       │          └──────▶ inputs/  (baca sumber, bukan buku kerja)
+                       └─ menemui plugin daripada ./plugins
 ```
 
 - **`core/`** — xlsx ialah arkib ZIP bahagian XML; Ranse memintas `openpyxl` dan mengedit XML helaian terus, mengekalkan setiap atribut yang tidak diubah secara sengaja. Ia tulis-sahaja dan tiada pengetahuan tentang minggu sekolah, subjek atau susun atur.
-- **`inputs/`** — pembaca yang mengubah fail kalendar, jadual waktu dan DSKP menjadi objek model; mereka tidak menyentuh buku kerja sasaran.
-- **`handlers/`** — semua peraturan perniagaan, melaksanakan dua protokol (`resolve` / `fill`) dan ditemui daripada registri terbina dalam.
+- **`inputs/`** — pembaca rangka kerja sendiri (profil YAML); plugin menambah pembacanya di sebelah handler-nya, dan mereka tidak menyentuh buku kerja sasaran.
+- **`handlers/`** — dua protokol (`resolve` / `fill`) serta loader yang membina registri daripada plugin di bawah `./plugins`. Semua peraturan perniagaan hidup dalam plugin, bukan dalam rangka kerja.
 - **`cli.py`** — argparse serta susunan pipeline; `RanseError` menjadi `Error: …` + keluar 1.
 
 Reka bentuk penuh (antara muka, keputusan, kitaran hayat, risiko):

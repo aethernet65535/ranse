@@ -14,8 +14,9 @@ non-empty string or a mapping" — those keys are handler-specific and pass
 through verbatim into `ProfileInputs.extra`; each handler/reader
 validates the keys it declares, exactly like handler `params`.
 
-Other YAML formats live in their own folder (one reader per format): the
-school calendar is read by [`inputs/calendar/`](../../calendar/).
+Other YAML formats live in the plugin that uses them (one reader per format,
+one folder each): the school calendar is read by
+[`plugins/erph/inputs/calendar/`](../../../../plugins/erph/inputs/calendar/DESIGN.md).
 
 `resolve_template` (framework, decision 10) picks the workbook: the
 `inputs.templates` override first, then `inputs.template` with `{week}`

@@ -33,13 +33,16 @@ import yaml
 REPO_ROOT = Path(__file__).resolve().parent.parent
 TESTS_DIR = REPO_ROOT / "tests"
 SRC_DIR = REPO_ROOT / "src"
+PLUGINS_DIR = REPO_ROOT / "plugins"
 GOLDEN_DIR = TESTS_DIR / "golden"
 
 TEMPLATE_XLSX = REPO_ROOT / "assets" / "ALI BIN ABU" / "12. ERPH" / "template.xlsx"
 TIMETABLE_DIR = REPO_ROOT / "assets" / "timetable"
 DSKP_DIR = REPO_ROOT / "assets" / "bc-dskp"
-PROFILE_YAML = REPO_ROOT / "profiles" / "ali-bin-abu" / "profile.yaml"
-CALENDAR_YAML = REPO_ROOT / "config" / "school-weeks" / "school-weeks.yaml"
+PLUGIN_DIR = PLUGINS_DIR / "erph"
+PROFILE_YAML = PLUGIN_DIR / "profiles" / "ali-bin-abu" / "profile.yaml"
+CALENDAR_YAML = PLUGIN_DIR / "config" / "school-weeks" / "school-weeks.yaml"
+PERIOD_TIMES_YAML = PLUGIN_DIR / "config" / "period-times" / "period-times.yaml"
 
 # Golden cases: two normal weeks …
 GOLDEN_CASES = {
@@ -66,8 +69,12 @@ def assets_available():
 # ---------------------------------------------------------------------------
 
 def _pythonpath():
-    """Environment with ``src/`` on PYTHONPATH so ``python -m ranse`` works."""
-    parts = [str(SRC_DIR)]
+    """Environment with ``src/`` and ``plugins/`` on PYTHONPATH.
+
+    ``src/`` makes ``python -m ranse`` work; ``plugins/`` makes the plugin
+    package (``erph``) importable, exactly like the user's own checkout.
+    """
+    parts = [str(SRC_DIR), str(PLUGINS_DIR)]
     if os.environ.get("PYTHONPATH"):
         parts.append(os.environ["PYTHONPATH"])
     return {**os.environ, "PYTHONPATH": os.pathsep.join(parts)}
@@ -80,12 +87,17 @@ def run_fill(xlsx_path, date, extra_args=()):
     the installed console script runs the same entry point). The shipped
     profile is copied to a temp file with ``inputs.template`` pointing at
     ``xlsx_path`` — the CLI has no ``--xlsx`` on purpose (decision 10).
+
+    The profile's own relative paths (``../../config/…``) resolve against
+    the profile folder, which moves to a temp directory here, so every
+    file-referencing input is pinned to an absolute path.
     Returns a ``subprocess.CompletedProcess``.
     """
     with tempfile.TemporaryDirectory() as tmp:
         raw = yaml.safe_load(PROFILE_YAML.read_text(encoding="utf-8"))
         raw["inputs"]["template"] = str(xlsx_path)
         raw["inputs"]["calendar"] = str(CALENDAR_YAML)
+        raw["inputs"]["period_times"] = str(PERIOD_TIMES_YAML)
         # The shipped profile's template is a {week} pattern; a per-week
         # override would beat the temp copy, so drop it.
         raw["inputs"].pop("templates", None)
@@ -149,28 +161,39 @@ def gzip_bytes(data):
 # ---------------------------------------------------------------------------
 
 _PACKAGE_CANDIDATES = (
+    # framework (src/ranse)
     "ranse.errors",
     "ranse.model",
     "ranse.core.refs",
     "ranse.core.format",
     "ranse.core.xlsx",
-    "ranse.inputs.timetable",
-    "ranse.inputs.dskp",
+    "ranse.plugins",
     "ranse.inputs.yaml",
-    "ranse.inputs.calendar",
-    "ranse.handlers.week",
-    "ranse.handlers.menu",
-    "ranse.handlers.fixed_cells",
-    "ranse.handlers.dskp",
-    "ranse.handlers.registry",
+    "ranse.handlers.loader",
     "ranse.handlers.base",
     "ranse.inputs",
     "ranse.cli",
+    # the shipped plugin (plugins/erph)
+    "erph.domain",
+    "erph.inputs.timetable",
+    "erph.inputs.dskp",
+    "erph.inputs.calendar",
+    "erph.handlers.week",
+    "erph.handlers.menu",
+    "erph.handlers.fixed_cells",
+    "erph.handlers.dskp",
 )
+
+
 def fn(name):
-    """Return ``name`` from the ranse package (src/ranse), or fail loudly."""
-    if SRC_DIR.is_dir() and str(SRC_DIR) not in sys.path:
-        sys.path.insert(0, str(SRC_DIR))
+    """Return ``name`` from the framework or the shipped plugin.
+
+    Unit tests call ``fn`` instead of importing a fixed module, so moving
+    code between modules does not require editing the tests.
+    """
+    for path in (SRC_DIR, PLUGINS_DIR):
+        if path.is_dir() and str(path) not in sys.path:
+            sys.path.insert(0, str(path))
     for mod_name in _PACKAGE_CANDIDATES:
         try:
             mod = importlib.import_module(mod_name)

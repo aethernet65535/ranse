@@ -1,31 +1,22 @@
-"""Ranse inputs: one reader per source format, each in its own folder.
+"""Ranse inputs: the source readers the framework itself ships.
 
-Inputs never touch the target workbook (docs/DESIGN.md decision 8). The format
-each reader accepts is documented in that reader's ``DESIGN.md``; the index is
-``inputs/README.md``.
+The framework reads exactly one kind of source file itself — the **profile**
+— and that reader lives in ``yaml/`` (bootstrapping: the profile has to be
+read before anything it configures can be found). Every other reader belongs
+to a business and lives in that business's plugin
+(``plugins/<name>/inputs/<reader>/``, docs/DESIGN.md S8).
 
-A reader runs standalone as ``python -m ranse.inputs.<name>`` when it ships a
-``__main__`` entry (the DSKP reader does). It may *additionally* declare a top
-level ``ranse <name>`` subcommand — spec ``{"name", "help", "add_arguments",
-"run"}`` — by listing its name in ``_READERS`` below: one line, no changes to
-``cli.py`` (static, built-in registry, decision 2: no dynamic import paths, no
-entry points). The shipped list is deliberately empty, so the top-level CLI
-shows only the framework's own ``fill`` / ``write`` and ``ranse fill`` never
-imports a reader.
+Inputs never touch the target workbook (docs/DESIGN.md decision 8). A plugin
+reader may also declare a top-level CLI subcommand — spec ``{"name", "help",
+"add_arguments", "run"}`` — by defining ``SUBCOMMAND``; :func:`subcommands`
+collects them from the discovered plugins, so ``cli.py`` never names one.
+Nothing ships a subcommand, so the stock CLI shows only the framework's own
+``fill`` / ``write``.
 """
 
-import importlib
-
-# Readers declaring a SUBCOMMAND; () keeps the top-level CLI framework-only.
-_READERS = ()
+from ..plugins import reader_subcommands
 
 
 def subcommands():
-    """The subcommand specs the registered readers declare, in list order."""
-    specs = []
-    for name in _READERS:
-        module = importlib.import_module(f".{name}", __name__)
-        spec = getattr(module, "SUBCOMMAND", None)
-        if spec is not None:
-            specs.append(spec)
-    return tuple(specs)
+    """The subcommand specs the discovered plugin readers declare."""
+    return reader_subcommands()

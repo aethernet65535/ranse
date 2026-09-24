@@ -2,14 +2,15 @@
 
 Business logic lives behind these two protocols, which is what keeps it out
 of core (decision 6): a Filler can only touch cells through ``ctx.workbook``.
+Plugins import the protocols from here; the framework imports nothing from a
+plugin.
 """
 
 from dataclasses import dataclass, field
-from datetime import date
 from typing import Optional, Protocol
 
 from ..core.xlsx import Workbook
-from ..model import Profile, Schedule, Week
+from ..model import Profile
 
 
 @dataclass
@@ -19,36 +20,34 @@ class Context:
     ``profile``    the loaded profile (``inputs`` / ``context`` / handlers);
     ``workbook``   the target workbook (write-only core API). It stays None
                    during the resolve phase — the orchestrator opens it once
-                   the week (and therefore the template file) is known;
-    ``schedule``   the input a resolver read for the fillers (or None);
-    ``week``       resolved ``Week`` (or None when no calendar is used);
-    ``start_date`` the week start a resolver resolved (or None);
+                   the workbook to fill is known;
     ``template_vars`` values a resolver published for the ``{…}``
                    placeholders in ``inputs.template`` (a resolver that
-                   knows the week number sets ``{"week": n}``); the
-                   framework substitutes them and never guesses one;
+                   knows the value substitutes it by publishing e.g.
+                   ``{"week": n}``); the framework substitutes them and
+                   never guesses one;
     ``params``     params of the handler currently running (set per handler
                    by the orchestrator);
     ``runtime``    values of the CLI options the handlers declared, keyed by
                    each handler's own ``cli_options`` names;
     ``report``     lines printed by the orchestrator after filling.
 
-    A handler may also declare class attributes:
+    A resolver may publish any further value simply by setting an attribute
+    (``ctx.some_input = value``): the framework stores it and never looks at
+    it, exactly like ``template_vars``. A handler may also declare class
+    attributes:
 
     ``cli_options``      the ``ranse fill`` options it needs (docs/DESIGN.md
                          S3.4);
     ``required_sheets``  workbook sheets that must exist before any fill;
     ``requires``         names of context values this filler cannot work
-                         without (e.g. ``("schedule",)``). The orchestrator
+                         without (e.g. ``("some_input",)``). The orchestrator
                          only checks that each declared name is set — the
                          names themselves are the handlers' own vocabulary,
                          the framework never interprets them.
     """
     profile: Profile
     workbook: Optional[Workbook] = None
-    schedule: Optional[Schedule] = None
-    week: Optional[Week] = None
-    start_date: Optional[date] = None
     template_vars: dict = field(default_factory=dict)
     params: dict = field(default_factory=dict)
     runtime: dict = field(default_factory=dict)

@@ -3,8 +3,8 @@
 Only orchestration lives here: argparse, the pipeline order, printing the
 report and turning a RanseError into ``Error: …`` + exit code 1 (decision
 13). Anything business-specific is declared where it lives — the extra
-options and the required sheets come from the handlers, and the extra
-subcommands come from the readers.
+options and the required sheets come from the handlers the plugins
+contribute, and the extra subcommands come from their readers.
 
 There is no ``--xlsx``: the target template is a profile input (decision 10).
 """
@@ -15,13 +15,13 @@ import sys
 from .core.xlsx import Workbook
 from .errors import RanseError
 from .handlers.base import Context
-from .handlers.registry import build_handlers, cli_options, required_sheets
+from .handlers.loader import build_handlers, cli_options, required_sheets
 from .inputs import subcommands
 from .inputs.yaml import load_profile, resolve_template
 
-# The subcommands the framework itself provides. A reader may add its own
-# (`inputs.subcommands()`), but the shipped registry is empty: the top-level
-# help stays framework-only and `ranse fill` imports no reader.
+# The subcommands the framework itself provides. A plugin reader may add its
+# own (`inputs.subcommands()`), but no shipped plugin declares one: the
+# top-level help stays framework-only and `ranse fill` imports no reader.
 _COMMANDS = ("fill", "write")
 _PROFILE_HELP = "Path to the profile YAML (inputs + handlers)"
 

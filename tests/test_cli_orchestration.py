@@ -2,7 +2,8 @@
 
 Both are framework mechanisms: the orchestrator only checks that each
 declared context value exists (it never interprets the names), and the
-reader registry is a static list the readers declare into (decision 2).
+reader subcommands are collected from the discovered plugins (decision 2,
+revised).
 """
 
 import argparse
@@ -81,7 +82,7 @@ build_parser = fn("_build_parser")
 
 def test_the_shipped_registry_is_empty():
     # The top-level CLI ships only the framework's fill/write; a business
-    # opts in by listing its reader in `inputs._READERS`.
+    # opts in by having one of its readers declare a SUBCOMMAND spec.
     assert subcommands() == ()
 
 

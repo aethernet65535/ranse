@@ -16,6 +16,14 @@ ranse = "ranse.cli:main"
 [project.optional-dependencies]
 dev = ["pytest>=7"]
 
+# The wheel carries the framework only: plugins are local directories a user
+# drops into ./plugins, never installed packages (docs/DESIGN.md S8).
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["tests", "src"]
+pythonpath = ["tests", "src", "plugins"]

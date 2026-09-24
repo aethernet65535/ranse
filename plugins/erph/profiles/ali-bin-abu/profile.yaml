@@ -1,0 +1,75 @@
+# ranse profile — ALI BIN ABU (2026)
+#
+# A profile is the only input the CLI takes (docs/DESIGN.md S3):
+#   inputs:    where the files live (template, calendar, timetable)
+#   context:   values shared by several handlers
+#   handlers:  the explicit, ordered list of handlers to run
+#
+# The names below come from the plugin this profile lives in
+# (`erph.handlers.*`, discovered from ./plugins) — a typo fails before
+# anything is written.
+
+profile: ali-bin-abu-2026
+
+inputs:
+  # The e-RPH workbook this profile fills (in place). {week} is replaced
+  # with the resolved week number; "*" covers the monthly subdirectories
+  # (01. JANUARY/M1.xlsx … 07. TMP-NEW/M33.xlsx), so one profile serves the
+  # whole year and the CLI stays week-agnostic:
+  #   ranse fill --profile plugins/erph/profiles/ali-bin-abu/profile.yaml \
+  #              --date 2026-09-20
+  template: "assets/ALI BIN ABU/12. ERPH/2026/*/M{week}.xlsx"
+  # School calendar: date → week number/series → timetable file.
+  # Paths are relative to this profile's own folder (the plugin is
+  # self-contained: ../../config/ is plugins/erph/config/).
+  calendar: "../../config/school-weeks/school-weeks.yaml"
+  # Escape hatch: if {week} ever matches more than one workbook (e.g. an
+  # old week copied into another folder) or a file is named/placed
+  # unusually, pin that week explicitly — the error message lists the
+  # candidates and suggests this entry.
+  # templates:
+  #   25: "assets/ALI BIN ABU/12. ERPH/2026/07. TMP-NEW/M25.xlsx"
+  # Optional explicit timetable source; when omitted the week's series
+  # decides (timetable: → the file registered for that series).
+  # timetable: "assets/timetable/jadual-waktu-2026-siri-7.xlsx"
+  # csv: "assets/timetable/timetable.csv"
+  # Period table (period → [start, end]); replaces the built-in one.
+  period_times: "../../config/period-times/period-times.yaml"
+
+# Shared across handlers — one declaration, every consumer (risk 3):
+#   days     the day blocks this template has: the MENU row blocks (menu)
+#            and the day sheets iterated while matching lessons (dskp);
+#   subjects subject code → name written into the template.
+context:
+  days: [Sunday, Monday, Tuesday, Wednesday, Thursday]
+  subjects:
+    BC: "BAHASA CINA 华 文"
+    BI: "ENGLISH"
+
+handlers:
+  # Phase one (resolve): date → week number/series → timetable path.
+  - name: week
+
+  # Phase two (fill): MENU layout, fixed cells, DSKP blocks.
+  - name: menu
+  - name: fixed_cells
+    params:
+      cells:
+        - [MENU, "B3:C3", "ALI BIN ABU"]
+  - name: dskp
+    params:
+      # auto: two parent-level content standards side by side, sliding
+      # forward one section per week (1+2 → 2+3 → … → wrap back to 1+2).
+      # Static entries (params.entries) are written first, so the automatic
+      # ones win on the same cell.
+      mode: auto
+      file: "assets/bc-dskp/t{form}.txt"
+      match_codes: [BC]
+      match_names: ["BAHASA CINA", "华文"]
+      cs: 1
+      ls: 1
+      left_col: 2
+      right_col: 5
+      # entries:
+      #   - {sheet: ISNIN, class: 1, file: t1.json,
+      #      selection: [1, 1, 1], col_start: 2}

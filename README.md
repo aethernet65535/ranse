@@ -45,26 +45,29 @@ The framework and each business area are documented separately:
 | Document | Contents |
 |---|---|
 | [`docs/DESIGN.md`](docs/DESIGN.md) | core framework design: engine, CLI, handler system, profile schema, pipeline |
-| [`src/ranse/handlers/README.md`](src/ranse/handlers/README.md) | shipped handler business rules — index; each handler has its own DESIGN.md in its own folder |
-| [`src/ranse/inputs/README.md`](src/ranse/inputs/README.md) | source-file reader index; each reader has its own DESIGN.md |
-| [`config/README.md`](config/README.md) | the school week calendar (`school-weeks.yaml`) |
+| [`plugins/erph/README.md`](plugins/erph/README.md) | the shipped business — index of its handlers, readers, profile and data files |
+| [`src/ranse/inputs/README.md`](src/ranse/inputs/README.md) | the framework's own reader (the profile YAML); every other reader lives in a plugin |
 | [`docs/translations/ms-MY/README.md`](docs/translations/ms-MY/README.md) | this README in Bahasa Melayu |
 
 ## Project Structure
 
 ```
-profiles/                    # One profile per teacher/template (start here)
-  ali-bin-abu/               # one folder per profile: profile.yaml + docs
-    profile.yaml
-config/school-weeks/          # School calendar data file (see config/README.md)
+plugins/                     # One folder per business — the framework scans it
+  erph/                      # the shipped business: e-RPH workbooks
+    domain.py                # its types (Lesson / Schedule / Week)
+    handlers/                # week/ menu/ fixed_cells/ dskp/ — folder = name
+    inputs/                  # calendar/ timetable/ dskp/ — folder = name
+    profiles/ali-bin-abu/    # one folder per profile: profile.yaml + docs
+    config/                  # the data files that profile references
 docs/
   DESIGN.md                  # Core framework design
 src/ranse/
   cli.py                     # ranse fill / write
-  model.py                   # Lesson / Schedule / Week / Profile
+  model.py                   # Profile / ProfileInputs / HandlerSpec
+  plugins.py                 # plugin discovery (./plugins)
   core/                      # write-only xlsx engine (no business knowledge)
-  inputs/                    # one folder + DESIGN.md per reader (timetable, dskp, yaml)
-  handlers/                  # week/ menu/ fixed_cells/ dskp/ — one folder + DESIGN.md each
+  inputs/yaml/               # the framework's own reader: the profile
+  handlers/                  # base.py (protocol) + loader.py (registry)
 tests/                       # unit tests + golden regression baselines
 ```
 
@@ -88,7 +91,7 @@ This installs the `ranse` command. `pip install -e ".[dev]"` also installs pytes
 ### `ranse fill` — fill this week's workbook
 
 ```bash
-ranse fill --profile profiles/ali-bin-abu/profile.yaml --date 2026-09-20
+ranse fill --profile plugins/erph/profiles/ali-bin-abu/profile.yaml --date 2026-09-20
 ```
 
 One command resolves the inputs, opens the profile's workbook, runs the
@@ -102,14 +105,14 @@ edited between weeks.
 `--profile` is the only option `ranse fill` adds itself. Every other option
 comes from a handler the profile enables, and each handler documents its own
 in its `DESIGN.md` (index:
-[`src/ranse/handlers/README.md`](src/ranse/handlers/README.md)). With the
+[`plugins/erph/README.md`](plugins/erph/README.md)). With the
 shipped profile that is:
 
 | Option | Declared by | Description |
 |---|---|---|
-| `--date YYYY-MM-DD` | [`week`](src/ranse/handlers/week/DESIGN.md) | Week start (default: the Sunday of the current week; other days roll back to their Sunday) |
-| `--week N` | [`week`](src/ranse/handlers/week/DESIGN.md) | Override the week number (default: resolved from `--date`) |
-| `--no-dskp-auto` | [`dskp`](src/ranse/handlers/dskp/DESIGN.md) | Skip that handler's automatic filling for this run |
+| `--date YYYY-MM-DD` | [`week`](plugins/erph/handlers/week/DESIGN.md) | Week start (default: the Sunday of the current week; other days roll back to their Sunday) |
+| `--week N` | [`week`](plugins/erph/handlers/week/DESIGN.md) | Override the week number (default: resolved from `--date`) |
+| `--no-dskp-auto` | [`dskp`](plugins/erph/handlers/dskp/DESIGN.md) | Skip that handler's automatic filling for this run |
 
 There is deliberately no `--xlsx`: the workbook is a profile input, so a
 mistake in the shell cannot overwrite the wrong file.
@@ -117,22 +120,22 @@ mistake in the shell cannot overwrite the wrong file.
 ### `ranse write` — one cell
 
 ```bash
-ranse write --profile profiles/ali-bin-abu/profile.yaml MENU!B3 "ALI BIN ABU"
+ranse write --profile plugins/erph/profiles/ali-bin-abu/profile.yaml MENU!B3 "ALI BIN ABU"
 ```
 
 Writes a single cell (`SHEET!CELL`, or `SHEET!FROM:TO` — the top-left of a range or merged range is used) and saves the workbook. It takes no options beyond `--profile`: it runs the profile's resolve phase, so which week's workbook it writes to is decided exactly the way `ranse fill` decides it. The value is written as text; use `ranse fill` with a `fixed_cells` handler for values that must be numbers.
 
-### `python -m ranse.inputs.dskp` — parse DSKP content
+### `python -m erph.inputs.dskp` — parse DSKP content
 
 ```bash
-python -m ranse.inputs.dskp --txt assets/bc-dskp/t1.txt --select 1 1 1 -o t1.json
-python -m ranse.inputs.dskp --pdf dskp.pdf --pages 35-45 -o t1.json
-python -m ranse.inputs.dskp --list
+PYTHONPATH=plugins python -m erph.inputs.dskp --txt assets/bc-dskp/t1.txt --select 1 1 1 -o t1.json
+PYTHONPATH=plugins python -m erph.inputs.dskp --pdf dskp.pdf --pages 35-45 -o t1.json
+PYTHONPATH=plugins python -m erph.inputs.dskp --list
 ```
 
 Produces structured JSON from a DSKP txt/pdf source. The reader runs as its
 own module so `ranse --help` lists only the framework's `fill` / `write`.
-Formats: [`src/ranse/inputs/dskp/DESIGN.md`](src/ranse/inputs/dskp/DESIGN.md).
+Formats: [`plugins/erph/inputs/dskp/DESIGN.md`](plugins/erph/inputs/dskp/DESIGN.md).
 
 ## Configuration (the profile)
 
@@ -165,7 +168,7 @@ handlers:
   - name: dskp
     params:
       mode: auto
-      # … handler-specific params, see src/ranse/handlers/README.md
+      # … handler-specific params, see plugins/erph/README.md
 ```
 
 ### `inputs`
@@ -174,10 +177,10 @@ handlers:
 |---|---|
 | `template` | **Required.** The workbook that gets filled in place. May contain `{week}` and glob wildcards |
 | `templates` | Optional `week number → path` map; wins over `template` for those weeks |
-| `calendar` | The week calendar data file (documented in [`config/school-weeks/DESIGN.md`](config/school-weeks/DESIGN.md)) |
+| `calendar` | The week calendar data file (documented in [`plugins/erph/config/school-weeks/DESIGN.md`](plugins/erph/config/school-weeks/DESIGN.md)) |
 | `timetable` | Optional explicit timetable xlsx; wins over the series lookup |
 | `csv` | Optional explicit timetable csv; wins over the series lookup |
-| `period_times` | Optional period table (period → `[start, end]`); replaces the built-in one (documented in [`config/period-times/DESIGN.md`](config/period-times/DESIGN.md)) |
+| `period_times` | Optional period table (period → `[start, end]`); replaces the built-in one (documented in [`plugins/erph/config/period-times/DESIGN.md`](plugins/erph/config/period-times/DESIGN.md)) |
 
 Relative paths are resolved against the profile's own directory, then the current directory, then the repo root (the last step only in a source checkout — an installed package has none) — so the shipped profile works no matter where you run it from.
 
@@ -199,7 +202,10 @@ both params: one `subjects` map used by two handlers, and the `days` list
 
 ### `handlers`
 
-An explicit, ordered list. Only built-in handlers can be named — an unknown name is an error, and every handler validates its own `params` before anything is written. On a shared cell, **the last handler in the list wins**.
+An explicit, ordered list. Only handlers a plugin under `plugins/` provides
+can be named — an unknown name is an error that lists what was found, and
+every handler validates its own `params` before anything is written. On a
+shared cell, **the last handler in the list wins**.
 
 | Handler | Phase | What it does |
 |---|---|---|
@@ -209,24 +215,27 @@ An explicit, ordered list. Only built-in handlers can be named — an unknown na
 | `dskp` | fill | writes the DSKP standard rows to the day sheets |
 
 Each handler's rules and full `params` reference live in that handler's own
-DESIGN.md (index: [`src/ranse/handlers/README.md`](src/ranse/handlers/README.md)).
+DESIGN.md (index: [`plugins/erph/README.md`](plugins/erph/README.md)).
 
 ## Architecture
 
 ```
-cli.py ──▶ handlers/ ──▶ core/        (write-only Workbook / Sheet API)
-              │
-              └──────▶ inputs/        (read source files, never the workbook)
+plugins/erph/  ──▶  cli.py ──▶ handlers/ ──▶ core/   (write-only Workbook API)
+                       │          │
+                       │          └──────▶ inputs/  (read sources, never the workbook)
+                       └─ discovers the plugin from ./plugins
 ```
 
 - **`core/`** — an xlsx is a zip of XML parts; Ranse skips `openpyxl` and
   edits the sheet XML directly, preserving every attribute it does not
   deliberately change. It is strictly write-only and knows nothing about
   school weeks, subjects or layouts.
-- **`inputs/`** — readers that turn the calendar, timetable and DSKP files
-  into model objects; they never touch the target workbook.
-- **`handlers/`** — all business rules, implementing the two protocols
-  (`resolve` / `fill`) and looked up from a built-in registry.
+- **`inputs/`** — the framework's own reader (the profile YAML); a plugin
+  adds its own readers next to its handlers, and they never touch the target
+  workbook.
+- **`handlers/`** — the two protocols (`resolve` / `fill`) plus the loader
+  that builds the registry from the plugins under `./plugins`. All business
+  rules live inside a plugin, never in the framework.
 - **`cli.py`** — argparse plus the pipeline order; a `RanseError` becomes
   `Error: …` + exit 1.
 

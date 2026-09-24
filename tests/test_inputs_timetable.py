@@ -84,9 +84,8 @@ def test_load_period_times_round_trip(tmp_path):
 
 
 def test_shipped_period_times_match_the_builtin_table(tmp_path):
-    from harness import REPO_ROOT
-    shipped = load_period_times(
-        str(REPO_ROOT / "config" / "period-times" / "period-times.yaml"))
+    from harness import PERIOD_TIMES_YAML
+    shipped = load_period_times(str(PERIOD_TIMES_YAML))
     PERIOD_TIMES = fn("PERIOD_TIMES")
     assert shipped == PERIOD_TIMES
 

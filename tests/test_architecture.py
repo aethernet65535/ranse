@@ -7,19 +7,17 @@ handlers or the CLI) are contract — this module turns them into CI
 assertions instead of conventions.
 
 Deliberately NOT subject to the vocabulary scan:
-- ``model.py`` — the domain model carries business semantics by design (S2);
-- ``handlers/<name>/``, ``inputs/{calendar,dskp,timetable}/`` — those *are*
-  the business (business handlers and business readers);
-- the registry files are whitelisted (see ``_VOCAB_EXEMPT``): they are the
-  plug-in points where business names legitimately live (decision 2).
+- everything under ``plugins/`` — that *is* the business (handlers, readers,
+  profiles and data files); Phase 4 scans it with the mirror exemption list.
 """
 
 import ast
 from pathlib import Path
 
-from harness import REPO_ROOT, SRC_DIR
+from harness import PLUGINS_DIR, REPO_ROOT, SRC_DIR
 
 PKG = SRC_DIR / "ranse"
+PLUGIN_PKG = PLUGINS_DIR / "erph"
 
 
 # ---------------------------------------------------------------------------
@@ -30,17 +28,17 @@ def _py_files(*parts):
     return sorted(Path(*parts).rglob("*.py"), key=str)
 
 
-def _module_name(path):
+def _module_name(path, root):
     """'ranse.core.xlsx' for src/ranse/core/xlsx.py ('ranse' for __init__)."""
-    parts = path.relative_to(SRC_DIR).with_suffix("").parts
+    parts = path.relative_to(root).with_suffix("").parts
     if parts[-1] == "__init__":
         parts = parts[:-1]
     return ".".join(parts)
 
 
-def _imported_modules(path):
+def _imported_modules(path, root=SRC_DIR):
     """Every module this file imports, with relative imports resolved."""
-    module = _module_name(path)
+    module = _module_name(path, root)
     # Base package for a level-1 relative import: the file's own package
     # (the package itself for __init__.py, the parent otherwise).
     pkg = module if path.name == "__init__.py" else module.rsplit(".", 1)[0]
@@ -60,11 +58,11 @@ def _imported_modules(path):
     return found
 
 
-def _violations(paths, forbidden):
+def _violations(paths, forbidden, root=SRC_DIR):
     """Human-readable violations of an import rule."""
     out = []
     for path in paths:
-        for mod in _imported_modules(path):
+        for mod in _imported_modules(path, root):
             if any(mod == f or mod.startswith(f + ".") for f in forbidden):
                 out.append(f"{path.relative_to(REPO_ROOT)} imports {mod}")
     return out
@@ -77,14 +75,13 @@ def _violations(paths, forbidden):
 _CORE = _py_files(PKG / "core")
 _ALL_INPUTS = _py_files(PKG / "inputs")
 _CLI = [PKG / "cli.py"]
+_FRAMEWORK = _py_files(PKG)
+_PLUGIN = _py_files(PLUGIN_PKG)
 
-# Concrete handlers/readers the orchestrator must never name (it learns them
-# from handlers/registry.py and inputs/__init__.py instead).
-_CONCRETE = [
-    "ranse.handlers.week", "ranse.handlers.menu",
-    "ranse.handlers.fixed_cells", "ranse.handlers.dskp",
-    "ranse.inputs.timetable", "ranse.inputs.dskp", "ranse.inputs.calendar",
-]
+# The framework may never name a plugin: handlers and readers are reached
+# through the plugin loader (handlers/loader.py, plugins.py).
+_PLUGIN_IMPORTS = ("erph",)
+_LOADER_FILES = {PKG / "plugins.py", PKG / "handlers" / "loader.py"}
 
 
 def test_core_depends_on_nothing_above_it():
@@ -94,9 +91,16 @@ def test_core_depends_on_nothing_above_it():
 
 
 def test_cli_knows_only_registries_and_the_profile_reader():
-    # cli composes base + registry + profile reader; concrete handlers and
-    # readers are reached through the registries, never imported.
-    assert not _violations(_CLI, _CONCRETE)
+    # cli composes base + the plugin loader + profile reader; concrete
+    # handlers and readers are reached through the loader, never imported.
+    assert not _violations(_CLI, list(_PLUGIN_IMPORTS))
+
+
+def test_only_the_loader_imports_a_plugin():
+    # Discovery is the loader's job (decision 2, revised): everything else in
+    # the framework stays plugin-agnostic.
+    scanned = [p for p in _FRAMEWORK if p not in _LOADER_FILES]
+    assert not _violations(scanned, list(_PLUGIN_IMPORTS))
 
 
 def test_inputs_never_call_back_up():
@@ -104,14 +108,35 @@ def test_inputs_never_call_back_up():
     assert not _violations(_ALL_INPUTS, ["ranse.handlers", "ranse.cli"])
 
 
-def test_generic_readers_do_not_import_each_other():
-    # one format one folder (inputs/README.md): the profile reader and the
-    # calendar reader stay independent of the other readers.
-    readers = ("yaml", "calendar", "timetable", "dskp")
-    for reader in ("yaml", "calendar"):
-        paths = _py_files(PKG / "inputs" / reader)
-        siblings = [f"ranse.inputs.{r}" for r in readers if r != reader]
-        assert not _violations(paths, siblings)
+def test_one_folder_per_source_format():
+    # One format, one folder: the framework's own profile reader stays
+    # independent of the plugin's readers, and the plugin's readers stay
+    # independent of each other.
+    assert not _violations(_py_files(PKG / "inputs" / "yaml"),
+                           ["erph.inputs"])
+    readers = ("calendar", "timetable", "dskp")
+    for reader in readers:
+        siblings = [f"erph.inputs.{r}" for r in readers if r != reader]
+        assert not _violations(_py_files(PLUGIN_PKG / "inputs" / reader),
+                               siblings, root=PLUGINS_DIR)
+
+
+def test_plugin_readers_never_call_back_up():
+    # Same rule as the framework's own readers: a reader may not reach into
+    # the handlers or the CLI.
+    assert not _violations(_py_files(PLUGIN_PKG / "inputs"),
+                           ["erph.handlers", "ranse.cli"], root=PLUGINS_DIR)
+
+
+def test_plugins_do_not_import_each_other():
+    # A plugin talks to the framework and to its own package, never to
+    # another plugin (the plugin loader is what composes them).
+    plugins = sorted(p.name for p in PLUGINS_DIR.iterdir() if p.is_dir())
+    for plugin in plugins:
+        for path in _py_files(PLUGINS_DIR / plugin):
+            others = [f"{other}" for other in plugins if other != plugin]
+            assert not _violations([path], others, root=PLUGINS_DIR), (
+                f"{path.relative_to(REPO_ROOT)} imports another plugin")
 
 
 # ---------------------------------------------------------------------------
@@ -129,15 +154,13 @@ _VOCAB_FILES = _CORE + _py_files(PKG / "inputs" / "yaml") + [
     PKG / "errors.py",
     PKG / "inputs" / "__init__.py",
     PKG / "handlers" / "base.py",
-    PKG / "handlers" / "registry.py",
+    PKG / "handlers" / "loader.py",
+    PKG / "plugins.py",
 ]
 
-# Plug-in points are allowed to name the business — that is where the
-# business plugs in (built-in registries, decision 2).
-_VOCAB_EXEMPT = {
-    PKG / "inputs" / "__init__.py": "the reader registry (business plug-in point)",
-    PKG / "handlers" / "registry.py": "the handler registry (business plug-in point)",
-}
+# Phase 4 clears this: the framework now names no business at all — the
+# plug-in points moved out to `plugins/`, which is scanned separately.
+_VOCAB_EXEMPT = {}
 
 
 def test_framework_code_carries_no_business_vocabulary():
