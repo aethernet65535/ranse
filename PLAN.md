@@ -10,7 +10,7 @@
 | Phase 1 Python 层英文化 | `a7df720` | 103 passed，golden 字节不变，assets 未动 |
 | Phase 2 数据 schema + 日名英文化（原子） | `e24bb88` | 103 passed，golden 字节不变，holiday stderr 字节不变 |
 | Phase 3 `plugins/erph/` 重组 | `7f56775` | 117 passed（含 golden + 新增插件发现测试） |
-| Phase 4 CI 与文档定稿 | `待补记`（见下条追加提交） | 122 passed，`ranse --help` 仍为 `{fill,write}` |
+| Phase 4 CI 与文档定稿 | `1cb7be6` | 122 passed，`ranse --help` 仍为 `{fill,write}` |
 
 ### 落地时与本计划文字的两处偏差
 
