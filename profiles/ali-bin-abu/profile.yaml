@@ -29,9 +29,15 @@ inputs:
   # decides (jadual: → the file registered for that siri).
   # timetable: "assets/timetable/jadual-waktu-2026-siri-7.xlsx"
   # csv: "assets/timetable/timetable.csv"
+  # Period table (period → [start, end]); replaces the built-in one.
+  period_times: "config/period-times/period-times.yaml"
 
-# Shared across handlers: subject code → name written into the template.
+# Shared across handlers — one declaration, every consumer (risk 3):
+#   days     the day blocks this template has: the MENU row blocks (menu)
+#            and the day sheets iterated while matching lessons (dskp);
+#   subjects subject code → name written into the template.
 context:
+  days: [Ahad, Isnin, Selasa, Rabu, Khamis]
   subjects:
     BC: "BAHASA CINA 华 文"
     BI: "ENGLISH"

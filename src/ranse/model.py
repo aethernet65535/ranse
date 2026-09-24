@@ -28,9 +28,11 @@ class Lesson:
 class Schedule:
     """A week of lessons: ``{day_name: {period_number: Lesson}}``.
 
-    Day names are the Malay school days (``"Ahad"`` … ``"Khamis"``) — the
-    template only has sheets for those, so Jumaat/Sabtu are dropped while
-    reading (risk 10, src/ranse/inputs/timetable/DESIGN.md).
+    Day names are the Malay school days (``"Ahad"`` … ``"Sabtu"``). A
+    reader keeps every day the source carries; which days a template
+    actually has is declared once by the profile (``context.days``) and
+    used by the fillers (risk 10,
+    src/ranse/inputs/timetable/DESIGN.md).
     """
 
     days: Dict[str, Dict[int, Lesson]] = field(default_factory=dict)

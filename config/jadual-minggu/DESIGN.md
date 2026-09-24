@@ -95,5 +95,5 @@ In short:
 
 - Handler rules that consume this file: [`src/ranse/handlers/week/DESIGN.md`](../../src/ranse/handlers/week/DESIGN.md)
 - Timetable file formats picked here: [`src/ranse/inputs/timetable/DESIGN.md`](../../src/ranse/inputs/timetable/DESIGN.md)
-- Profile schema (`inputs.jadual`): [`docs/DESIGN.md`](../../docs/DESIGN.md) S3.3
+- Profile key (`inputs.jadual`, read by the `week` handler): profile schema [`docs/DESIGN.md`](../../docs/DESIGN.md) S3.3
 - Example profile: [`profiles/ali-bin-abu/profile.yaml`](../../profiles/ali-bin-abu/profile.yaml)

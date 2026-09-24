@@ -10,11 +10,14 @@ from xml.etree import ElementTree as ET
 from ... import _REPO_ROOT
 from ...core.refs import _cell_ref, _resolve_path
 from ...errors import ProfileError
-from ...inputs.timetable import DAY_ORDER
 from ...model import merge_periods
 from ..base import Context
 
 _DSKP_CONTENT_CACHE = {}
+
+# Day sheets the shipped template has (fallback; the profile's
+# ``context.days`` wins — risk 3: one declaration shared by menu and dskp).
+DEFAULT_DAYS = ("Ahad", "Isnin", "Selasa", "Rabu", "Khamis")
 
 
 # {tingkatan} / {t} / {T} in the params' `file` → the lesson's tingkatan number
@@ -95,11 +98,11 @@ def _is_matched_subject(subject, codes, names, subject_map):
     return subject in codes or any(n in mapped for n in names if n)
 
 
-def schedule_has_auto_match(schedule, params, subjects):
+def schedule_has_auto_match(schedule, params, subjects, days=None):
     """True if the timetable has any lesson the auto mode would fill."""
     codes, names = _auto_subject_matchers(params)
     subject_map = subjects or {}
-    for day in DAY_ORDER:
+    for day in days or DEFAULT_DAYS:
         for entry in schedule.day(day).values():
             if _is_matched_subject(entry.subject, codes, names,
                                    subject_map):
@@ -107,13 +110,15 @@ def schedule_has_auto_match(schedule, params, subjects):
     return False
 
 
-def build_auto_dskp_entries(schedule, minggu, params, subjects, base_dir=None):
+def build_auto_dskp_entries(schedule, minggu, params, subjects, base_dir=None,
+                            days=None):
     """Turn this week's timetable lessons into DSKP fill entries.
 
     Every subject listed in params.match_codes gets, for each of its
     merged lessons (40 or 80 minutes), two entries: the left column
     (col_start, default B) and the right column (default E) of its class
-    block. Returns (entries, report_lines).
+    block. ``days`` is the profile's ``context.days`` (which sheets this
+    template has); defaults to DEFAULT_DAYS. Returns (entries, report_lines).
     """
     codes, names = _auto_subject_matchers(params)
     cs_idx = int(params.get("cs", 1))
@@ -123,7 +128,7 @@ def build_auto_dskp_entries(schedule, minggu, params, subjects, base_dir=None):
     subject_map = subjects or {}
 
     entries, report = [], []
-    for day in DAY_ORDER:
+    for day in days or DEFAULT_DAYS:
         merged = merge_periods(schedule.day(day))
         for class_num, (_, entry) in enumerate(merged, start=1):
             subject = entry.subject
@@ -268,7 +273,10 @@ class DskpFiller:
 
     name = "dskp"
     phase = "fill"
-    required_sheets = tuple(d.upper() for d in DAY_ORDER)
+    # The day sheets checked before any write (from DEFAULT_DAYS; a profile
+    # that overrides context.days beyond these sheets still gets the
+    # per-entry "sheet not found" warning at fill time).
+    required_sheets = tuple(d.upper() for d in DEFAULT_DAYS)
     # The `ranse fill` options this handler needs; the orchestrator adds them
     # to the parser and hands the values back in `ctx.runtime[key]`.
     cli_options = {
@@ -369,19 +377,20 @@ class DskpFiller:
         if ctx.runtime.get("no_dskp_auto"):
             return []
 
+        days = ctx.profile.context.get("days") or DEFAULT_DAYS
         if ctx.week is not None:
             if not ctx.schedule:
                 return []
             auto, report = build_auto_dskp_entries(
                 ctx.schedule, ctx.week.minggu, params, subjects,
-                ctx.profile.base_dir)
+                ctx.profile.base_dir, days=days)
             entries.extend(auto)
             return report
 
         # Without a week number there is no section pair to pick — say so
         # instead of silently writing nothing.
         if ctx.schedule and schedule_has_auto_match(ctx.schedule, params,
-                                                   subjects):
+                                                   subjects, days=days):
             return ["Note: automatic DSKP filling skipped (no week known) — "
                     "add inputs.jadual to the profile or pass --minggu N "
                     "to enable it"]

@@ -1,12 +1,18 @@
 """Weekly timetable reading (CSV / xlsx) → schedule structures.
 
-Both period tables live here (risk 4 — see DESIGN.md next to this file; values
-unchanged):
+This reader recognises the school week's day names (``ALL_DAYS``, Ahad
+first) and keeps **every day the source carries** — which days a template
+actually has is the fillers' business, declared once by the profile in
+``context.days`` (risk 10, defined with the handlers; the reader must not
+encode the target workbook's sheet layout, decision 8).
 
-- ``PERIOD_TIMES`` (period → time range) fills the MENU rows;
-- ``TIME_PERIOD`` (time range → period) is the CSV direction. The two cannot
-  share one name inside this module, so the CSV direction got its own;
-  ``build_schedule`` is its only caller.
+Period times (risk 4 — see DESIGN.md next to this file):
+
+- ``PERIOD_TIMES`` (period → time range) is the built-in fallback table;
+- a profile may reference its own table (``inputs.period_times``, a YAML
+  file under ``config/period-times/``), which replaces it wholesale;
+- the CSV direction (range → period) is *derived* from whichever table is
+  active, so the two directions can never drift apart.
 """
 
 import csv
@@ -16,18 +22,26 @@ from collections import defaultdict
 from datetime import datetime
 from xml.etree import ElementTree as ET
 
+import yaml
+
 from ...core.format import (NS, NS_R, parse_sheet_names, parse_sheet_rels,
                             read_shared_strings, read_zip)
 from ...core.refs import _parse_cell_ref
+from ...errors import ProfileError
 from ...model import Lesson, Schedule
 
-DAY_ORDER = ["Ahad", "Isnin", "Selasa", "Rabu", "Khamis"]
+# The school week's day names, Ahad first — what the reader *recognises* in
+# headers and CSV dates. Selecting the days a template carries is the
+# fillers' job (context.days), never this reader's.
+ALL_DAYS = ["Ahad", "Isnin", "Selasa", "Rabu", "Khamis", "Jumaat", "Sabtu"]
 
-# Monday-first weekday index → Malay day name (same order as DAY_ORDER for
-# the school week, which starts on Sunday/Ahad).
+# Weekday index (Monday-first, datetime.weekday()) → day name; the school
+# week starts on Sunday/Ahad.
 DAY_BY_WEEKDAY = ["Isnin", "Selasa", "Rabu", "Khamis", "Jumaat", "Sabtu", "Ahad"]
 
-# period number → (start, end)
+# Built-in fallback: period number → (start, end). The values are pinned by
+# the golden suite; a profile's `inputs.period_times` replaces this whole
+# table (risk 4 — see DESIGN.md next to this file).
 PERIOD_TIMES = {
     1: ("07:40", "08:20"),
     2: ("08:20", "09:00"),
@@ -41,22 +55,38 @@ PERIOD_TIMES = {
     10: ("13:30", "14:10"),
 }
 
-# (start, end) → period number — the CSV direction of PERIOD_TIMES.
-TIME_PERIOD = {
-    ("07:40", "08:20"): 1,
-    ("08:20", "09:00"): 2,
-    ("09:00", "09:40"): 3,
-    ("09:40", "10:20"): 4,
-    ("10:20", "10:50"): 5,
-    ("10:50", "11:30"): 6,
-    ("11:30", "12:10"): 7,
-    ("12:10", "12:50"): 8,
-    ("12:50", "13:30"): 9,
-    ("13:30", "14:10"): 10,
-}
 
-# Decision 12: MENU layout constants (NUM_PERIODS, the PAGI/TGH/TPTG suffix
-# cache) live in handlers/menu/, not here.
+def _reverse_times(period_times):
+    """(start, end) → period — derived, so it can never drift from the table."""
+    return {(start, end): period
+            for period, (start, end) in period_times.items()}
+
+
+def load_period_times(path):
+    """Load a profile-referenced period table (``inputs.period_times``).
+
+    YAML mapping of ``period → [start, end]``; when present it **replaces**
+    the built-in ``PERIOD_TIMES`` table (one source of truth, no merging).
+    Shape errors raise :class:`~ranse.errors.ProfileError` (decision 13).
+    """
+    with open(path, encoding="utf-8") as f:
+        cfg = yaml.safe_load(f)
+    if not isinstance(cfg, dict) or not cfg:
+        raise ProfileError(
+            f"{path}: period times must be a mapping of period → [start, end]")
+    out = {}
+    for key, value in cfg.items():
+        try:
+            period = int(key)
+        except (TypeError, ValueError):
+            raise ProfileError(f"{path}: period key {key!r} is not a number")
+        if (not isinstance(value, (list, tuple)) or len(value) != 2
+                or not all(isinstance(v, str) and v.strip() for v in value)):
+            raise ProfileError(
+                f"{path}: period {period} must be [start, end] as HH:MM "
+                f"strings")
+        out[period] = (value[0].strip(), value[1].strip())
+    return out
 
 CLASS_CODE_RE = re.compile(r"([A-Z]+)[–-](\d+)([A-Za-z]+)")
 
@@ -70,20 +100,23 @@ def read_csv(path):
         return list(csv.DictReader(f))
 
 
-def build_schedule(rows):
-    """Build a Schedule from CSV rows (same shape as read_timetable_xlsx)."""
+def build_schedule(rows, period_times=None):
+    """Build a Schedule from CSV rows (same shape as read_timetable_xlsx).
+
+    Every weekday the ``Date`` maps to is kept — selecting the days a
+    template carries belongs to the fillers (``context.days``).
+    """
+    period_times = period_times or PERIOD_TIMES
+    time_period = _reverse_times(period_times)
     schedule = defaultdict(dict)
     for r in rows:
-        period = TIME_PERIOD.get((r["Start Time"], r["End Time"]))
+        period = time_period.get((r["Start Time"], r["End Time"]))
         if period is None:
             continue
         day = _day_name_from_date(r.get("Date", ""))
         if day is None:
             print(f"  Warning: cannot read day from Date={r.get('Date')!r}, skipping row",
                   file=sys.stderr)
-            continue
-        if day not in DAY_ORDER:
-            # Jumaat/Sabtu have no sheet in the template.
             continue
         schedule[day][period] = Lesson(
             cls=r["Class"],
@@ -95,12 +128,13 @@ def build_schedule(rows):
     return Schedule(days=dict(schedule))
 
 
-def load_schedule(path):
+def load_schedule(path, period_times=None):
     """Read a timetable file (``.csv`` or ``.xlsx``) into a Schedule."""
     if str(path).lower().endswith(".csv"):
-        return build_schedule(read_csv(path))
+        return build_schedule(read_csv(path), period_times=period_times)
     zip_data = read_zip(path)
-    return read_timetable_xlsx(zip_data, read_shared_strings(zip_data))
+    return read_timetable_xlsx(zip_data, read_shared_strings(zip_data),
+                               period_times=period_times)
 
 
 def _day_name_from_date(value):
@@ -181,7 +215,7 @@ def _parse_sheet_xml(xml_bytes):
     return grid
 
 
-def read_timetable_xlsx(zip_data, shared_strings):
+def read_timetable_xlsx(zip_data, shared_strings, period_times=None):
     """Read a timetable xlsx and return a schedule dict keyed by day name.
 
     The timetable layout:
@@ -191,6 +225,7 @@ def read_timetable_xlsx(zip_data, shared_strings):
     Returns:
         Schedule — { day_name: { period_num: Lesson } }
     """
+    period_times = period_times or PERIOD_TIMES
     rid_to_target = parse_sheet_rels(zip_data)
     sheet_map = parse_sheet_names(zip_data, rid_to_target)
 
@@ -212,7 +247,7 @@ def read_timetable_xlsx(zip_data, shared_strings):
         cells = grid[row_num]
         for col_num, cell_elem in cells.items():
             val = _read_cell_value(cell_elem, shared_strings).strip()
-            if val in DAY_ORDER:
+            if val in ALL_DAYS:
                 day_col_map[col_num] = val
                 if header_row is None:
                     header_row = row_num
@@ -239,7 +274,7 @@ def read_timetable_xlsx(zip_data, shared_strings):
             except (ValueError, TypeError):
                 continue
 
-        if period_num is None or period_num not in PERIOD_TIMES:
+        if period_num is None or period_num not in period_times:
             continue
 
         # Read class codes from day columns
@@ -251,7 +286,7 @@ def read_timetable_xlsx(zip_data, shared_strings):
                 continue
 
             subject, tingkatan, cls = _parse_class_code(code)
-            start, end = PERIOD_TIMES[period_num]
+            start, end = period_times[period_num]
 
             schedule[day_name][period_num] = Lesson(
                 cls=f"{tingkatan}{cls}",

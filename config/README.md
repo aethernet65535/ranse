@@ -6,6 +6,7 @@ Data files the shipped profiles reference, one folder each; the folder's
 | Folder | Data file | Documented in |
 |---|---|---|
 | [`jadual-minggu/`](jadual-minggu/) | `jadual-minggu.yaml` — the school week calendar | [`jadual-minggu/DESIGN.md`](jadual-minggu/DESIGN.md) |
+| [`period-times/`](period-times/) | `period-times.yaml` — period → [start, end] | [`period-times/DESIGN.md`](period-times/DESIGN.md) |
 
 The framework that loads these files is documented in
 [`docs/DESIGN.md`](../docs/DESIGN.md); the handler that consumes the calendar

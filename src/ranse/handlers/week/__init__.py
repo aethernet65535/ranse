@@ -12,7 +12,7 @@ from datetime import datetime, timedelta
 from ... import _REPO_ROOT
 from ...core.refs import _resolve_path
 from ...inputs.calendar import load_jadual_config
-from ...inputs.timetable import load_schedule
+from ...inputs.timetable import load_period_times, load_schedule
 from ...model import Week
 from ..base import Context
 
@@ -185,7 +185,18 @@ class WeekResolver:
         # Read the timetable here: a resolver may read inputs, the
         # orchestrator only opens the workbook and runs the fillers.
         if tt_path:
-            ctx.schedule = load_schedule(tt_path)
+            # Optional profile-referenced period table (risk 4); absent
+            # means the reader's built-in table.
+            period_times = None
+            pt_input = inputs.get("period_times")
+            if pt_input:
+                pt_path = _resolve_path(pt_input, bases)
+                if not os.path.isfile(pt_path):
+                    print(f"Error: file not found: {pt_path}",
+                          file=sys.stderr)
+                    sys.exit(1)
+                period_times = load_period_times(pt_path)
+            ctx.schedule = load_schedule(tt_path, period_times=period_times)
         if ctx.week is not None:
             siri_txt = ctx.week.siri if ctx.week.siri is not None else "-"
             print(f"Week: minggu {ctx.week.minggu}, siri {siri_txt}"

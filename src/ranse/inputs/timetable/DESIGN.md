@@ -19,13 +19,13 @@ number, every other day column holds a class code:
 | 2 | 1 | BC-1A | BI-2B | … | … | … |
 | 3 | 2 | … | … | … | … | … |
 
-- **Header detection** — the first row containing a day name from `DAY_ORDER`
-  (`Ahad`, `Isnin`, `Selasa`, `Rabu`, `Khamis`) is the header; each cell
-  holding such a name becomes a day column.
+- **Header detection** — the first row containing a day name from `ALL_DAYS`
+  (`Ahad` … `Sabtu`) is the header; each cell holding such a name becomes a
+  day column.
 - **Sheet selection** — the first sheet of the workbook, unless a sheet name
   contains `timetable` or `sheet` (case-insensitive), which wins.
 - **Period number** — the first numeric cell in the row; rows whose number is
-  not in `PERIOD_TIMES` (1–10) are skipped.
+  not in the active period table are skipped.
 - **Class code** — matched by `([A-Z]+)[–-](\d+)([A-Za-z]+)`, i.e.
   `<SUBJECT>-<TINGKATAN><CLASS>` with an ASCII hyphen or an en dash:
   `BC-1A` → subject `BC`, tingkatan `1`, class `A`. The timetable's class
@@ -36,10 +36,13 @@ number, every other day column holds a class code:
 
 ### Day coverage (risk 10)
 
-The school week runs **Ahad … Khamis**; the e-RPH template only has sheets
-for those five days, so **Jumaat/Sabtu columns and rows are dropped while
-reading** — a business rule that lives outside `core/`. Do not "helpfully"
-keep them: downstream fillers assume the five-day `DAY_ORDER`.
+The school week runs **Ahad … Sabtu** and the reader keeps **every day the
+source carries** — including Jumaat/Sabtu. A reader must not encode the
+target workbook's sheet layout (decision 8), so which days a template
+actually has is declared once by the profile in `context.days` and used by
+the fillers (`menu` for the MENU row blocks, `dskp` for the day sheets).
+Do not "helpfully" filter here — that would move the business rule back
+into an input.
 
 ---
 
@@ -55,21 +58,33 @@ Date,Class,Start Time,End Time,Subject,Tingkatan
 |---|---|
 | `Date` | any of `YYYY-MM-DD`, `DD/MM/YYYY`, `YYYY/MM/DD`, `DD-MM-YYYY`; mapped to a day name via the weekday |
 | `Class` | class label as the template spells it (`1E`, `5SPA`) |
-| `Start Time` / `End Time` | `HH:MM`, must match a `TIME_PERIOD` key pair, else the row is skipped |
+| `Start Time` / `End Time` | `HH:MM`, must match a key pair of the active period table, else the row is skipped |
 | `Subject` | subject code or name (after `context.subjects` mapping it feeds `dskp`'s `match_names`) |
 | `Tingkatan` | tingkatan number as text |
 
 - A `Date` that cannot be parsed produces a warning on stderr and the row is
   skipped.
-- Days outside `DAY_ORDER` (Jumaat/Sabtu) are skipped (risk 10).
+- Every weekday is kept — day selection belongs to the fillers
+  (`context.days` in the profile), not to this reader (risk 10).
 
 ---
 
 ## Period times (risk 4)
 
-Both period tables live in `__init__.py`, next to this file, and their
-**values are pinned** — the MENU fill and the CSV reader disagree with
-nothing today, and the golden suite proves it:
+There is **one** period table at a time, in two directions:
+
+- `PERIOD_TIMES` (period → range) in `__init__.py` is the **built-in
+  fallback**, used when the profile references no table. Its values are
+  pinned — the golden suite proves it;
+- a profile may reference its own table via `inputs.period_times` (a YAML
+  file, schema in
+  [`config/period-times/DESIGN.md`](../../../../config/period-times/DESIGN.md));
+  it **replaces** the built-in table wholesale;
+- the CSV direction (range → period) is **derived** from the active table
+  (`_reverse_times`), so the two directions can never drift apart — a
+  change is made once, in the table.
+
+Built-in values (also the shipped `config/period-times/period-times.yaml`):
 
 | Period | Start–End | | Period | Start–End |
 |---|---|---|---|---|
@@ -79,9 +94,6 @@ nothing today, and the golden suite proves it:
 | 4 | 09:40–10:20 | | 9 | 12:50–13:30 |
 | 5 | 10:20–10:50 | | 10 | 13:30–14:10 |
 
-- `PERIOD_TIMES` (period → range) fills the MENU rows;
-- `TIME_PERIOD` (range → period) is the CSV direction — the same data, so a
-  change must be made in **both** maps;
 - changing any value changes every filled workbook.
 
 **Risk 4** also covers the consumer side: `merge_periods` (in `model.py`)

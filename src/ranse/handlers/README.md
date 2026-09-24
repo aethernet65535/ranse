@@ -69,7 +69,8 @@ wins on a shared MENU cell.
 | 7, 11, 12 | [`menu/DESIGN.md`](menu/DESIGN.md) (clearing branch, time suffix, MENU-only time writer) |
 | 8 | [`fixed_cells/DESIGN.md`](fixed_cells/DESIGN.md) (`int(value)` at write time) |
 | 9 | this file (fill order, above) |
-| 4, 10 | [`src/ranse/inputs/timetable/DESIGN.md`](../../../src/ranse/inputs/timetable/DESIGN.md) (period tables, Jumaat/Sabtu dropped) |
+| 4 | [`src/ranse/inputs/timetable/DESIGN.md`](../../../src/ranse/inputs/timetable/DESIGN.md) + [`config/period-times/DESIGN.md`](../../../config/period-times/DESIGN.md) (one period table, derived reverse direction) |
+| 10 | [`profiles/ali-bin-abu/DESIGN.md`](../../../profiles/ali-bin-abu/DESIGN.md) (`context.days`: which day sheets this template has — the reader keeps every day, the fillers select) |
 | 1, 2, 3, 5, 6 | [`docs/DESIGN.md`](../../../docs/DESIGN.md) S10 (framework) |
 
 ---

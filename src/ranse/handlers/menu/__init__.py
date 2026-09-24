@@ -1,12 +1,17 @@
 """MENU sheet filling: layout rows, time suffixes, merged periods."""
 
 from ...core.refs import _cell_ref, _date_to_excel
-from ...inputs.timetable import DAY_ORDER
 from ...model import merge_periods
 from ..base import Context
 
 # --- MENU layout (decision 12: layout constants stay in the handler) ------
 NUM_PERIODS = 8
+
+# Day blocks of the shipped template's MENU sheet, top to bottom. The
+# profile declares the same list once in ``context.days`` (risk 3: a value
+# shared by menu and dskp belongs in the profile); this tuple is only the
+# fallback for profiles that do not.
+DEFAULT_DAYS = ("Ahad", "Isnin", "Selasa", "Rabu", "Khamis")
 
 _TIME_SUFFIX_CACHE = {}
 for _h in range(24):
@@ -46,9 +51,10 @@ class MenuFiller:
             return []
 
         subject_map = ctx.profile.context.get("subjects", {})
+        days = ctx.profile.context.get("days") or DEFAULT_DAYS
         sheet = ctx.workbook.sheet("MENU")
 
-        for day_idx, day_name in enumerate(DAY_ORDER):
+        for day_idx, day_name in enumerate(days):
             merged = merge_periods(schedule.day(day_name))
 
             header_row = 5 + day_idx * 10
