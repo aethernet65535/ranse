@@ -1,4 +1,4 @@
-"""Profile + calendar YAML loading, and picking this week's workbook."""
+"""Profile YAML loading, and picking the workbook to fill."""
 
 import glob
 import os

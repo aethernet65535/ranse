@@ -80,9 +80,10 @@ File map:
 |---|---|
 | `src/ranse/cli.py` | argparse, two-phase orchestration, `RanseError` → `Error: …` + exit 1 |
 | `src/ranse/model.py` | `Lesson` / `Schedule` / `Week` / `Profile` dataclasses, `merge_periods` |
-| `src/ranse/errors.py` | `RanseError`, `ProfileError`, `WeekError`, `SheetError` |
+| `src/ranse/errors.py` | `RanseError`, `ProfileError`, `SheetError` |
 | `src/ranse/core/refs.py` | A1 ↔ (row, col), range top-left, date serial, path resolution — pure functions |
-| `src/ranse/core/xlsx.py` | zip container + write-only `Workbook` / `Sheet` |
+| `src/ranse/core/format.py` | xlsx format primitives: zip parts, sheet map, shared strings (no domain knowledge) |
+| `src/ranse/core/xlsx.py` | write-only `Workbook` / `Sheet`, built on `core/format.py` |
 | `src/ranse/inputs/` | readers for the example's source files, one folder each (index: `src/ranse/inputs/README.md`) |
 | `src/ranse/handlers/base.py` | `Resolver` / `Filler` protocols + `Context` |
 | `src/ranse/handlers/registry.py` | the built-in registry (the only discovery, D2) |
@@ -146,6 +147,8 @@ Rules:
 @dataclass
 class Context:
     profile; workbook=None; schedule=None; week=None; start_date=None
+    template_vars={}   # values resolvers publish for the {…} template
+                       # placeholders (e.g. {"week": 33})
     params={}          # params of the handler currently running
     runtime={}         # values of the handler-declared CLI options
     report=[]
@@ -167,8 +170,13 @@ a malformed `params` fails **before any cell is touched**. A handler may only
 write through `ctx.workbook`, which is the core API of S3.1. A handler may
 declare what it needs as class attributes: `cli_options` (the `ranse fill`
 options it adds, S3.4), `required_sheets` (sheets the workbook must have
-before any fill) and `needs_schedule` (True when it cannot work without the
-schedule the resolvers read).
+before any fill) and `requires` (names of context values this filler cannot
+run without, e.g. `("schedule",)` — the orchestrator only checks presence,
+never interprets the names: they are the handlers' own vocabulary). A
+resolve-phase handler publishes values the framework substitutes by filling
+`ctx.template_vars` (the `{week}` placeholder in `inputs.template` is fed
+that way — the domain field name `Week.minggu` stops at the handler
+boundary).
 
 The shipped handlers and everything they compute are documented per handler in
 `src/ranse/handlers/<name>/DESIGN.md` (index: `src/ranse/handlers/README.md`).
@@ -269,15 +277,16 @@ handler that owns it.
 
 `ranse fill` runs one deterministic pipeline (`cli.py`):
 
-1. **Load the profile** (`inputs/yaml.py`) and **build the handlers**
-   (registry): unknown names and bad params fail here, before any I/O to the
-   workbook.
+1. **Load the profile** (the `inputs/yaml/` reader) and **build the
+   handlers** (registry): unknown names and bad params fail here, before any
+   I/O to the workbook.
 2. **Resolve phase** — every handler with `phase == "resolve"` runs in profile
    order. Resolvers read the source files and compute `ctx` inputs (the week,
-   the schedule); they write no cells.
-3. **Pick the workbook** — `resolve_template()` substitutes `{week}` and
-   resolves glob wildcards; zero matches or several matches are both errors
-   that list the candidates and point at `inputs.templates`.
+   the schedule) and publish `ctx.template_vars`; they write no cells.
+3. **Pick the workbook** — `resolve_template()` substitutes `{week}` from
+   `ctx.template_vars` and resolves glob wildcards; zero matches or several
+   matches are both errors that list the candidates and point at
+   `inputs.templates`.
 4. **Open it** (`Workbook.open`) and check that the sheets the handlers
    declared (`required_sheets`) are present. The target workbook stays
    write-only throughout.
@@ -295,7 +304,7 @@ whatever ran before, so a re-run is always safe.
 ## 6. Errors and exit codes
 
 - `core` / `inputs` raise `RanseError` subclasses (`ProfileError`,
-  `WeekError`, `SheetError`).
+  `SheetError`).
 - `cli` catches `RanseError` and prints `Error: <message>` on stderr, exit 1.
 - Handlers report their own errors: `print(…, file=sys.stderr)` +
   `sys.exit(1)` for business errors, and a `  Warning: …` line for skippable

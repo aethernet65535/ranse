@@ -121,11 +121,13 @@ profile: ali-bin-abu-2026
 inputs:
   template: "assets/ALI BIN ABU/12. ERPH/2026/*/M{week}.xlsx"  # wajib
   jadual: "config/jadual-minggu/jadual-minggu.yaml"              # kalendar minggu
+  period_times: "config/period-times/period-times.yaml"          #jadual tempoh
   # templates: {18: "…/06. JUNE/M18.xlsx"}    # tetapkan satu minggu secara eksplisit
   # timetable: "assets/timetable/jadual-waktu-2026-siri-7.xlsx"  # gantian pilihan
   # csv: "timetable.csv"
 
 context:
+  days: [Ahad, Isnin, Selasa, Rabu, Khamis]  # blok hari yang dimiliki templat
   subjects:
     BC: "BAHASA CINA 华 文"
 
@@ -151,6 +153,7 @@ handlers:
 | `jadual` | Fail data kalendar minggu (didokumenkan dalam [`config/jadual-minggu/DESIGN.md`](../../../config/jadual-minggu/DESIGN.md)) |
 | `timetable` | Fail jadual waktu xlsx eksplisit (pilihan); mengalahkan carian siri |
 | `csv` | Fail jadual waktu csv eksplisit (pilihan); mengalahkan carian siri |
+| `period_times` | Jadual tempoh pilihan (tempoh → `[mula, tamat]`); menggantikan jadual terbina dalam (didokumenkan dalam [`config/period-times/DESIGN.md`](../../../config/period-times/DESIGN.md)) |
 
 Laluan relatif diselesaikan terhadap direktori profil itu sendiri, kemudian direktori semasa, kemudian akar repositori (langkah terakhir hanya dalam checkout sumber — pemasangan pakej tiada akar repositori) — jadi profil yang disertakan berfungsi di mana-mana sahaja anda menjalankannya.
 
@@ -166,7 +169,7 @@ Minggu yang buku kerjanya belum wujud dilaporkan dengan cara yang sama, dengan `
 
 ### `context`
 
-Nilai yang dikongsi oleh beberapa handler — contohnya satu peta `subjects` yang digunakan oleh dua handler, jadi ia ditulis sekali dan bukannya diduplikasi ke dalam params kedua-duanya.
+Nilai yang dikongsi oleh beberapa handler — ditulis sekali dan bukannya diduplikasi ke dalam params kedua-duanya: satu peta `subjects` yang digunakan oleh dua handler, dan senarai `days` (blok hari yang dimiliki templat) yang dilalui oleh `menu` dan `dskp` keduanya.
 
 ### `handlers`
 

@@ -144,11 +144,13 @@ profile: ali-bin-abu-2026
 inputs:
   template: "assets/ALI BIN ABU/12. ERPH/2026/*/M{week}.xlsx"  # required
   jadual: "config/jadual-minggu/jadual-minggu.yaml"              # week calendar
+  period_times: "config/period-times/period-times.yaml"          # period table
   # templates: {18: "…/06. JUNE/M18.xlsx"}    # pin one week explicitly
   # timetable: "assets/timetable/jadual-waktu-2026-siri-7.xlsx"  # optional override
   # csv: "timetable.csv"
 
 context:
+  days: [Ahad, Isnin, Selasa, Rabu, Khamis]  # day blocks the template has
   subjects:
     BC: "BAHASA CINA 华 文"
 
@@ -174,6 +176,7 @@ handlers:
 | `jadual` | The week calendar data file (documented in [`config/jadual-minggu/DESIGN.md`](config/jadual-minggu/DESIGN.md)) |
 | `timetable` | Optional explicit timetable xlsx; wins over the siri lookup |
 | `csv` | Optional explicit timetable csv; wins over the siri lookup |
+| `period_times` | Optional period table (period → `[start, end]`); replaces the built-in one (documented in [`config/period-times/DESIGN.md`](config/period-times/DESIGN.md)) |
 
 Relative paths are resolved against the profile's own directory, then the current directory, then the repo root (the last step only in a source checkout — an installed package has none) — so the shipped profile works no matter where you run it from.
 
@@ -189,8 +192,9 @@ A week whose workbook does not exist yet is reported the same way, with `no work
 
 ### `context`
 
-Values shared by several handlers — e.g. one `subjects` map used by two
-handlers, so it is written once instead of duplicated into both params.
+Values shared by several handlers — written once instead of duplicated into
+both params: one `subjects` map used by two handlers, and the `days` list
+(the day blocks the template has) that `menu` and `dskp` both walk.
 
 ### `handlers`
 

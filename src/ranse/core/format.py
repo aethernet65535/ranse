@@ -6,7 +6,7 @@ callers use these:
 - the write-only ``Workbook`` / ``Sheet`` in :mod:`ranse.core.xlsx`, which
   build on them to edit the **target** workbook;
 - the source readers in ``inputs/``, which parse a **source** workbook
-  (e.g. a timetable xlsx) the same way.
+  (e.g. a weekly schedule xlsx) the same way.
 
 Reading through here never violates the write-only rule (D7): that rule is
 about the target workbook — nothing in the pipeline reads a value back out

@@ -1,5 +1,8 @@
 # PLAN — Core/CLI/Inputs 去业务化（框架与业务解耦）
 
+> **状态：Phase 1–6 已全部完成**（逐阶段提交，每阶段 `pytest` 全绿；
+> golden 黄金回归字节不变，最终 **102 passed**）。
+
 审计结论：框架层（`core/`、`cli.py`、`inputs/yaml/`）存在 DSKP/ERPH 业务残留——
 硬编码的业务 key、领域词汇直接进入编排器、业务 loader 放在通用目录、
 day 过滤与节次时间表写死在代码里、`_REPO_ROOT` 路径回退对 pip 安装不安全。
@@ -50,7 +53,7 @@ day 过滤与节次时间表写死在代码里、`_REPO_ROOT` 路径回退对 pi
 - `inputs/__init__.py`：去掉 `from . import dskp`，改惰性注册表
   `_READERS = ("dskp",)` + `subcommands()`（`importlib` 收集 `SUBCOMMAND`）——
   新业务只改这一行，`ranse fill` 启动不再加载 dskp reader（符合 D2 精神）。
-- `cli.py` `_SUBCOMMANDS` 改在 `_build_parser` 内构建。
+- `inputs/__init__` 的惰性注册表在 `main()` 内收集并供 dispatch 使用（`import ranse.cli` 不拉入任何 reader）。
 - `errors.py`：删死代码 `WeekError`（全仓库无人 raise）；`docs/DESIGN.md` S6 同步。
 - `handlers/menu`：`needs_schedule = True` → `requires = ("schedule",)`。
 
