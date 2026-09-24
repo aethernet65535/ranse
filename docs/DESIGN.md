@@ -3,7 +3,7 @@
 This document describes the **core framework** — the xlsx engine, the CLI, the
 handler system, the profile schema and the pipeline that ties them together.
 Business rules are documented next to the code that implements them: one
-`DESIGN.md` per shipped handler, profile and input reader (see the
+`DESIGN.md` per handler, reader, profile and data file (see the
 documentation map in S2). The numbered **decisions** and **risks** are stable
 identifiers across the whole doc set, so a comment that cites "decision N" or
 "risk N" means this document or the business document that owns it.
@@ -17,22 +17,23 @@ place**, driven entirely by a YAML **profile**. It reads source files, decides
 what to write, and rewrites the target workbook without disturbing any cell it
 does not write.
 
-The framework is business-agnostic. A *business* is a set of handlers plus the
-input files and the profile that configure them; this repository ships one
-worked example, whose rules live entirely in `handlers/`, `inputs/` and
-`profiles/` and never leak into the core described here.
+The framework is business-agnostic. A *business* is a **plugin**: a folder
+under `plugins/` holding handlers, readers, the profile and the data files
+that configure them. This repository ships one worked example,
+`plugins/erph/`, whose rules live entirely in that folder and never leak into
+the core described here — that boundary is enforced by CI (S9).
 
 Framework-level guarantees:
 
 - **Write-only core** — nothing in the pipeline reads a value back out of the
   target workbook (D7). There is no `read(coord)`.
-- **No business logic in core** (D6) — domain concepts (dates, subjects,
-  layout constants, calendar semantics) exist only in `handlers/` and
-  `inputs/`.
+- **No business logic in the framework** (D6) — domain concepts (dates,
+  subjects, layout constants, calendar semantics) exist only inside a plugin.
 - **Fail before writing** — the profile structure, the handler names and every
   handler's `params` are validated before a single cell is touched.
-- **One-way dependencies** (S2) — `cli → handlers → core`; `inputs` produce
-  model objects and never touch the target workbook (D8).
+- **One-way dependencies** (S2) — `cli → handlers → core`; readers never
+  touch the target workbook (D8); a plugin may import the framework, the
+  framework imports a plugin only in the loader.
 - **Idempotent re-runs** — handlers are stateless between runs; the same
   inputs always produce the same workbook, so a re-run is always safe.
 
@@ -51,8 +52,7 @@ Non-goals are listed in S11.
                | argparse + pipeline order + RanseError -> exit code (D13)
 +-- handlers/ -v-----------------------------------+
 |  base.py       Resolver / Filler protocols + Context |
-|  registry.py   built-in registry (only discovery, D2) |
-|  <name>/       one folder per handler, + its own DESIGN.md |
+|  loader.py     the registry: handlers the plugins declare |
 +--------------+-----------------------------------+
                | may only write through core's write API
 +-- core/ -----v---------------+   +-- inputs/ --------+
@@ -63,6 +63,11 @@ Non-goals are listed in S11.
 |  x no read(coord)            |   |                   |
 |  x no domain constants       |   |                   |
 +------------------------------+   +-------------------+
+
+plugins/<name>/            <- one folder per business; the framework
+  handlers/<name>/            discovers it (D2) and never names it
+  inputs/<name>/
+  domain.py  profiles/  config/
 ```
 
 Dependency direction is strictly one-way:
@@ -70,7 +75,11 @@ Dependency direction is strictly one-way:
 - `cli → handlers → core`, and `cli`/`handlers` → `inputs`;
 - **`core` must not import `handlers` or `inputs`** (D6);
 - **`inputs` never touch the target workbook** (D8) — they only read source
-  files and produce model objects;
+  files and produce objects;
+- **only the plugin loader imports a plugin** (`plugins.py`, called from
+  `handlers/loader.py` and `inputs.subcommands()`, D2 revised);
+- **a plugin imports the framework and its own package only** — never
+  another plugin (S9);
 - **`core` is write-only** towards the target workbook: there is no
   `read(coord)` (D7).
 
@@ -79,21 +88,22 @@ File map:
 | Path | Responsibility |
 |---|---|
 | `src/ranse/cli.py` | argparse, two-phase orchestration, `RanseError` → `Error: …` + exit 1 |
-| `src/ranse/model.py` | `Lesson` / `Schedule` / `Week` / `Profile` dataclasses, `merge_periods` |
+| `src/ranse/model.py` | `Profile` / `ProfileInputs` / `HandlerSpec` — configuration only, no domain types |
+| `src/ranse/plugins.py` | plugin discovery: the `./plugins` scan, `sys.path` bootstrap, name conflicts |
 | `src/ranse/errors.py` | `RanseError`, `ProfileError`, `SheetError` |
 | `src/ranse/core/refs.py` | A1 ↔ (row, col), range top-left, date serial, path resolution — pure functions |
 | `src/ranse/core/format.py` | xlsx format primitives: zip parts, sheet map, shared strings (no domain knowledge) |
 | `src/ranse/core/xlsx.py` | write-only `Workbook` / `Sheet`, built on `core/format.py` |
-| `src/ranse/inputs/` | readers for the example's source files, one folder each (index: `src/ranse/inputs/README.md`) |
+| `src/ranse/inputs/yaml/` | the framework's own reader: the profile (index: `src/ranse/inputs/README.md`) |
 | `src/ranse/handlers/base.py` | `Resolver` / `Filler` protocols + `Context` |
-| `src/ranse/handlers/registry.py` | the built-in registry (the only discovery, D2) |
-| `src/ranse/handlers/<name>/` | one folder per shipped handler, business rules in that folder's `DESIGN.md` |
-| `profiles/<name>/` | one shipped profile per folder: `profile.yaml` + `README.md` + `DESIGN.md` |
+| `src/ranse/handlers/loader.py` | the handler registry, built from the discovered plugins (D2) |
+| `plugins/<name>/` | one folder per business — handlers, readers, domain types, profiles and data files; index: `plugins/<name>/README.md` |
 | `tests/` | unit tests + golden regression baselines |
 
 `model.py` sits at the top level of the package rather than in `core/` because
-the model carries domain semantics (day names, class groups, week numbers)
-that the pure write engine must not know about.
+it is configuration the CLI and the loader share; the **domain** types a
+business needs (day names, class groups, week numbers) live in that plugin's
+`domain.py`, where the pure write engine cannot see them.
 
 ### Documentation map
 
@@ -103,10 +113,12 @@ lives:
 | Document | Contents |
 |---|---|
 | `docs/DESIGN.md` (this file) | core framework: engine, CLI, handler system, profile, pipeline |
-| `src/ranse/handlers/README.md` | index of the shipped handlers; each handler carries its own `DESIGN.md` |
-| `profiles/<name>/DESIGN.md` | one document per shipped profile: its business design and configuration |
-| `src/ranse/inputs/README.md` | index of the shipped readers; each reader carries its own `DESIGN.md` |
-| `config/README.md` | index of the shipped data files; each folder carries its own `DESIGN.md` |
+| `plugins/<name>/README.md` | index of that business: its handlers, readers, profile and data files |
+| `plugins/<name>/handlers/<handler>/DESIGN.md` | one document per handler: its rules, params and risks |
+| `plugins/<name>/inputs/<reader>/DESIGN.md` | one document per reader: the format it accepts |
+| `plugins/<name>/profiles/<profile>/DESIGN.md` | one document per profile: its configuration and business design |
+| `plugins/<name>/config/<folder>/DESIGN.md` | one document per data file: its schema |
+| `src/ranse/inputs/README.md` | the framework's own reader (the profile YAML) |
 | `docs/translations/ms-MY/README.md` | README in Bahasa Melayu |
 
 ---
@@ -146,7 +158,7 @@ Rules:
 ```python
 @dataclass
 class Context:
-    profile; workbook=None; schedule=None; week=None; start_date=None
+    profile; workbook=None
     template_vars={}   # values resolvers publish for the {…} template
                        # placeholders (e.g. {"week": 33})
     params={}          # params of the handler currently running
@@ -164,22 +176,26 @@ class Filler(Protocol):     # phase two: write cells through core only
     def fill(self, ctx: Context) -> list[str]: ...   # returns report lines
 ```
 
-Handlers are looked up by name in `handlers/registry.py` (built-in only, D2),
-and each handler validates its own `params` at build time — an unknown name or
-a malformed `params` fails **before any cell is touched**. A handler may only
-write through `ctx.workbook`, which is the core API of S3.1. A handler may
-declare what it needs as class attributes: `cli_options` (the `ranse fill`
-options it adds, S3.4), `required_sheets` (sheets the workbook must have
-before any fill) and `requires` (names of context values this filler cannot
-run without, e.g. `("schedule",)` — the orchestrator only checks presence,
-never interprets the names: they are the handlers' own vocabulary). A
-resolve-phase handler publishes values the framework substitutes by filling
-`ctx.template_vars` (the `{week}` placeholder in `inputs.template` is fed
-that way — the domain field name `Week.number` stops at the handler
-boundary).
+Handlers are looked up by name in `handlers/loader.py`, which builds the
+registry from the plugins under `./plugins` (D2 revised), and each handler
+validates its own `params` at build time — an unknown name or a malformed
+`params` fails **before any cell is touched**. A handler may only write
+through `ctx.workbook`, which is the core API of S3.1. A handler may declare
+what it needs as class attributes: `cli_options` (the `ranse fill` options it
+adds, S3.4), `required_sheets` (sheets the workbook must have before any
+fill) and `requires` (names of context values this filler cannot run without
+— the orchestrator only checks presence, never interprets the names: they are
+the handlers' own vocabulary).
 
-The shipped handlers and everything they compute are documented per handler in
-`src/ranse/handlers/<name>/DESIGN.md` (index: `src/ranse/handlers/README.md`).
+A resolve-phase handler **publishes** the values the rest of the run needs by
+setting them on the context (`ctx.<name> = value`) and, for the `{…}`
+placeholders in `inputs.template`, into `ctx.template_vars`. The framework
+stores what a resolver publishes and never interprets it, so no domain type
+crosses the framework boundary in either direction.
+
+The shipped plugin's handlers and everything they compute are documented per
+handler in `plugins/erph/handlers/<name>/DESIGN.md` (index:
+`plugins/erph/README.md`).
 
 ### 3.3 Profile schema
 
@@ -188,8 +204,8 @@ profile: example-2026
 
 inputs:
   template: "path/to/*/W{week}.xlsx"   # required
-  # every other key is handler-specific; the shipped example adds a calendar
-  # file, a timetable and a curriculum source here (see its DESIGN.md)
+  # every other key is handler-specific; the shipped plugin's profile adds a
+  # calendar file, a timetable and a curriculum source here (see its DESIGN)
   # templates: {25: "…/W25.xlsx"}       # pin one week when the pattern matches twice
 
 context:
@@ -199,7 +215,7 @@ handlers:
   - name: <resolve-handler>
   - name: <fill-handler>
     params:
-      # handler-specific params, see src/ranse/handlers/README.md
+      # handler-specific params, see plugins/erph/README.md
 ```
 
 Schema:
@@ -208,20 +224,32 @@ Schema:
 |---|---|---|
 | `inputs` | mapping | where the files live; `template` is **required** (D10), everything else optional and handler-specific |
 | `context` | mapping | values shared by several handlers, so a value used twice is written once |
-| `handlers` | ordered list of `{name, params}` | the pipeline itself (D1); names must exist in the registry (D2) |
+| `handlers` | ordered list of `{name, params}` | the pipeline itself (D1); a name must be one a plugin provides (D2) |
 
 Validation rules: a missing `inputs.template` or a malformed `handlers:` list
 raises `ProfileError` from the `inputs/yaml/` reader; an unknown handler name or
-invalid handler params raises `ProfileError` from the registry. Relative paths
-resolve against the profile's own directory, then the current directory, then —
-only in a source checkout — the repo root (`inputs.input_bases`; an installed
-package has no repo root, so the fallback stays out of the way).
+invalid handler params raises `ProfileError` from the plugin loader (it lists
+the names it did find, or says there are no plugins under `./plugins`).
+Relative paths resolve against the profile's own directory, then the current
+directory, then — only in a source checkout — the repo root
+(`inputs.input_bases`; an installed package has no repo root, so the fallback
+stays out of the way). Plugin discovery searches `./plugins` the same way.
 
-`inputs.template` may contain `{week}` (substituted once the week number is
-known) and glob wildcards; it must match exactly one workbook, otherwise the
-error lists the candidates and points at `inputs.templates` (D10). Standalone
-data files are never inlined into the profile: a profile *references* them
-from `inputs`, and the handlers that read them own their formats (D11).
+`inputs.template` may contain the `{week}` placeholder — substituted with the
+number a resolve-phase handler publishes in `ctx.template_vars` — and glob
+wildcards; it must match exactly one workbook, otherwise the error lists the
+candidates. `inputs.templates` pins a specific workbook by that number and
+wins over the pattern (D10).
+
+`week` is the one name the framework itself carries here, exactly like the
+`fill` / `write` subcommands: the profile names it, the placeholder
+substitution and the `inputs.templates` key are defined in terms of it, and
+everything else a resolver publishes stays opaque (S3.2). The framework never
+derives a week number — only the handler knows one.
+
+Standalone data files are never inlined into the profile: a profile
+*references* them from `inputs`, and the handlers that read them own their
+formats (D11).
 
 ### 3.4 CLI
 
@@ -231,11 +259,18 @@ ranse write --profile P SHEET!CELL VALUE
 ```
 
 `fill` and `write` are the only subcommands the framework ships, so
-`ranse --help` carries no business vocabulary. A reader may still declare one
-of its own (`inputs.subcommands()`; the shipped registry is empty) — the
-framework adds and dispatches it without knowing what it does, and
-`ranse fill` never imports a reader. The example's document reader runs as
-its own module instead: `python -m ranse.inputs.dskp`.
+`ranse --help` carries no business vocabulary. A plugin reader may still
+declare one of its own by defining a `SUBCOMMAND` spec;
+`inputs.subcommands()` collects them from the discovered plugins, so the
+framework adds and dispatches a subcommand without knowing what it does, and
+`ranse fill` never imports a reader.
+
+A plugin's reader can also run as its own module — the shipped plugin's
+document reader does, from the repository root:
+
+```bash
+PYTHONPATH=plugins python -m erph.inputs.dskp --list
+```
 
 `ranse fill` adds only `--profile` itself. Every other option is declared by
 a handler (`cli_options`) and its value reaches that handler through
@@ -261,11 +296,11 @@ handler that owns it.
 | # | Item | Decision |
 |---|---|---|
 | D1 | Profile shape | An **explicit ordered `handlers:` list**; do not support both an implicit and an explicit form |
-| D2 | Handler discovery | **Built-in registry only** — no dynamic import paths, no entry-point plugins |
+| D2 | Handler discovery | **Local directory scan**: the folders under `./plugins` are the registry (`plugins/<name>/handlers/<handler>/` = handler, `inputs/<reader>/` = reader, the folder name is the name). No manifest file, no dynamic import path, no entry point, no install metadata — dropping a directory in is the whole registration step. *Revised from "built-in registry only"; the framework is now plugin-agnostic and `src/ranse` carries no handler or reader names.* |
 | D3 | Packaging | An **installable package**; no loose script entry point at the repo root |
 | D4 | Equivalence check | Write the **golden regression tests before touching business code** |
-| D5 | Extra scope | Use dataclasses for the model; keep the README and its translation in sync; generator tooling lives under `inputs/` |
-| D6 | Core constraint | **No business logic in core**: no domain constants, no domain vocabulary, no `sys.exit` |
+| D5 | Extra scope | Use dataclasses for the model; keep the README and its translation in sync; generator tooling lives with the business that uses it (the shipped plugin's readers). *Extended by the plugin reorganisation: the repository is fully anglicized outside the frozen artifacts, so the code references in the translation follow the code.* |
+| D6 | Framework constraint | **No business logic in the framework**: no domain constants, no domain vocabulary, no `sys.exit` — and no business name at all, in any language (CI: S9) |
 | D7 | Core boundary | Core is **write-only** towards the target workbook: `open / sheet / write / save`; **no `read(coord)`** |
 | D8 | Input reading | Lives in a separate **`inputs/` layer** (the source readers + YAML loaders); it never touches the target workbook |
 | D9 | Single-cell writes | Both layers: the core API `wb.write("SHEET!B3", "value")` **and** the CLI subcommand `ranse write` |
@@ -280,9 +315,9 @@ handler that owns it.
 
 `ranse fill` runs one deterministic pipeline (`cli.py`):
 
-1. **Load the profile** (the `inputs/yaml/` reader) and **build the
-   handlers** (registry): unknown names and bad params fail here, before any
-   I/O to the workbook.
+1. **Load the profile** (the `inputs/yaml/` reader), **discover the plugins**
+   (`./plugins`) and **build the handlers** from them (the loader): unknown
+   names and bad params fail here, before any I/O to the workbook.
 2. **Resolve phase** — every handler with `phase == "resolve"` runs in profile
    order. Resolvers read the source files and compute `ctx` inputs (the week,
    the schedule) and publish `ctx.template_vars`; they write no cells.
@@ -350,17 +385,44 @@ exit codes (D6).
 
 ## 8. Inputs layer
 
-`inputs/` turns source files into model objects; it never writes the target
-workbook (D8). It holds the YAML loaders (the profile, and any data file a
-handler references) plus one reader per source format. Each reader documents
-the format it accepts in its own `DESIGN.md` (index:
-`src/ranse/inputs/README.md`); `core` has no import from this layer.
+`inputs/` turns source files into objects; it never writes the target
+workbook (D8), and `core` has no import from this layer.
+
+The framework reads exactly one kind of source file itself: the **profile**,
+in `inputs/yaml/`. That is bootstrapping rather than business — the profile
+says what to read, so it has to be read before anything it configures can be
+found.
+
+Every other reader belongs to a business and lives in that business's plugin,
+`plugins/<name>/inputs/<reader>/`, one folder per source format; the folder
+name is the reader name. Each reader documents the format it accepts in its
+own `DESIGN.md`, and the plugin's `README.md` indexes them.
+
+### 8.1 Plugin discovery
+
+`plugins.py` is the framework's only plugin-aware module. It:
+
+- scans `./plugins` (current directory first, then — only in a source
+  checkout — the repository root, the same fallback the input paths use);
+- accepts a plugin folder when it is a legal snake_case package
+  (`__init__.py` present) and registers `handlers/<name>/` and
+  `inputs/<name>/` inside it;
+- puts the plugin root on `sys.path` so `<plugin>.handlers.<name>` imports,
+  and imports each folder once;
+- fails at load time when two plugins declare the same name, listing both
+  sources — a profile naming an ambiguous handler would be a bug, not a
+  preference.
+
+A handler folder registers by convention: its `__init__.py` defines exactly
+one class carrying `name = "<folder name>"` and `phase = "resolve" | "fill"`.
+The loader looks for nothing else — no manifest, no decorator, no entry
+point.
 
 ---
 
 ## 9. Testing
 
-Two layers, both must stay green (D4):
+Three layers, all of which must stay green (D4):
 
 1. **Pure unit tests** — no `assets/` dependency, so a fresh clone can run
    them: cell-reference round trips, date serials, the section-pair sliding
@@ -377,7 +439,32 @@ timestamps would produce false diffs (risk 2). The suite **skips** when
 self-contained (risk 5).
 
 The golden cases pin the **shipped example**: a change to a handler rule in
-`src/ranse/handlers/` must regenerate them deliberately.
+`plugins/erph/` must regenerate them deliberately.
+
+3. **Architecture** (`tests/test_architecture.py`) turns the two contracts
+   above into CI assertions instead of conventions:
+
+   - **dependency direction** — `core` imports nothing above it; a plugin is
+     imported only by the plugin loader; `importlib` / `sys.path` appear only
+     in that loader; a plugin imports the framework and its own package only;
+   - **vocabulary neutrality** — the scan runs over **every** `.py` file of
+     `src/ranse`, with an empty whitelist, and fails on either the old Malay
+     vocabulary (`jadual`, `minggu`, the seven Malay day names, …) or the
+     business concepts in English (`lesson`, `timetable`, `calendar`,
+     `holiday`, …). `DSKP` / `ERPH` are never scanned: they *are* the
+     business, and the requirement was to leave those two names alone.
+
+   Inside a plugin the business vocabulary is expected. The exception is the
+   **frozen spellings of the source artifacts** — the timetable's headers and
+   the workbook's day-sheet names — which may only live in the plugin's
+   mirror module (`plugins/erph/domain.py`), whitelisted by file **with a
+   reason** and kept honest by a test. Everything downstream of a reader
+   speaks canonical English.
+
+   Two guards keep the scan meaningful: one asserts the word lists still
+   contain the full Malay set, one feeds the scanner a sample file and
+   expects it to catch the words — a scan that silently passes everything is
+   worse than no scan.
 
 ---
 
@@ -411,9 +498,12 @@ Not to be done with the current design:
 - a logging framework, or rewording the existing error messages;
 - moving layout constants (row formulas, column numbers) into the profile
   (D12);
-- dynamic third-party handler loading (D2);
+- installing plugins as packages: they are local directories under
+  `./plugins`, with no entry point and no install metadata (D2). The wheel
+  ships the framework only;
 - a loose script entry point at the repo root (D3);
-- edits under the example's asset directory.
+- edits under the example's asset directory — `assets/`, and every spelling
+  a real workbook or source file carries, is frozen.
 
 Planned or possible later:
 

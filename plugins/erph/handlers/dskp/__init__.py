@@ -145,8 +145,8 @@ def build_auto_dskp_entries(schedule, number, params, subjects, base_dir=None,
                 continue
 
             left, right = pair
-            # The day sheet is artifact (``AHAD`` … ``KHAMIS``): translate
-            # the English day name before touching the workbook.
+            # The day sheet name is frozen artifact: translate the English
+            # day name through the sheet mirror before touching the workbook.
             sheet_name = SHEET_BY_DAY.get(day, day.upper())
             for col_start, sec in ((left_col, left), (right_col, right)):
                 entries.append({
@@ -248,7 +248,7 @@ class DskpFiller:
 
     Entry order is significant: static entries come first, automatic ones
     are appended after them, so on the same cell the automatic entry wins
-    (handlers/README.md risk 9).
+    (the plugin's handler index, risk 9).
 
     Profile form::
 
@@ -256,7 +256,7 @@ class DskpFiller:
           params:
             mode: auto                # auto (default) | static
             entries:                  # static entries (written first)
-              - {sheet: ISNIN, class: 1, file: t1.json,
+              - {sheet: <day sheet>, class: 1, file: t1.json,
                  selection: [1, 1, 1], col_start: 2}
             file: assets/bc-dskp/t{form}.txt
             match_codes: [BC]

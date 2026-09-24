@@ -1,9 +1,9 @@
 """School-calendar YAML (school-weeks) → plain dict.
 
 The shipped example's calendar format — one folder per source format
-(``inputs/README.md``). The schema is contract, documented with the data
-file it reads: ``config/school-weeks/DESIGN.md``. It is a pure input: it
-never touches the target workbook (decision 8).
+(the plugin's ``README.md``). The schema is contract, documented with the
+data file it reads: ``config/school-weeks/DESIGN.md``. It is a pure input:
+it never touches the target workbook (decision 8).
 """
 
 import os

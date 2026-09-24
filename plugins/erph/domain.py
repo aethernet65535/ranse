@@ -1,15 +1,15 @@
-"""The e-RPH domain model: lessons, schedules, weeks and the day mirrors.
+"""The e-RPH domain model: lessons, schedules, weeks and the source mirrors.
 
 These types carry business semantics, which is why they live with the
 business and not in the framework (docs/DESIGN.md S2): the framework knows
 only profiles, handlers and the write-only workbook API. ``inputs`` produce
 them, ``handlers`` consume them.
 
-The two mirror tables at the bottom are the **only** places this plugin
-stores the frozen Malay tokens of the source artifacts: the timetable's own
-column headers, and the workbook's day-sheet names. Everything downstream of
-a reader speaks the canonical English day names, so the artifact spellings
-never travel; docs/DESIGN.md S9 keeps the exemption list honest.
+The mirrors at the bottom are the **only** place this plugin stores the
+frozen spellings of the source artifacts: the timetable's column headers
+(xlsx and csv), and the workbook's day-sheet names. Everything downstream of
+a reader speaks canonical English, so the artifact spellings never travel —
+and ``docs/DESIGN.md`` S9 keeps that exemption list honest.
 """
 
 from dataclasses import dataclass, field, replace
@@ -135,3 +135,8 @@ SHEET_BY_DAY = {
     "Wednesday": "RABU",
     "Thursday": "KHAMIS",
 }
+
+# The CSV export's column headers are frozen artifact as well, and one of
+# them is not English; the csv direction of the timetable reader reads it
+# through here rather than spelling it out at the call site.
+CSV_FORM_COLUMN = "Tingkatan"

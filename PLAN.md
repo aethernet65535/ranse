@@ -1,9 +1,37 @@
 # PLAN — 插件化重组 + 全仓英文化（framework / plugins 分层）
 
-> **状态：需求已定稿，待开工**。分 4 阶段执行；每阶段 `pytest` 全绿 + golden
-> 字节不变 + 单独提交。
+> **状态：4 个阶段全部完成**。每阶段 `pytest` 全绿 + golden 字节不变 +
+> 单独提交。
 > 前一份计划（core/CLI/inputs 去业务化，6 阶段）已完成，止于提交 `bb57dd7`；
 > 其后追加提交 `55a31be`（顶层移除 `ranse dskp`，注册表清空）。
+
+| 阶段 | 提交 | 收尾状态 |
+|---|---|---|
+| Phase 1 Python 层英文化 | `a7df720` | 103 passed，golden 字节不变，assets 未动 |
+| Phase 2 数据 schema + 日名英文化（原子） | `e24bb88` | 103 passed，golden 字节不变，holiday stderr 字节不变 |
+| Phase 3 `plugins/erph/` 重组 | `7f56775` | 117 passed（含 golden + 新增插件发现测试） |
+| Phase 4 CI 与文档定稿 | `待补记`（见下条追加提交） | 122 passed，`ranse --help` 仍为 `{fill,write}` |
+
+### 落地时与本计划文字的两处偏差
+
+1. **插件扫描机制抽成 `src/ranse/plugins.py`**，`handlers/loader.py` 与
+   `inputs.subcommands()` 都基于它。计划原文把扫描放在 `handlers/loader.py`，
+   但 `inputs.subcommands()` 要用扫描结果，那样 `inputs → handlers` 就违反了
+   既有的方向规则（`test_inputs_never_call_back_up`）。抽到中性模块后，
+   `importlib` / `sys.path` 仍只出现在这一个 loader 模块（CI 有断言），
+   loader 只多一层委托。
+2. **框架词表不含 `week`**。`{week}` 占位符与 `inputs.templates` 的键是框架
+   自己的 D10 契约（Phase 1 已把 `{minggu}` 改成 `{week}`，而 Phase 4 的方向
+   规则不允许改 `resolve_template` 的语义），因此 `week` 与 `fill` / `write`
+   一样算框架词汇；其余业务英语词（`lesson/schedule/subject/timetable/
+   calendar/holiday/series/day/school/…`）在整个 `src/ranse` 上零命中。
+
+### Phase 4 的正向守望（每阶段复核）
+
+- `pytest -q` 全绿；golden sheet XML 字节不变；holiday stderr 字节不变；
+- `PYTHONPATH=src python -m ranse --help` 只列 `{fill,write}`；
+- 架构扫描：`src/ranse` 全包（白名单清零）+ 插件侧马来词表（镜像文件豁免）；
+- wheel 只含 `src/ranse`（插件是本地目录，不进包）。
 
 ## 目标
 

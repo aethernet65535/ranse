@@ -29,7 +29,8 @@ from ranse.core.format import (NS, NS_R, parse_sheet_names, parse_sheet_rels,
 from ranse.core.refs import _parse_cell_ref
 from ranse.errors import ProfileError
 
-from ...domain import DAY_BY_WEEKDAY, DAY_HEADERS, Lesson, Schedule
+from ...domain import (CSV_FORM_COLUMN, DAY_BY_WEEKDAY, DAY_HEADERS, Lesson,
+                       Schedule)
 
 # Built-in fallback: period number → (start, end). The values are pinned by
 # the golden suite; a profile's `inputs.period_times` replaces this whole
@@ -115,7 +116,7 @@ def build_schedule(rows, period_times=None):
             start=r["Start Time"],
             end=r["End Time"],
             subject=r["Subject"],
-            form=r["Tingkatan"],
+            form=r[CSV_FORM_COLUMN],
         )
     return Schedule(days=dict(schedule))
 
@@ -210,10 +211,10 @@ def _parse_sheet_xml(xml_bytes):
 def read_timetable_xlsx(zip_data, shared_strings, period_times=None):
     """Read a timetable xlsx and return a schedule dict keyed by day name.
 
-    The timetable layout (source day headers are translated to English via
-    ``DAY_HEADERS`` in the plugin's ``domain.py``):
-        Row 1 (header):  "Period"  "Ahad"  "Isnin"  "Selasa"  "Rabu"  "Khamis"
-        Row 2+:          period_num  code   code     code      code    code
+    The timetable layout (the source's own day headers are translated to the
+    canonical English names through ``domain.DAY_HEADERS``):
+        Row 1 (header):  "Period"  one column per source day header
+        Row 2+:          period_num  code  code  code  code  code
 
     Returns:
         Schedule — { day_name: { period_num: Lesson } }

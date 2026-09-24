@@ -11,8 +11,8 @@ and which **handlers** run, in order.
 
 It ships configured for its first business: filling Malaysian **e-RPH**
 (*Rancangan Pengajaran Harian*) workbooks from a weekly timetable. That
-business — and every other business you could configure — lives entirely in
-handlers and data files, never in the core framework described below.
+business — and every other business you could configure — lives entirely in a
+folder under `plugins/`, never in the core framework described below.
 
 ## Features
 
@@ -28,6 +28,9 @@ handlers and data files, never in the core framework described below.
 - **Two-phase pipeline** — `resolve` handlers compute inputs first, `fill`
   handlers write cells second; handler names and params are validated before
   anything is touched, and the last writer wins on a shared cell.
+- **Plugin business** — handlers, readers, profiles and data files live in one
+  folder under `plugins/`; the framework itself names no business, so a new
+  business is a new directory, not a framework change.
 - **Two input formats** — read the timetable from `.xlsx` or `.csv`.
 - **Single-cell writes** — `ranse write MENU!B3 "ALI BIN ABU"` for one-off
   corrections.
@@ -241,6 +244,46 @@ plugins/erph/  ──▶  cli.py ──▶ handlers/ ──▶ core/   (write-on
 
 Full design (interfaces, decisions, lifecycle, risks):
 [`docs/DESIGN.md`](docs/DESIGN.md).
+
+## Writing a plugin
+
+The framework ships the engine, the CLI and the handler/reader protocols — it
+knows no business at all. A business is a folder under `plugins/`:
+
+```
+plugins/acme/
+  __init__.py                    # an ordinary Python package
+  handlers/report/__init__.py    # one class: name = "report", phase = "fill"
+  inputs/timesheet/__init__.py   # a reader for your own source format
+  profiles/teacher/profile.yaml  # the profile that names them
+  config/                        # whatever data files that profile references
+```
+
+**The directory is the registration.** At startup the framework scans
+`./plugins`; `handlers/<name>/` becomes a handler and `inputs/<name>/` a
+reader, where `<name>` is the folder name (snake_case, with an
+`__init__.py`). A handler folder exports exactly one class carrying
+`name = "<the folder>"` and `phase = "resolve" | "fill"`. There is no
+manifest, no entry point and no install step: drop the directory in, name the
+handlers in a profile, run `ranse fill`.
+
+Your code imports the framework, never the other way round:
+
+| You need … | Import from |
+|---|---|
+| `Context`, `Resolver` / `Filler` | `ranse.handlers.base` |
+| the write-only workbook API | `ranse.core.xlsx` |
+| path resolution, cell refs | `ranse.inputs.yaml`, `ranse.core.refs` |
+| errors the CLI reports as `Error: …` | `ranse.errors` |
+
+Only the framework's plugin loader imports a plugin. Two plugins declaring the
+same name is an error at load time (it would make a profile ambiguous), and a
+profile naming a handler that does not exist fails with the list of names that
+do.
+
+A plugin is a local directory, not a package: the wheel ships `src/ranse`
+only. The shipped [`plugins/erph/`](plugins/erph/README.md) is a complete
+worked example — four handlers, three readers, a profile and its data files.
 
 ## Development
 
