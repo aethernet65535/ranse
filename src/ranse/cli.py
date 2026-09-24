@@ -27,15 +27,21 @@ _PROFILE_HELP = "Path to the profile YAML (inputs + handlers)"
 
 
 def main(argv=None):
+    argv = list(sys.argv[1:] if argv is None else argv)
     # Reader-declared subcommands are collected here (not at import time)
     # so `import ranse.cli` never pulls a reader's parser stack in.
     specs = {spec["name"]: spec for spec in subcommands()}
-    parser = _build_parser(specs)
-    args = parser.parse_args(argv)
 
     try:
+        # `fill`'s options belong to handlers, and which handlers run is the
+        # profile's business — so the profile is read here, before the parser
+        # exists (`_profile_handlers` explains when that is not possible).
+        options = cli_options(_profile_handlers(argv))
+        parser = _build_parser(specs, options)
+        args = parser.parse_args(argv)
+
         if args.command == "fill":
-            _run_fill(parser, args)
+            _run_fill(parser, args, options)
         elif args.command == "write":
             _run_write(args)
         else:
@@ -45,7 +51,42 @@ def main(argv=None):
         sys.exit(1)
 
 
-def _build_parser(specs):
+def _profile_handlers(argv):
+    """The handler names the profile named on the command line enables.
+
+    ``ranse fill``'s options are declared by handlers, so the option surface
+    — and therefore the parser — depends on the profile. This is only a
+    peek: it looks at the framework's own ``--profile`` flag and returns
+    ``None`` when there is no profile to read (a reader subcommand, a bare
+    ``ranse fill --help``), so the parser then offers every discovered
+    handler's options instead. A path that cannot be opened also returns
+    ``None``: the run itself reports that, in its own words.
+    """
+    path = _profile_argument(argv)
+    if path is None:
+        return None
+    try:
+        return [spec.name for spec in load_profile(path).handlers]
+    except OSError:
+        return None
+
+
+def _profile_argument(argv):
+    """The value of ``--profile`` in argv, or None (only `fill` takes one)."""
+    if not argv or argv[0] != "fill":
+        return None
+    for i, token in enumerate(argv):
+        if token == "--profile" and i + 1 < len(argv):
+            return argv[i + 1]
+        if token.startswith("--profile="):
+            return token.split("=", 1)[1]
+    return None
+
+
+def _build_parser(specs, options=None):
+    """Build the parser; ``options`` defaults to every discovered handler's."""
+    if options is None:
+        options = cli_options()
     names = list(_COMMANDS) + list(specs)
     parser = argparse.ArgumentParser(
         prog="ranse",
@@ -55,9 +96,7 @@ def _build_parser(specs):
 
     fill = subparsers.add_parser("fill", help="fill the profile's template")
     fill.add_argument("--profile", required=True, help=_PROFILE_HELP)
-    # Everything else `ranse fill` accepts is declared by a handler.
-    for key, flags, kwargs in cli_options():
-        fill.add_argument(flags, dest=key, **kwargs)
+    _add_handler_options(fill, options)
 
     write = subparsers.add_parser(
         "write", help="write a single cell on the profile's template")
@@ -71,6 +110,23 @@ def _build_parser(specs):
             subparsers.add_parser(spec["name"], help=spec["help"]))
 
     return parser
+
+
+def _add_handler_options(fill, options):
+    """Add every handler-declared option, each handler in its own section.
+
+    The framework names no business here: a section is titled with the
+    handler's registry name and phase, both of which the plugin supplies
+    (decision 2). When the profile is known, the sections follow the
+    profile's handler order, so the help reads like the run it configures.
+    """
+    groups = {}
+    for handler, phase, key, flags, kwargs in options:
+        group = groups.get(handler)
+        if group is None:
+            group = fill.add_argument_group(f"'{handler}' handler ({phase})")
+            groups[handler] = group
+        group.add_argument(flags, dest=key, **kwargs)
 
 
 def _run_write(args):
@@ -98,7 +154,7 @@ def _resolve_phase(handlers, ctx):
         handler.resolve(ctx)
 
 
-def _run_fill(parser, args):
+def _run_fill(parser, args, options):
     profile = load_profile(args.profile)
 
     # Unknown handler names / invalid params fail here, before any cell is
@@ -107,7 +163,7 @@ def _run_fill(parser, args):
 
     ctx = Context(
         profile=profile,
-        runtime={key: getattr(args, key) for key, _, _ in cli_options()},
+        runtime={key: getattr(args, key) for _, _, key, _, _ in options},
     )
 
     # --- Phase one: resolvers compute the inputs (no cell writes) ---

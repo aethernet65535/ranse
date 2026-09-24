@@ -4,11 +4,18 @@ Both are framework mechanisms: the orchestrator only checks that each
 declared context value exists (it never interprets the names), and the
 reader subcommands are collected from the discovered plugins (decision 2,
 revised).
+
+The last block is the `ranse fill` option surface: the options are declared
+by handlers, so the CLI scopes them to the handlers the profile names and
+presents each handler as its own help section (docs/DESIGN.md S3.4).
 """
 
 import argparse
 import os
+import textwrap
 from types import SimpleNamespace
+
+import pytest
 
 from harness import call_error, fn
 
@@ -119,3 +126,110 @@ def test_repo_root_fallback_only_in_a_source_checkout():
     # an installed wheel turns it off (no pyproject/src beside the package).
     assert _IS_SOURCE_CHECKOUT is True
     assert bases[-1] == _REPO_ROOT
+
+
+# --- the `ranse fill` option surface (declared by handlers) ----------------
+
+cli_options = fn("cli_options")
+profile_handlers = fn("_profile_handlers")
+main = fn("main")
+
+
+def _profile(tmp_path, handlers):
+    """A profile that names `handlers` (nothing else needs to exist)."""
+    path = tmp_path / "profile.yaml"
+    names = "".join(f"  - name: {name}\n" for name in handlers)
+    path.write_text("profile: p\n"
+                    "inputs: {template: t.xlsx}\n"
+                    "handlers:\n" + names, encoding="utf-8")
+    return path
+
+
+def _fill_help(argv, capsys):
+    """Run the CLI, expect argparse's --help exit, return what it printed."""
+    with pytest.raises(SystemExit) as exc:
+        main(argv)
+    assert exc.value.code == 0
+    return capsys.readouterr().out
+
+
+def test_cli_options_say_which_handler_declares_them():
+    declared = {key: (handler, phase) for handler, phase, key, _, _ in
+                cli_options()}
+    assert declared["date"] == ("week", "resolve")
+    assert declared["week"] == ("week", "resolve")
+    assert declared["no_dskp_auto"] == ("dskp", "fill")
+
+
+def test_cli_options_keep_the_order_they_are_asked_for():
+    options = cli_options(["dskp", "week"])
+    asked_order = list(dict.fromkeys(handler for handler, _, _, _, _ in options))
+    assert asked_order == ["dskp", "week"]
+    # An unknown name is skipped here; the profile loader reports it.
+    assert cli_options(["not_a_handler"]) == []
+
+
+def test_fill_help_without_a_profile_shows_every_handler(capsys):
+    help_text = _fill_help(["fill", "--help"], capsys)
+    assert "'week' handler (resolve):" in help_text
+    assert "'dskp' handler (fill):" in help_text
+    assert "--date DATE" in help_text and "--no-dskp-auto" in help_text
+
+
+def test_fill_help_follows_the_profile(tmp_path, capsys):
+    # The profile names dskp and week — in that order — and neither menu nor
+    # fixed_cells, so the help shows exactly those two sections, in the
+    # profile's order rather than by handler name.
+    profile = _profile(tmp_path, ["dskp", "week"])
+    help_text = _fill_help(["fill", "--profile", str(profile), "--help"],
+                           capsys)
+    assert "'dskp' handler (fill):" in help_text
+    assert "'week' handler (resolve):" in help_text
+    assert help_text.index("'dskp' handler") < help_text.index("'week' handler")
+
+
+def test_fill_help_of_a_profile_without_handler_options(tmp_path, capsys):
+    profile = _profile(tmp_path, ["menu", "fixed_cells"])
+    help_text = _fill_help(["fill", "--profile", str(profile), "--help"],
+                           capsys)
+    assert help_text == textwrap.dedent("""\
+        usage: ranse fill [-h] --profile PROFILE
+
+        options:
+          -h, --help         show this help message and exit
+          --profile PROFILE  Path to the profile YAML (inputs + handlers)
+        """)
+
+
+def test_an_option_of_a_handler_the_profile_does_not_name_is_a_usage_error(
+        tmp_path, capsys):
+    profile = _profile(tmp_path, ["week", "menu"])
+    with pytest.raises(SystemExit) as exc:
+        main(["fill", "--profile", str(profile), "--no-dskp-auto"])
+    assert exc.value.code == 2
+    assert "--no-dskp-auto" in capsys.readouterr().err
+
+
+def test_the_same_option_is_accepted_when_the_handler_is_named(tmp_path,
+                                                               capsys):
+    profile = _profile(tmp_path, ["week", "dskp"])
+    with pytest.raises(SystemExit) as exc:
+        main(["fill", "--profile", str(profile), "--no-dskp-auto"])
+    # Not a usage error any more: it got past the parser and failed in the
+    # run (the template does not exist).
+    assert exc.value.code == 1
+    assert "unrecognized arguments" not in capsys.readouterr().err
+
+
+def test_profile_handlers_peek_only_reads_a_fill_profile(tmp_path):
+    profile = _profile(tmp_path, ["week", "dskp"])
+    assert profile_handlers(["fill", "--profile", str(profile)]) == [
+        "week", "dskp"]
+    assert profile_handlers(["fill", f"--profile={profile}"]) == [
+        "week", "dskp"]
+    # No profile to read, or a command that takes none: no scoping.
+    assert profile_handlers(["fill", "--help"]) is None
+    assert profile_handlers(["write", "--profile", str(profile)]) is None
+    assert profile_handlers(["--help"]) is None
+    # An unopenable path is left to the run, which reports it itself.
+    assert profile_handlers(["fill", "--profile", "/nowhere/p.yaml"]) is None

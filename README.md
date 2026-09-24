@@ -117,6 +117,23 @@ shipped profile that is:
 | `--week N` | [`week`](plugins/erph/handlers/week/DESIGN.md) | Override the week number (default: resolved from `--date`) |
 | `--no-dskp-auto` | [`dskp`](plugins/erph/handlers/dskp/DESIGN.md) | Skip that handler's automatic filling for this run |
 
+`ranse fill --help` reads that list out of the profile itself, grouping the
+options by the handler that declares them and following the profile's handler
+order:
+
+```
+$ ranse fill --profile plugins/erph/profiles/ali-bin-abu/profile.yaml --help
+…
+'week' handler (resolve):
+  --date DATE  --week WEEK
+'dskp' handler (fill):
+  --no-dskp-auto
+```
+
+An option for a handler your profile does not use is a usage error, so a
+stale flag fails fast instead of being ignored. Without `--profile`
+(`ranse fill --help`), every installed handler is listed that way instead.
+
 There is deliberately no `--xlsx`: the workbook is a profile input, so a
 mistake in the shell cannot overwrite the wrong file.
 

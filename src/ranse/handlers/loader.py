@@ -51,21 +51,35 @@ def build_handlers(specs):
     return bound
 
 
-def cli_options():
+def cli_options(only=None):
     """The ``ranse fill`` options the registered handlers declare.
 
-    Returns ``[(key, flags, kwargs), …]`` in registry order, de-duplicated by
-    key. The orchestrator adds each one with ``dest=key`` and hands
-    ``args.<key>`` back to the handlers through ``ctx.runtime[key]``.
+    Returns ``[(handler, phase, key, flags, kwargs), …]``, in registry order
+    and de-duplicated by key. The declaring handler and its phase travel with
+    each option because the CLI presents them as that handler's own help
+    section (docs/DESIGN.md S3.4); the orchestrator adds each option with
+    ``dest=key`` and hands ``args.<key>`` back through ``ctx.runtime[key]``.
+
+    ``only`` is a list of handler names, in the order they should appear, and
+    restricts the result to them — that is how the CLI scopes the option
+    surface to the handlers a profile actually names. Names that are not in
+    the registry are skipped here; the profile loader reports those, with the
+    list of names it did find.
     """
+    registry = handlers()
+    names = sorted(registry) if only is None else list(only)
+
     options = []
     seen = set()
-    for cls in handlers().values():
+    for name in names:
+        cls = registry.get(name)
+        if cls is None:
+            continue
         for key, (flags, kwargs) in getattr(cls, "cli_options", {}).items():
             if key in seen:
                 continue
             seen.add(key)
-            options.append((key, flags, kwargs))
+            options.append((name, cls.phase, key, flags, kwargs))
     return options
 
 

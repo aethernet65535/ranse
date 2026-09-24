@@ -51,7 +51,9 @@ folder's `DESIGN.md`:
   fails before any cell is touched;
 - a handler that needs a command-line switch declares it in `cli_options`
   (`{runtime_key: (flags, argparse_kwargs)}`); `ranse fill` adds them and the
-  parsed value comes back in `ctx.runtime[runtime_key]`;
+  parsed value comes back in `ctx.runtime[runtime_key]`. They are added under
+  that handler's own `--help` section, and only when the profile names the
+  handler — `ranse fill`'s option surface is the profile's (framework S3.4);
 - a handler declares what else it needs in `required_sheets` (sheets the
   workbook must have before any fill) and `requires` (names of `ctx` values
   the resolvers must publish, e.g. `("schedule",)` — the orchestrator only

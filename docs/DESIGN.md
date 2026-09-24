@@ -278,6 +278,43 @@ a handler (`cli_options`) and its value reaches that handler through
 has no options of its own either: it runs the profile's resolve phase to find
 the workbook, then writes the one cell.
 
+Which options `ranse fill` accepts — and how its help presents them — follows
+the **profile**: the CLI peeks at `--profile` before it builds the parser, and
+every handler the profile names contributes its own help section, in the
+profile's order:
+
+```
+$ ranse fill --profile plugins/erph/profiles/ali-bin-abu/profile.yaml --help
+usage: ranse fill [-h] --profile PROFILE [--date DATE] [--week WEEK]
+                  [--no-dskp-auto]
+
+options:
+  -h, --help         show this help message and exit
+  --profile PROFILE  Path to the profile YAML (inputs + handlers)
+
+'week' handler (resolve):
+  --date DATE        Week start date YYYY-MM-DD (default: the Sunday of the
+                     current week)
+  --week WEEK        Override the week number (default: resolved from --date)
+
+'dskp' handler (fill):
+  --no-dskp-auto     Disable automatic DSKP content-standard filling
+```
+
+The framework names no business in that output either: a section is titled
+with the handler's registry name and its phase, both of which come from the
+plugin (D2). A handler that declares no option gets no section. Two more
+consequences are deliberate:
+
+- an option belonging to a handler the profile does **not** name is a usage
+  error (exit 2), not a silently ignored flag — a flag nobody will read is a
+  mistake worth stopping for;
+- `ranse fill --help` without a profile — and a profile path that cannot be
+  opened, which the run itself reports in its own words — lists every
+  discovered handler's options instead, one section each. The parser has to
+  exist before a profile is known, so that is the fallback rather than an
+  error.
+
 There is deliberately **no `--xlsx`**: the workbook is a profile input, so a
 mistake in the shell cannot overwrite the wrong file (D10).
 
