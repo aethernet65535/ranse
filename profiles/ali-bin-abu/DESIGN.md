@@ -16,7 +16,7 @@ the CLI stays week-agnostic.
 | Input | Points at | Read by |
 |---|---|---|
 | `template` | `assets/ALI BIN ABU/12. ERPH/2026/*/M{week}.xlsx` | `resolve_template` (framework) |
-| `jadual` | `config/jadual-minggu/jadual-minggu.yaml` — the school calendar | the `week` handler |
+| `calendar` | `config/school-weeks/school-weeks.yaml` — the school calendar | the `week` handler |
 | `period_times` | `config/period-times/period-times.yaml` — period → [start, end] | the `week` handler (passed to the timetable reader) |
 
 ## Shared context
@@ -28,14 +28,14 @@ framework):
 
 ```yaml
 context:
-  days: [Ahad, Isnin, Selasa, Rabu, Khamis]
+  days: [Sunday, Monday, Tuesday, Wednesday, Thursday]
   subjects:
     BC: "BAHASA CINA 华 文"
     BI: "ENGLISH"
 ```
 
-- **`days` (risk 10)** — the template has sheets only for Ahad … Khamis, so
-  Jumaat/Sabtu must never be written. The timetable reader keeps every day
+- **`days` (risk 10)** — the template has sheets only for Sunday … Thursday, so
+  Friday/Saturday must never be written. The timetable reader keeps every day
   the source carries (it must not know the workbook's layout, decision 8);
   `menu` walks these day blocks for its MENU rows and `dskp` walks them for
   the day sheets. One declaration, two consumers (risk 3).

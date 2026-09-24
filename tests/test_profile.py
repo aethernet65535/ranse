@@ -38,7 +38,7 @@ def test_shipped_profile_names_only_registered_handlers():
 def test_shipped_profile_resolves_its_inputs_against_itself():
     profile = load_profile(str(PROFILE_YAML))
     assert profile.inputs.template.endswith(".xlsx")
-    assert profile.inputs.get("jadual").endswith("jadual-minggu.yaml")
+    assert profile.inputs.get("calendar").endswith("school-weeks.yaml")
     # Each profile has its own folder (profiles/ali-bin-abu/profile.yaml), and
     # its relative inputs must still resolve against that folder.
     assert Path(profile.base_dir).name == "ali-bin-abu"
@@ -57,7 +57,7 @@ def test_missing_template_is_an_error(tmp_path):
     path = write_profile(tmp_path, """
         profile: p
         inputs:
-          jadual: config/jadual-minggu.yaml
+          calendar: config/school-weeks/school-weeks.yaml
         handlers: []
         """)
     with pytest.raises(ProfileError) as exc:
@@ -115,12 +115,12 @@ def test_extra_inputs_pass_through_verbatim(tmp_path):
         profile: p
         inputs:
           template: template.xlsx
-          jadual: cal.yaml
+          calendar: cal.yaml
           nested: {a: b}
         handlers: []
         """)
     profile = load_profile(str(path))
-    assert profile.inputs.get("jadual") == "cal.yaml"
+    assert profile.inputs.get("calendar") == "cal.yaml"
     assert profile.inputs.get("nested") == {"a": "b"}
     assert profile.inputs.get("missing") is None
     # Framework keys answer through get() too.
@@ -146,12 +146,12 @@ def test_empty_extra_input_string_is_an_error(tmp_path):
         profile: p
         inputs:
           template: template.xlsx
-          jadual: ""
+          calendar: ""
         handlers: []
         """)
     with pytest.raises(ProfileError) as exc:
         load_profile(str(path))
-    assert "inputs.jadual" in str(exc.value)
+    assert "inputs.calendar" in str(exc.value)
 
 
 def test_absent_extra_input_is_treated_as_unset(tmp_path):
@@ -159,11 +159,11 @@ def test_absent_extra_input_is_treated_as_unset(tmp_path):
         profile: p
         inputs:
           template: template.xlsx
-          jadual:
+          calendar:
         handlers: []
         """)
     profile = load_profile(str(path))
-    assert profile.inputs.get("jadual") is None
+    assert profile.inputs.get("calendar") is None
 
 
 # --- params validation (each handler validates its own params) -------------

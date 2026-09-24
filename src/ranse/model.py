@@ -123,8 +123,8 @@ class ProfileInputs:
     def get(self, key, default=None):
         """One ``inputs:`` value by key — framework keys included.
 
-        ``inputs.get("jadual")`` is what a handler whose profile key is
-        ``jadual`` calls; ``template``/``templates`` resolve to the
+        ``inputs.get("calendar")`` is what a handler whose profile key is
+        ``calendar`` calls; ``template``/``templates`` resolve to the
         framework's own fields.
         """
         if key == "template":

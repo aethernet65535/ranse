@@ -18,7 +18,7 @@ inputs:
   #   ranse fill --profile profiles/ali-bin-abu/profile.yaml --date 2026-09-20
   template: "assets/ALI BIN ABU/12. ERPH/2026/*/M{week}.xlsx"
   # School calendar: date → week number/series → timetable file.
-  jadual: "config/jadual-minggu/jadual-minggu.yaml"
+  calendar: "config/school-weeks/school-weeks.yaml"
   # Escape hatch: if {week} ever matches more than one workbook (e.g. an
   # old week copied into another folder) or a file is named/placed
   # unusually, pin that week explicitly — the error message lists the
@@ -26,7 +26,7 @@ inputs:
   # templates:
   #   25: "assets/ALI BIN ABU/12. ERPH/2026/07. TMP-NEW/M25.xlsx"
   # Optional explicit timetable source; when omitted the week's series
-  # decides (jadual: → the file registered for that series).
+  # decides (timetable: → the file registered for that series).
   # timetable: "assets/timetable/jadual-waktu-2026-siri-7.xlsx"
   # csv: "assets/timetable/timetable.csv"
   # Period table (period → [start, end]); replaces the built-in one.
@@ -37,7 +37,7 @@ inputs:
 #            and the day sheets iterated while matching lessons (dskp);
 #   subjects subject code → name written into the template.
 context:
-  days: [Ahad, Isnin, Selasa, Rabu, Khamis]
+  days: [Sunday, Monday, Tuesday, Wednesday, Thursday]
   subjects:
     BC: "BAHASA CINA 华 文"
     BI: "ENGLISH"

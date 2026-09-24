@@ -11,7 +11,7 @@ that folder's `DESIGN.md`:
 | Reader | Reads | Produces | Format |
 |---|---|---|---|
 | [`yaml/`](yaml/) | the profile YAML | `Profile` | [`yaml/DESIGN.md`](yaml/DESIGN.md) |
-| [`calendar/`](calendar/) | the school calendar YAML (jadual-minggu) | calendar config dict | [`calendar/DESIGN.md`](calendar/DESIGN.md) |
+| [`calendar/`](calendar/) | the school calendar YAML (school-weeks) | calendar config dict | [`calendar/DESIGN.md`](calendar/DESIGN.md) |
 | [`timetable/`](timetable/) | a weekly timetable (xlsx or csv) | `Schedule` | [`timetable/DESIGN.md`](timetable/DESIGN.md) |
 | [`dskp/`](dskp/) | curriculum documents (txt / pdf) and the JSON they produce | nested section dicts | [`dskp/DESIGN.md`](dskp/DESIGN.md) |
 

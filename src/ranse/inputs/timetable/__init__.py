@@ -30,14 +30,28 @@ from ...core.refs import _parse_cell_ref
 from ...errors import ProfileError
 from ...model import Lesson, Schedule
 
-# The school week's day names, Sunday first — what the reader *recognises* in
-# headers and CSV dates. Selecting the days a template carries is the
-# fillers' job (context.days), never this reader's.
-ALL_DAYS = ["Ahad", "Isnin", "Selasa", "Rabu", "Khamis", "Jumaat", "Sabtu"]
+# Source header day names → the canonical English day names ``Schedule``
+# carries: the shipped timetable spells its headers in Malay (frozen asset —
+# those tokens must keep matching), everything downstream speaks English.
+# Selecting the days a template carries is the fillers' job (context.days),
+# never this reader's.
+_DAY_HEADERS = {
+    "Ahad": "Sunday",
+    "Isnin": "Monday",
+    "Selasa": "Tuesday",
+    "Rabu": "Wednesday",
+    "Khamis": "Thursday",
+    "Jumaat": "Friday",
+    "Sabtu": "Saturday",
+}
 
-# Weekday index (Monday-first, datetime.weekday()) → day name; the school
-# week starts on Sunday.
-DAY_BY_WEEKDAY = ["Isnin", "Selasa", "Rabu", "Khamis", "Jumaat", "Sabtu", "Ahad"]
+# Day names the reader recognises in source headers/CSV dates (Sunday first).
+ALL_DAYS = list(_DAY_HEADERS)
+
+# Weekday index (Monday-first, datetime.weekday()) → canonical day name; the
+# school week starts on Sunday.
+DAY_BY_WEEKDAY = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday",
+                  "Saturday", "Sunday"]
 
 # Built-in fallback: period number → (start, end). The values are pinned by
 # the golden suite; a profile's `inputs.period_times` replaces this whole
@@ -218,7 +232,8 @@ def _parse_sheet_xml(xml_bytes):
 def read_timetable_xlsx(zip_data, shared_strings, period_times=None):
     """Read a timetable xlsx and return a schedule dict keyed by day name.
 
-    The timetable layout:
+    The timetable layout (source day headers are translated to English via
+    ``_DAY_HEADERS``):
         Row 1 (header):  "Period"  "Ahad"  "Isnin"  "Selasa"  "Rabu"  "Khamis"
         Row 2+:          period_num  code   code     code      code    code
 
@@ -242,13 +257,13 @@ def read_timetable_xlsx(zip_data, shared_strings, period_times=None):
 
     # --- Locate header row and map column indices to day names ---
     header_row = None
-    day_col_map = {}  # col_index → day_name
+    day_col_map = {}  # col_index → canonical day name
     for row_num in sorted(grid.keys()):
         cells = grid[row_num]
         for col_num, cell_elem in cells.items():
             val = _read_cell_value(cell_elem, shared_strings).strip()
-            if val in ALL_DAYS:
-                day_col_map[col_num] = val
+            if val in _DAY_HEADERS:
+                day_col_map[col_num] = _DAY_HEADERS[val]
                 if header_row is None:
                     header_row = row_num
 

@@ -38,7 +38,7 @@ Rangka kerja dan setiap kawasan perniagaan didokumenkan secara berasingan:
 profiles/                    # Satu profil bagi setiap guru/templat (mula di sini)
   ali-bin-abu/               # satu folder bagi setiap profil: profile.yaml + dokumen
     profile.yaml
-config/jadual-minggu/        # Fail data kalendar sekolah (lihat config/README.md)
+config/school-weeks/          # Fail data kalendar sekolah (lihat config/README.md)
 docs/
   DESIGN.md                  # Reka bentuk rangka kerja teras
 src/ranse/
@@ -120,14 +120,14 @@ profile: ali-bin-abu-2026
 
 inputs:
   template: "assets/ALI BIN ABU/12. ERPH/2026/*/M{week}.xlsx"  # wajib
-  jadual: "config/jadual-minggu/jadual-minggu.yaml"              # kalendar minggu
+  calendar: "config/school-weeks/school-weeks.yaml"            # kalendar minggu
   period_times: "config/period-times/period-times.yaml"          #jadual tempoh
   # templates: {18: "…/06. JUNE/M18.xlsx"}    # tetapkan satu minggu secara eksplisit
   # timetable: "assets/timetable/jadual-waktu-2026-siri-7.xlsx"  # gantian pilihan
   # csv: "timetable.csv"
 
 context:
-  days: [Ahad, Isnin, Selasa, Rabu, Khamis]  # blok hari yang dimiliki templat
+  days: [Sunday, Monday, Tuesday, Wednesday, Thursday]  # blok hari yang dimiliki templat
   subjects:
     BC: "BAHASA CINA 华 文"
 
@@ -150,7 +150,7 @@ handlers:
 |---|---|
 | `template` | **Wajib.** Buku kerja yang akan diisi di tempat asal. Boleh mengandungi `{week}` dan wildcard glob |
 | `templates` | Peta `minggu → laluan` (pilihan); menang atas `template` bagi minggu tersebut |
-| `jadual` | Fail data kalendar minggu (didokumenkan dalam [`config/jadual-minggu/DESIGN.md`](../../../config/jadual-minggu/DESIGN.md)) |
+| `calendar` | Fail data kalendar minggu (didokumenkan dalam [`config/school-weeks/DESIGN.md`](../../../config/school-weeks/DESIGN.md)) |
 | `timetable` | Fail jadual waktu xlsx eksplisit (pilihan); mengalahkan carian siri |
 | `csv` | Fail jadual waktu csv eksplisit (pilihan); mengalahkan carian siri |
 | `period_times` | Jadual tempoh pilihan (tempoh → `[mula, tamat]`); menggantikan jadual terbina dalam (didokumenkan dalam [`config/period-times/DESIGN.md`](../../../config/period-times/DESIGN.md)) |

@@ -8,7 +8,7 @@ is exactly why [MENU](../menu/DESIGN.md) can own all time data
 **Which day sheets** it walks comes from the profile's `context.days`
 (risk 10, defined in the profile's
 [DESIGN.md](../../../../profiles/ali-bin-abu/DESIGN.md)); without that key it
-falls back to `DEFAULT_DAYS` (Ahad … Khamis). The timetable reader keeps every
+falls back to `DEFAULT_DAYS` (Sunday … Thursday). The timetable reader keeps every
 day of the source — this handler, not the reader, decides what the template
 has. `required_sheets` is the same default list, checked before any write.
 

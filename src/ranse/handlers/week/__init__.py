@@ -27,7 +27,7 @@ def resolve_week(calendar_cfg, start_date, override=None):
     """Resolve start_date → Week(number, series) (or None if no config).
 
     Each record takes effect from its `start` date (a Sunday) until the next
-    record. Holiday weeks (`cuti`) and records without a `minggu` number are
+    record. Holiday weeks (`holiday`) and records without a `week` number are
     hard errors — a wrong week would silently fill the wrong DSKP content.
     """
     if calendar_cfg is None:
@@ -39,12 +39,12 @@ def resolve_week(calendar_cfg, start_date, override=None):
         return value.date() if isinstance(value, datetime) else value
 
     records = sorted(
-        (e for e in calendar_cfg.get("minggu") or []
+        (e for e in calendar_cfg.get("weeks") or []
          if isinstance(e, dict) and e.get("start")),
         key=lambda e: _as_date(e["start"]))
 
     if not records:
-        print("Error: the calendar config contains no dated 'minggu' records",
+        print("Error: the calendar config contains no dated 'weeks' records",
               file=sys.stderr)
         sys.exit(1)
 
@@ -62,33 +62,33 @@ def resolve_week(calendar_cfg, start_date, override=None):
               file=sys.stderr)
         sys.exit(1)
 
-    if chosen.get("cuti"):
-        print(f"Error: {d} falls in a holiday week: {chosen['cuti']} "
+    if chosen.get("holiday"):
+        print(f"Error: {d} falls in a holiday week: {chosen['holiday']} "
               f"(check --date)", file=sys.stderr)
         sys.exit(1)
 
-    number = override if override is not None else chosen.get("minggu")
+    number = override if override is not None else chosen.get("week")
     if number is None:
         print(f"Error: calendar record starting {_as_date(chosen['start'])} "
-              f"has no 'minggu' number", file=sys.stderr)
+              f"has no 'week' number", file=sys.stderr)
         sys.exit(1)
     number = int(number)
 
-    series = chosen.get("siri")
+    series = chosen.get("series")
     if series is None:
-        series_by_week = calendar_cfg.get("jadual_siri") or {}
+        series_by_week = calendar_cfg.get("week_series") or {}
         series = series_by_week.get(number, series_by_week.get(str(number)))
 
     return Week(number=number, series=series)
 
 
 def series_to_timetable(calendar_cfg, series):
-    """series number → timetable file path (registered under 'jadual:')."""
-    timetable_map = calendar_cfg.get("jadual") or {}
+    """series number → timetable file path (registered under 'timetable:')."""
+    timetable_map = calendar_cfg.get("timetable") or {}
     path = timetable_map.get(series, timetable_map.get(str(series)))
     if not path:
-        print(f"Error: series {series} has no file registered under 'jadual:' "
-              f"in the calendar config", file=sys.stderr)
+        print(f"Error: series {series} has no file registered under "
+              f"'timetable:' in the calendar config", file=sys.stderr)
         sys.exit(1)
     # Paths inside the calendar file resolve next to the file first.
     return _resolve_path(
@@ -145,7 +145,7 @@ class WeekResolver:
         # --- Week number / series from the calendar file ---
         calendar_cfg = None
         calendar_path = None
-        calendar_input = inputs.get("jadual")
+        calendar_input = inputs.get("calendar")
         if calendar_input:
             calendar_path = _resolve_path(calendar_input, bases)
             if not os.path.isfile(calendar_path):
@@ -175,7 +175,7 @@ class WeekResolver:
         if (calendar_cfg is not None and not tt_path
                 and ctx.week is not None and ctx.week.series is None):
             print(f"Error: week {ctx.week.number} has no series configured "
-                  f"yet (fill in jadual_siri in "
+                  f"yet (fill in week_series in "
                   f"{calendar_path}, or set inputs.timetable / inputs.csv "
                   f"in the profile)", file=sys.stderr)
             sys.exit(1)

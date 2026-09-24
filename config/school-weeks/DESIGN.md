@@ -1,20 +1,20 @@
-# The school week calendar — `jadual-minggu.yaml`
+# The school week calendar — `school-weeks.yaml`
 
 This folder holds the standalone **school calendar** data file
-([`jadual-minggu.yaml`](jadual-minggu.yaml), decision 11,
+([`school-weeks.yaml`](school-weeks.yaml), decision 11,
 [`docs/DESIGN.md`](../../docs/DESIGN.md) S3.3). It is not part of any profile:
-a profile *references* it via `inputs.jadual`, and the `week` handler reads it
+a profile *references* it via `inputs.calendar`, and the `week` handler reads it
 to answer two questions:
 
 1. **Which week is today?** `--date` (default: this week's Sunday) → the
-   `minggu` table.
-2. **Which timetable does that week use?** `jadual_siri` / `jadual` → the
+   `weeks` table.
+2. **Which timetable does that week use?** `week_series` / `timetable` → the
    timetable file (formats: [`src/ranse/inputs/timetable/DESIGN.md`](../../src/ranse/inputs/timetable/DESIGN.md)).
 
 ```yaml
 # in a profile
 inputs:
-  jadual: "config/jadual-minggu/jadual-minggu.yaml"
+  calendar: "config/school-weeks/school-weeks.yaml"
 ```
 
 ```bash
@@ -27,38 +27,38 @@ ranse fill --profile profiles/ali-bin-abu/profile.yaml --date 2026-09-20
 ## Structure
 
 ```yaml
-# siri number → timetable file (relative to the repo root; absolute works too)
+# series number → timetable file (relative to the repo root; absolute works too)
 # Paths resolve next to this file first, then the current directory, then the
 # repo root — see input_bases() in inputs/yaml/.
-jadual:
+timetable:
   1: assets/timetable/jadual-waktu-2026-siri-1.xlsx
   7: assets/timetable/jadual-waktu-2026-siri-7.xlsx
 
-jadual_siri:            # minggu → siri (fill this in)
+week_series:            # week → series (fill this in)
   33: 7
   34: 7
 
-minggu:                 # each record takes effect from its start date
+weeks:                  # each record takes effect from its start date
   - start: 2026-09-20
-    minggu: 33
+    week: 33
   - start: 2026-09-27
-    minggu: 34
+    week: 34
 ```
 
 | Key | Shape | Meaning |
 |---|---|---|
-| `jadual` | `siri → path` | which timetable file a siri uses |
-| `jadual_siri` | `minggu → siri` | which siri a week uses (fill in later) |
-| `minggu` | list of dated records | the calendar itself |
+| `timetable` | `series → path` | which timetable file a series uses |
+| `week_series` | `week → series` | which series a week uses (fill in later) |
+| `weeks` | list of dated records | the calendar itself |
 
-Each `minggu` record:
+Each `weeks` record:
 
 | Field | Required | Meaning |
 |---|---|---|
 | `start` | yes | effective date (normally a Sunday); the record holds until the next record |
-| `minggu` | yes, unless `cuti` | the week number |
-| `cuti` | — | marks a **holiday week**; hitting one is a hard error |
-| `siri` | no | overrides `jadual_siri` for this record |
+| `week` | yes, unless `holiday` | the week number |
+| `holiday` | — | marks a **holiday week**; hitting one is a hard error |
+| `series` | no | overrides `week_series` for this record |
 
 ---
 
@@ -72,23 +72,24 @@ In short:
   `start ≤ date`;
 - `--week N` overrides the record's week number but not the timetable
   lookup chain;
-- `siri` precedence: the record's own `siri:` → `jadual_siri[minggu]`;
+- `series` precedence: the record's own `series:` → `week_series[week]`;
 - timetable precedence: `inputs.timetable` / `inputs.csv` in the profile →
-  `jadual[siri]`;
-- holiday weeks (`cuti`), missing `minggu` numbers, unconfigured `siri` and
+  `timetable[series]`;
+- holiday weeks (`holiday`), missing `week` numbers, unconfigured `series` and
   missing files are **hard errors**, never a silent wrong fill.
 
 ---
 
 ## Maintaining this file
 
-- The `minggu` table mirrors the school calendar (TARIKH → MINGGU, M01…M43).
-  When the school calendar changes, add/remove/edit records — each record
-  takes effect from its `start` date until the next one.
-- `jadual_siri` maps every week to its siri:
-  `siri 1: M1-M5`, `siri 2: M6`, `siri 3: M7-M9`, `siri 4: M10-M14`,
-  `siri 5: M15-M24`, `siri 6: M25-M28`, `siri 7: M29-M44`.
-- The timetable files for **siri 2–6 are not registered under `jadual:`**
+- The `weeks` table mirrors the school calendar (its official DATA columns
+  TARIKH → MINGGU, M01…M43). When the school calendar changes,
+  add/remove/edit records — each record takes effect from its `start` date
+  until the next one.
+- `week_series` maps every week to its series:
+  `series 1: M1-M5`, `series 2: M6`, `series 3: M7-M9`, `series 4: M10-M14`,
+  `series 5: M15-M24`, `series 6: M25-M28`, `series 7: M29-M44`.
+- The timetable files for **series 2–6 are not registered under `timetable:`**
   yet, so those weeks currently report a missing-file error.
 - Relative paths resolve against this file's directory first, then the repo
   root, then the current directory.
@@ -97,5 +98,5 @@ In short:
 
 - Handler rules that consume this file: [`src/ranse/handlers/week/DESIGN.md`](../../src/ranse/handlers/week/DESIGN.md)
 - Timetable file formats picked here: [`src/ranse/inputs/timetable/DESIGN.md`](../../src/ranse/inputs/timetable/DESIGN.md)
-- Profile key (`inputs.jadual`, read by the `week` handler): profile schema [`docs/DESIGN.md`](../../docs/DESIGN.md) S3.3
+- Profile key (`inputs.calendar`, read by the `week` handler): profile schema [`docs/DESIGN.md`](../../docs/DESIGN.md) S3.3
 - Example profile: [`profiles/ali-bin-abu/profile.yaml`](../../profiles/ali-bin-abu/profile.yaml)

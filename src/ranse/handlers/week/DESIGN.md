@@ -5,7 +5,7 @@ cell. Business rules live here in the handler layer, never in core
 (decision 6, [`docs/DESIGN.md`](../../../../docs/DESIGN.md)).
 
 Protocol/registry contract: [parent index](../README.md).
-Calendar format it consumes: [`config/jadual-minggu/DESIGN.md`](../../../../config/jadual-minggu/DESIGN.md).
+Calendar format it consumes: [`config/school-weeks/DESIGN.md`](../../../../config/school-weeks/DESIGN.md).
 Timetable formats it resolves to: [`inputs/timetable/DESIGN.md`](../../inputs/timetable/DESIGN.md).
 
 ## Resolution rules
@@ -13,10 +13,10 @@ Timetable formats it resolves to: [`inputs/timetable/DESIGN.md`](../../inputs/ti
 1. The week start is the **Sunday** of the date's week (`--date` defaults to
    today; other weekdays roll back to their Sunday). MENU's date cell is that
    Sunday.
-2. `minggu` records in the calendar take effect **from their `start` date until
+2. `weeks` records in the calendar take effect **from their `start` date until
    the next record**. The record whose `start ≤ date` is chosen.
-3. `siri` comes from the record itself, else from `jadual_siri[minggu]`.
-4. The timetable path is `jadual[siri]`, unless the profile sets
+3. `series` comes from the record itself, else from `week_series[week]`.
+4. The timetable path is `timetable[series]`, unless the profile sets
    `inputs.timetable` / `inputs.csv`, which win.
 
 ## Hard errors
@@ -24,11 +24,11 @@ Timetable formats it resolves to: [`inputs/timetable/DESIGN.md`](../../inputs/ti
 A wrong week would silently fill the wrong content, so all of these abort the
 run (printed to stderr + exit 1, decision 13):
 
-- the calendar has no dated `minggu` records;
+- the calendar has no dated `weeks` records;
 - the date is earlier than the first record;
-- the chosen record is a holiday week (`cuti: …`);
-- the chosen record has no `minggu` number;
-- the week has no `siri` configured and no explicit timetable input;
+- the chosen record is a holiday week (`holiday: …`);
+- the chosen record has no `week` number;
+- the week has no `series` configured and no explicit timetable input;
 - the resolved file does not exist.
 
 ## Params and CLI options

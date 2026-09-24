@@ -15,9 +15,20 @@ from ..base import Context
 
 _DSKP_CONTENT_CACHE = {}
 
-# Day sheets the shipped template has (fallback; the profile's
+# Days the shipped template has day sheets for (fallback; the profile's
 # ``context.days`` wins — risk 3: one declaration shared by menu and dskp).
-DEFAULT_DAYS = ("Ahad", "Isnin", "Selasa", "Rabu", "Khamis")
+DEFAULT_DAYS = ("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday")
+
+# Canonical day name → the shipped template's actual day-sheet name. The
+# sheet names are frozen artifact (``AHAD`` … ``KHAMIS``); writes go through
+# this reverse mirror so English day names land on the right sheet.
+_SHEET_BY_DAY = {
+    "Sunday": "AHAD",
+    "Monday": "ISNIN",
+    "Tuesday": "SELASA",
+    "Wednesday": "RABU",
+    "Thursday": "KHAMIS",
+}
 
 
 # {form} / {t} / {T} in the params' `file` → the lesson's form number
@@ -150,9 +161,12 @@ def build_auto_dskp_entries(schedule, number, params, subjects, base_dir=None,
                 continue
 
             left, right = pair
+            # The day sheet is artifact (``AHAD`` … ``KHAMIS``): translate
+            # the English day name before touching the workbook.
+            sheet_name = _SHEET_BY_DAY.get(day, day.upper())
             for col_start, sec in ((left_col, left), (right_col, right)):
                 entries.append({
-                    "sheet": day.upper(),
+                    "sheet": sheet_name,
                     "class": class_num,
                     "file": dskp_path,
                     "selection": [int(sec), cs_idx, ls_idx],
@@ -162,7 +176,7 @@ def build_auto_dskp_entries(schedule, number, params, subjects, base_dir=None,
             left_title = sections[left].get("title", str(left))
             right_title = sections[right].get("title", str(right))
             report.append(
-                f"  {day.upper()} class {class_num} "
+                f"  {sheet_name} class {class_num} "
                 f"({entry.cls}, {entry.start}-{entry.end}, T{form}): "
                 f"{left_title} + {right_title}")
 
@@ -274,7 +288,7 @@ class DskpFiller:
     # The day sheets checked before any write (from DEFAULT_DAYS; a profile
     # that overrides context.days beyond these sheets still gets the
     # per-entry "sheet not found" warning at fill time).
-    required_sheets = tuple(d.upper() for d in DEFAULT_DAYS)
+    required_sheets = tuple(_SHEET_BY_DAY[d] for d in DEFAULT_DAYS)
     # The `ranse fill` options this handler needs; the orchestrator adds them
     # to the parser and hands the values back in `ctx.runtime[key]`.
     cli_options = {
@@ -389,6 +403,6 @@ class DskpFiller:
         if ctx.schedule and schedule_has_auto_match(ctx.schedule, params,
                                                    subjects, days=days):
             return ["Note: automatic DSKP filling skipped (no week known) — "
-                    "add inputs.jadual to the profile or pass --week N "
+                    "add inputs.calendar to the profile or pass --week N "
                     "to enable it"]
         return []

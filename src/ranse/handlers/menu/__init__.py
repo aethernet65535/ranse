@@ -7,11 +7,11 @@ from ..base import Context
 # --- MENU layout (decision 12: layout constants stay in the handler) ------
 NUM_PERIODS = 8
 
-# Day blocks of the shipped template's MENU sheet, top to bottom. The
-# profile declares the same list once in ``context.days`` (risk 3: a value
-# shared by menu and dskp belongs in the profile); this tuple is only the
-# fallback for profiles that do not.
-DEFAULT_DAYS = ("Ahad", "Isnin", "Selasa", "Rabu", "Khamis")
+# Day blocks of the shipped template's MENU sheet, top to bottom (in the
+# profile's ``context.days`` order). The profile declares the same list once
+# (risk 3: a value shared by menu and dskp belongs in the profile); this
+# tuple is only the fallback for profiles that do not.
+DEFAULT_DAYS = ("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday")
 
 _TIME_SUFFIX_CACHE = {}
 for _h in range(24):

@@ -33,11 +33,14 @@ in this handler's `__init__.py`, `NUM_PERIODS = 8`):
 
 | Block | Header row | Period rows | Date cell |
 |---|---|---|---|
-| Ahad | 5 | 6–13 | **I6** |
-| Isnin | 15 | 16–23 | — |
-| Selasa | 25 | 26–33 | — |
-| Rabu | 35 | 36–43 | — |
-| Khamis | 45 | 46–53 | — |
+| Sunday | 5 | 6–13 | **I6** |
+| Monday | 15 | 16–23 | — |
+| Tuesday | 25 | 26–33 | — |
+| Wednesday | 35 | 36–43 | — |
+| Thursday | 45 | 46–53 | — |
+
+Blocks follow the profile's `context.days` order; the shipped template spells
+its own day-sheet names in Malay (`AHAD` … `KHAMIS`, frozen artifact).
 
 For each day, up to eight rows are written after the header row (`header_row +
 1 + i`), one per merged lesson, with these columns:
@@ -90,8 +93,8 @@ workbook.
 
 | I want to change … | It lives in | How |
 |---|---|---|
-| this week's date | calendar → `MENU!I6` | `--date 2026-09-20`, or edit the `minggu` records |
-| which timetable a week uses | `jadual_siri` (or `siri:` in the record) | edit `config/jadual-minggu/jadual-minggu.yaml` (see [`config/jadual-minggu/DESIGN.md`](../../../../config/jadual-minggu/DESIGN.md)) |
+| this week's date | calendar → `MENU!I6` | `--date 2026-09-20`, or edit the `weeks` records |
+| which timetable a week uses | `week_series` (or `series:` in the record) | edit `config/school-weeks/school-weeks.yaml` (see [`config/school-weeks/DESIGN.md`](../../../../config/school-weeks/DESIGN.md)) |
 | the period times themselves | the profile's `inputs.period_times` → [`config/period-times/period-times.yaml`](../../../../config/period-times/period-times.yaml) (built-in fallback in `inputs/timetable/`) | edit the data file (affects every week at once, risk 4) |
 | one period's class / time for one week | **MENU sheet**, columns C–G | `ranse write` on that cell — note the next `ranse fill` for the same week rewrites it |
 | the DSKP standards on a day sheet | DSKP blocks | [`dskp` handler](../dskp/DESIGN.md); never a time edit |

@@ -19,9 +19,10 @@ number, every other day column holds a class code:
 | 2 | 1 | BC-1A | BI-2B | … | … | … |
 | 3 | 2 | … | … | … | … | … |
 
-- **Header detection** — the first row containing a day name from `ALL_DAYS`
-  (`Ahad` … `Sabtu`) is the header; each cell holding such a name becomes a
-  day column.
+- **Header detection** — the first row containing a source day name (`Ahad` …
+  `Sabtu`, the frozen header spellings mapped to the English day names
+  ``Schedule`` carries by `_DAY_HEADERS`: `Ahad` → `Sunday`, …) is the header;
+  each cell holding such a name becomes a day column.
 - **Sheet selection** — the first sheet of the workbook, unless a sheet name
   contains `timetable` or `sheet` (case-insensitive), which wins.
 - **Period number** — the first numeric cell in the row; rows whose number is

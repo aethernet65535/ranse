@@ -44,20 +44,20 @@ def test_build_schedule_keeps_every_weekday():
     # 2026-09-25 is a Friday: the reader must keep it — which days a
     # template carries is the fillers' business (context.days), not its.
     schedule = build_schedule([_csv_row("2026-09-25")])
-    assert schedule.days["Jumaat"][1].cls == "1E"
+    assert schedule.days["Friday"][1].cls == "1E"
 
 
 def test_build_schedule_maps_dates_to_day_names():
-    # 2026-09-20 is a Sunday (school weeks start Ahad)
+    # 2026-09-20 is a Sunday (school weeks start on Sunday)
     schedule = build_schedule([_csv_row("2026-09-20")])
-    assert schedule.days["Ahad"][1].start == "07:40"
+    assert schedule.days["Sunday"][1].start == "07:40"
 
 
 # --- period tables ---------------------------------------------------------
 
 def test_build_schedule_uses_the_builtin_table_by_default():
     schedule = build_schedule([_csv_row("2026-09-20")])
-    assert schedule.days["Ahad"][1].end == "08:20"
+    assert schedule.days["Sunday"][1].end == "08:20"
     # A time outside the built-in table is skipped.
     skipped = build_schedule([_csv_row("2026-09-20",
                                        **{"Start Time": "08:00",
@@ -71,7 +71,7 @@ def test_build_schedule_accepts_a_replacement_table():
         [_csv_row("2026-09-20",
                   **{"Start Time": "08:00", "End Time": "08:30"})],
         period_times=custom)
-    assert schedule.days["Ahad"][1].start == "08:00"
+    assert schedule.days["Sunday"][1].start == "08:00"
 
 
 def test_load_period_times_round_trip(tmp_path):

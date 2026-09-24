@@ -39,16 +39,16 @@ TEMPLATE_XLSX = REPO_ROOT / "assets" / "ALI BIN ABU" / "12. ERPH" / "template.xl
 TIMETABLE_DIR = REPO_ROOT / "assets" / "timetable"
 DSKP_DIR = REPO_ROOT / "assets" / "bc-dskp"
 PROFILE_YAML = REPO_ROOT / "profiles" / "ali-bin-abu" / "profile.yaml"
-CALENDAR_YAML = REPO_ROOT / "config" / "jadual-minggu" / "jadual-minggu.yaml"
+CALENDAR_YAML = REPO_ROOT / "config" / "school-weeks" / "school-weeks.yaml"
 
 # Golden cases: two normal weeks …
 GOLDEN_CASES = {
-    "minggu-33": "2026-09-20",
-    "minggu-34": "2026-09-27",
+    "week-33": "2026-09-20",
+    "week-34": "2026-09-27",
 }
 # … and an error case: name → (date, substrings the stderr must contain).
 GOLDEN_ERROR_CASES = {
-    "cuti": ("2026-01-04", "holiday week"),
+    "holiday": ("2026-01-04", "holiday week"),
 }
 
 
@@ -85,7 +85,7 @@ def run_fill(xlsx_path, date, extra_args=()):
     with tempfile.TemporaryDirectory() as tmp:
         raw = yaml.safe_load(PROFILE_YAML.read_text(encoding="utf-8"))
         raw["inputs"]["template"] = str(xlsx_path)
-        raw["inputs"]["jadual"] = str(CALENDAR_YAML)
+        raw["inputs"]["calendar"] = str(CALENDAR_YAML)
         # The shipped profile's template is a {week} pattern; a per-week
         # override would beat the temp copy, so drop it.
         raw["inputs"].pop("templates", None)

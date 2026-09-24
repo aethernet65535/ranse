@@ -47,7 +47,7 @@ The framework and each business area are documented separately:
 | [`docs/DESIGN.md`](docs/DESIGN.md) | core framework design: engine, CLI, handler system, profile schema, pipeline |
 | [`src/ranse/handlers/README.md`](src/ranse/handlers/README.md) | shipped handler business rules — index; each handler has its own DESIGN.md in its own folder |
 | [`src/ranse/inputs/README.md`](src/ranse/inputs/README.md) | source-file reader index; each reader has its own DESIGN.md |
-| [`config/README.md`](config/README.md) | the school week calendar (`jadual-minggu.yaml`) |
+| [`config/README.md`](config/README.md) | the school week calendar (`school-weeks.yaml`) |
 | [`docs/translations/ms-MY/README.md`](docs/translations/ms-MY/README.md) | this README in Bahasa Melayu |
 
 ## Project Structure
@@ -56,7 +56,7 @@ The framework and each business area are documented separately:
 profiles/                    # One profile per teacher/template (start here)
   ali-bin-abu/               # one folder per profile: profile.yaml + docs
     profile.yaml
-config/jadual-minggu/        # School calendar data file (see config/README.md)
+config/school-weeks/          # School calendar data file (see config/README.md)
 docs/
   DESIGN.md                  # Core framework design
 src/ranse/
@@ -144,14 +144,14 @@ profile: ali-bin-abu-2026
 
 inputs:
   template: "assets/ALI BIN ABU/12. ERPH/2026/*/M{week}.xlsx"  # required
-  jadual: "config/jadual-minggu/jadual-minggu.yaml"              # week calendar
+  calendar: "config/school-weeks/school-weeks.yaml"            # week calendar
   period_times: "config/period-times/period-times.yaml"          # period table
   # templates: {18: "…/06. JUNE/M18.xlsx"}    # pin one week explicitly
   # timetable: "assets/timetable/jadual-waktu-2026-siri-7.xlsx"  # optional override
   # csv: "timetable.csv"
 
 context:
-  days: [Ahad, Isnin, Selasa, Rabu, Khamis]  # day blocks the template has
+  days: [Sunday, Monday, Tuesday, Wednesday, Thursday]  # day blocks the template has
   subjects:
     BC: "BAHASA CINA 华 文"
 
@@ -174,7 +174,7 @@ handlers:
 |---|---|
 | `template` | **Required.** The workbook that gets filled in place. May contain `{week}` and glob wildcards |
 | `templates` | Optional `week number → path` map; wins over `template` for those weeks |
-| `jadual` | The week calendar data file (documented in [`config/jadual-minggu/DESIGN.md`](config/jadual-minggu/DESIGN.md)) |
+| `calendar` | The week calendar data file (documented in [`config/school-weeks/DESIGN.md`](config/school-weeks/DESIGN.md)) |
 | `timetable` | Optional explicit timetable xlsx; wins over the series lookup |
 | `csv` | Optional explicit timetable csv; wins over the series lookup |
 | `period_times` | Optional period table (period → `[start, end]`); replaces the built-in one (documented in [`config/period-times/DESIGN.md`](config/period-times/DESIGN.md)) |
