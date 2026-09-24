@@ -4,17 +4,20 @@ Inputs never touch the target workbook (docs/DESIGN.md decision 8). The format
 each reader accepts is documented in that reader's ``DESIGN.md``; the index is
 ``inputs/README.md``.
 
-A reader may also declare a ``ranse <name>`` subcommand (the spec is
-``{"name", "help", "add_arguments", "run"}``). The readers that ship one are
-listed in ``_READERS`` below — a new business plugs its reader in by adding
-one name there, without touching ``cli.py``. The collection stays a static,
-built-in registry (decision 2): no dynamic import paths, no entry points.
+A reader runs standalone as ``python -m ranse.inputs.<name>`` when it ships a
+``__main__`` entry (the DSKP reader does). It may *additionally* declare a top
+level ``ranse <name>`` subcommand — spec ``{"name", "help", "add_arguments",
+"run"}`` — by listing its name in ``_READERS`` below: one line, no changes to
+``cli.py`` (static, built-in registry, decision 2: no dynamic import paths, no
+entry points). The shipped list is deliberately empty, so the top-level CLI
+shows only the framework's own ``fill`` / ``write`` and ``ranse fill`` never
+imports a reader.
 """
 
 import importlib
 
-# Readers that may declare a SUBCOMMAND (missing attribute = no subcommand).
-_READERS = ("dskp",)
+# Readers declaring a SUBCOMMAND; () keeps the top-level CLI framework-only.
+_READERS = ()
 
 
 def subcommands():

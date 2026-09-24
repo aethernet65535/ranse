@@ -1,9 +1,9 @@
 # DSKP reader — formats
 
 DSKP (*Dokumen Standard Kurikulum Pentaksiran*) sources are parsed by this
-reader, which is used both by the `ranse dskp` subcommand and by the `dskp`
-handler's entries. It is a pure input: it never touches the target workbook
-(decision 8, [`docs/DESIGN.md`](../../../../docs/DESIGN.md)).
+reader, which runs standalone as `python -m ranse.inputs.dskp` and backs the
+`dskp` handler's entries. It is a pure input: it never touches the target
+workbook (decision 8, [`docs/DESIGN.md`](../../../../docs/DESIGN.md)).
 
 ---
 
@@ -27,7 +27,7 @@ same parser works for English and Bahasa Malaysia documents.
 
 ## JSON
 
-The structured output of `ranse dskp` (and the input of `dskp` entries):
+The structured output of `python -m ranse.inputs.dskp` (and the input of `dskp` entries):
 
 ```json
 {
@@ -51,7 +51,7 @@ Section keys are digits only — the automatic section pair relies on that
 
 ## pdf
 
-`ranse dskp --pdf F --pages 35-45` extracts text with **pdfplumber** (an
+`python -m ranse.inputs.dskp --pdf F --pages 35-45` extracts text with **pdfplumber** (an
 optional dependency — a clear error if it is missing) and parses it exactly
 like txt. Page ranges accept `35-45`, `35,37,39` or a mix.
 
@@ -70,5 +70,5 @@ writes into a class block.
 ## Built-in file table
 
 `__init__.py` carries a `DSKP_FILES` table (`T1` → `assets/bc-dskp/t1.txt`
-… `T5`) used when a `dskp` handler configures no `file:`; `ranse dskp --list`
+… `T5`) used when a `dskp` handler configures no `file:`; `python -m ranse.inputs.dskp --list`
 prints it. The `assets/` directory itself is gitignored.

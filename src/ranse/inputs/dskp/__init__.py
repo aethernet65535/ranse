@@ -3,13 +3,12 @@
 Outputs JSON with sections containing titles, content standards,
 and learning standards. Number-based detection works for any language.
 
-Usage:
-    ranse dskp --txt <file.txt> [-o output.json]
-    ranse dskp --txt <file.txt> --select 1 1 1
-    ranse dskp --pdf <file.pdf> --pages 35-45 [-o output.json]
-    ranse dskp --list
+Usage (standalone module — the top-level ``ranse`` CLI stays framework-only):
 
-(``python -m ranse.inputs.dskp ...`` runs the same parser standalone.)
+    python -m ranse.inputs.dskp --txt <file.txt> [-o output.json]
+    python -m ranse.inputs.dskp --txt <file.txt> --select 1 1 1
+    python -m ranse.inputs.dskp --pdf <file.pdf> --pages 35-45 [-o output.json]
+    python -m ranse.inputs.dskp --list
 """
 
 import argparse
@@ -217,7 +216,7 @@ def resolve_selection(sections, selection):
 # ---------------------------------------------------------------------------
 
 def add_arguments(parser):
-    """Register the ``dskp`` options (shared by the module and ``ranse dskp``)."""
+    """Register the ``dskp`` options (used by ``main``)."""
     parser.add_argument("--txt", help="Path to DSKP txt file")
     parser.add_argument("--pdf", help="Path to DSKP pdf file")
     parser.add_argument("--pages", help="Page range for PDF (e.g. 35-45 or 35,37,39)")
@@ -272,13 +271,3 @@ def main(argv=None):
 
 if __name__ == "__main__":
     main()
-
-
-# The ``ranse dskp`` subcommand, declared here so ``cli.py`` can stay
-# generic: {"name", "help", "add_arguments", "run"}.
-SUBCOMMAND = {
-    "name": "dskp",
-    "help": "parse a DSKP txt/pdf into structured JSON",
-    "add_arguments": add_arguments,
-    "run": run,
-}

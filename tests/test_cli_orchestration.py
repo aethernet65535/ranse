@@ -76,8 +76,20 @@ def test_week_resolver_publishes_nothing_without_a_calendar():
 
 # --- reader subcommand registry --------------------------------------------
 
-def test_the_registry_lists_the_shipped_readers():
-    assert [spec["name"] for spec in subcommands()] == ["dskp"]
+build_parser = fn("_build_parser")
+
+
+def test_the_shipped_registry_is_empty():
+    # The top-level CLI ships only the framework's fill/write; a business
+    # opts in by listing its reader in `inputs._READERS`.
+    assert subcommands() == ()
+
+
+def test_top_level_help_lists_only_framework_commands():
+    help_text = build_parser({}).format_help()
+    assert "{fill,write}" in help_text
+    assert "fill the profile's template" in help_text
+    assert "dskp" not in help_text.lower()
 
 
 # --- path bases (Phase 5: one builder, checkout-guarded repo fallback) -----

@@ -176,7 +176,7 @@ def build_auto_dskp_entries(schedule, minggu, params, subjects, base_dir=None,
 def load_dskp_content(file_path):
     """Load DSKP content from a JSON or txt file (cached per path).
 
-    JSON: output from ``ranse dskp`` (structured dict).
+    JSON: output from ``python -m ranse.inputs.dskp`` (structured dict).
     TXT: parsed on-the-fly by the inputs.dskp parser.
     """
     if file_path in _DSKP_CONTENT_CACHE:

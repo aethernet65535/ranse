@@ -46,7 +46,7 @@ Non-goals are listed in S11.
 +-- CLI (cli.py) ----------------------------------+
 |  ranse fill  --profile p.yaml [handler options]  |  <- no --xlsx: the
 |  ranse write --profile p.yaml SHEET!CELL "value" |     workbook is a
-|  <input-specific subcommands>                    |     profile input (D10)
+|  <reader subcommands: none shipped>              |     profile input (D10)
 +--------------+-----------------------------------+
                | argparse + pipeline order + RanseError -> exit code (D13)
 +-- handlers/ -v-----------------------------------+
@@ -230,9 +230,12 @@ ranse fill  --profile P [handler options]
 ranse write --profile P SHEET!CELL VALUE
 ```
 
-`fill` and `write` are the framework subcommands. Any other subcommand is
-declared by the reader that owns it, so the framework can add it without
-knowing what it does.
+`fill` and `write` are the only subcommands the framework ships, so
+`ranse --help` carries no business vocabulary. A reader may still declare one
+of its own (`inputs.subcommands()`; the shipped registry is empty) — the
+framework adds and dispatches it without knowing what it does, and
+`ranse fill` never imports a reader. The example's document reader runs as
+its own module instead: `python -m ranse.inputs.dskp`.
 
 `ranse fill` adds only `--profile` itself. Every other option is declared by
 a handler (`cli_options`) and its value reaches that handler through

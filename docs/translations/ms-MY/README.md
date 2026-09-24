@@ -42,7 +42,7 @@ config/jadual-minggu/        # Fail data kalendar sekolah (lihat config/README.m
 docs/
   DESIGN.md                  # Reka bentuk rangka kerja teras
 src/ranse/
-  cli.py                     # ranse fill / write / dskp
+  cli.py                     # ranse fill / write
   model.py                   # Lesson / Schedule / Week / Profile
   core/                      # enjin xlsx tulis-sahaja (tiada pengetahuan perniagaan)
   inputs/                    # pembaca fail sumber — satu folder + DESIGN.md setiap satu
@@ -101,15 +101,15 @@ ranse write --profile profiles/ali-bin-abu/profile.yaml MENU!B3 "ALI BIN ABU"
 
 Menulis satu sel (`SHEET!CELL`, atau `SHEET!FROM:TO` — sudu kiri atas julat atau julat digabungkan digunakan) dan menyimpan buku kerja. Ia tiada pilihan selain `--profile`: ia menjalankan fasa resolve profil, jadi buku kerja minggu mana yang ditulis ditentukan sama seperti `ranse fill`. Nilai ditulis sebagai teks; gunakan `ranse fill` dengan handler `fixed_cells` untuk nilai yang perlu menjadi nombor.
 
-### `ranse dskp` — hurai kandungan DSKP
+### `python -m ranse.inputs.dskp` — hurai kandungan DSKP
 
 ```bash
-ranse dskp --txt assets/bc-dskp/t1.txt --select 1 1 1 -o t1.json
-ranse dskp --pdf dskp.pdf --pages 35-45 -o t1.json
-ranse dskp --list
+python -m ranse.inputs.dskp --txt assets/bc-dskp/t1.txt --select 1 1 1 -o t1.json
+python -m ranse.inputs.dskp --pdf dskp.pdf --pages 35-45 -o t1.json
+python -m ranse.inputs.dskp --list
 ```
 
-Menghasilkan JSON berstruktur daripada sumber DSKP txt/pdf. Format: [`src/ranse/inputs/dskp/DESIGN.md`](../../../src/ranse/inputs/dskp/DESIGN.md).
+Menghasilkan JSON berstruktur daripada sumber DSKP txt/pdf. Pembaca ini berjalan sebagai modulnya sendiri supaya `ranse --help` hanya menyenaraikan `fill` / `write` rangka kerja. Format: [`src/ranse/inputs/dskp/DESIGN.md`](../../../src/ranse/inputs/dskp/DESIGN.md).
 
 ## Konfigurasi (profil)
 

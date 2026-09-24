@@ -60,7 +60,7 @@ config/jadual-minggu/        # School calendar data file (see config/README.md)
 docs/
   DESIGN.md                  # Core framework design
 src/ranse/
-  cli.py                     # ranse fill / write / dskp
+  cli.py                     # ranse fill / write
   model.py                   # Lesson / Schedule / Week / Profile
   core/                      # write-only xlsx engine (no business knowledge)
   inputs/                    # one folder + DESIGN.md per reader (timetable, dskp, yaml)
@@ -122,16 +122,17 @@ ranse write --profile profiles/ali-bin-abu/profile.yaml MENU!B3 "ALI BIN ABU"
 
 Writes a single cell (`SHEET!CELL`, or `SHEET!FROM:TO` — the top-left of a range or merged range is used) and saves the workbook. It takes no options beyond `--profile`: it runs the profile's resolve phase, so which week's workbook it writes to is decided exactly the way `ranse fill` decides it. The value is written as text; use `ranse fill` with a `fixed_cells` handler for values that must be numbers.
 
-### `ranse dskp` — parse DSKP content
+### `python -m ranse.inputs.dskp` — parse DSKP content
 
 ```bash
-ranse dskp --txt assets/bc-dskp/t1.txt --select 1 1 1 -o t1.json
-ranse dskp --pdf dskp.pdf --pages 35-45 -o t1.json
-ranse dskp --list
+python -m ranse.inputs.dskp --txt assets/bc-dskp/t1.txt --select 1 1 1 -o t1.json
+python -m ranse.inputs.dskp --pdf dskp.pdf --pages 35-45 -o t1.json
+python -m ranse.inputs.dskp --list
 ```
 
-Produces structured JSON from a DSKP txt/pdf source. Formats:
-[`src/ranse/inputs/dskp/DESIGN.md`](src/ranse/inputs/dskp/DESIGN.md).
+Produces structured JSON from a DSKP txt/pdf source. The reader runs as its
+own module so `ranse --help` lists only the framework's `fill` / `write`.
+Formats: [`src/ranse/inputs/dskp/DESIGN.md`](src/ranse/inputs/dskp/DESIGN.md).
 
 ## Configuration (the profile)
 

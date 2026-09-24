@@ -19,8 +19,9 @@ from .handlers.registry import build_handlers, cli_options, required_sheets
 from .inputs import subcommands
 from .inputs.yaml import load_profile, resolve_template
 
-# The subcommands the framework itself provides; every other one is
-# declared by the reader that owns it (`inputs.subcommands()`).
+# The subcommands the framework itself provides. A reader may add its own
+# (`inputs.subcommands()`), but the shipped registry is empty: the top-level
+# help stays framework-only and `ranse fill` imports no reader.
 _COMMANDS = ("fill", "write")
 _PROFILE_HELP = "Path to the profile YAML (inputs + handlers)"
 

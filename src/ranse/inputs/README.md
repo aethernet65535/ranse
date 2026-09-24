@@ -22,15 +22,13 @@ file in [`config/`](../../../config/README.md).
 
 The DSKP reader also runs standalone: `python -m ranse.inputs.dskp`.
 
-## Subcommands a reader declares
+## Subcommands a reader may declare
 
-A reader may also add a `ranse <name>` subcommand of its own:
+The shipped registry is deliberately empty: `ranse --help` lists only the
+framework's own `fill` / `write`, and `ranse fill` never imports a reader.
 
-| Reader | Subcommand |
-|---|---|
-| [`dskp/`](dskp/) | `ranse dskp` — parse a DSKP txt/pdf into structured JSON |
-
-The spec is `{"name", "help", "add_arguments", "run"}`; the readers that
-ship one are registered in `_READERS` (`inputs/__init__.py`) and collected
-by `inputs.subcommands()`; `cli.py` adds and dispatches them without
-knowing what they do.
+A reader that wants a top-level `ranse <name>` command opts in by defining
+`SUBCOMMAND` — spec `{"name", "help", "add_arguments", "run"}` — and adding
+its name to `_READERS` (`inputs/__init__.py`); `inputs.subcommands()`
+collects them and `cli.py` adds and dispatches them without knowing what
+they do.

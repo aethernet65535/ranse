@@ -2,6 +2,11 @@
 
 > **状态：Phase 1–6 已全部完成**（逐阶段提交，每阶段 `pytest` 全绿；
 > golden 黄金回归字节不变，最终 **102 passed**）。
+>
+> **追加决策（完成后确认）**：顶层 CLI 移除 `ranse dskp`（breaking，已确认接受）——
+> `inputs._READERS` 清空、reader 删除 `SUBCOMMAND`，DSKP 解析改用
+> `python -m ranse.inputs.dskp`；`ranse --help` 只列 `fill`/`write`，
+> `ranse fill` 不再 import 任何 reader（下文 Phase 3 的原句至此完全兑现）。
 
 审计结论：框架层（`core/`、`cli.py`、`inputs/yaml/`）存在 DSKP/ERPH 业务残留——
 硬编码的业务 key、领域词汇直接进入编排器、业务 loader 放在通用目录、
@@ -51,9 +56,9 @@ day 过滤与节次时间表写死在代码里、`_REPO_ROOT` 路径回退对 pi
   `_require_something_to_do` 泛化为"每个 filler 声明的 `requires` 是否都能满足，
   全部受阻才报错"（语义逐条保持：dskp 无 requires → 放行）。
 - `inputs/__init__.py`：去掉 `from . import dskp`，改惰性注册表
-  `_READERS = ("dskp",)` + `subcommands()`（`importlib` 收集 `SUBCOMMAND`）——
-  新业务只改这一行，`ranse fill` 启动不再加载 dskp reader（符合 D2 精神）。
-- `inputs/__init__` 的惰性注册表在 `main()` 内收集并供 dispatch 使用（`import ranse.cli` 不拉入任何 reader）。
+  `_READERS` + `subcommands()`（`importlib` 收集 `SUBCOMMAND`；出货列表为空，
+  见头部追加决策）——新业务只改这一行；注册表在 `main()` 内收集供 dispatch，
+  `import ranse.cli` 与 `ranse fill` 都不拉入任何 reader（D2 精神）。
 - `errors.py`：删死代码 `WeekError`（全仓库无人 raise）；`docs/DESIGN.md` S6 同步。
 - `handlers/menu`：`needs_schedule = True` → `requires = ("schedule",)`。
 
