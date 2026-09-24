@@ -1,9 +1,13 @@
-"""Xlsx zip container + write-only Workbook API (docs/DESIGN.md decision 7).
+"""Write-only Workbook / Sheet API (docs/DESIGN.md decision 7).
 
 Write-only towards the target workbook: there is no ``read(coord)``.
 Serialization details (attribute preservation, inline strings, namespace
 prefixes, xml declaration flags) must stay byte-identical — the golden
 regression suite checks exactly that (docs/DESIGN.md risk 1-2).
+
+The read/format primitives (zip parts, sheet map, shared strings) live in
+:mod:`ranse.core.format`; this module's public surface is exactly
+``open / sheets / sheet / write / save``.
 
 ``ET.register_namespace`` side effects live in ``Workbook.open`` (once per
 open) instead of inside every parse; the registered prefixes/URIs must keep
@@ -11,26 +15,19 @@ the templates' original prefixes (risk 1).
 """
 
 import os
-import re
 import tempfile
 import zipfile
 from xml.etree import ElementTree as ET
 
 from ..errors import SheetError
+from .format import (NS, NS_R, parse_sheet_names, parse_sheet_rels,
+                     read_shared_strings, read_zip)
 from .refs import _cell_range_top_left, _cell_ref, _parse_cell_ref
 
-NS = "{http://schemas.openxmlformats.org/spreadsheetml/2006/main}"
-NS_R = "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}"
-
 
 # ---------------------------------------------------------------------------
-# Xlsx zip read / write
+# Xlsx zip write
 # ---------------------------------------------------------------------------
-
-def _read_zip(path):
-    with zipfile.ZipFile(path, "r") as zf:
-        return {info.filename: zf.read(info.filename) for info in zf.infolist()}
-
 
 def _file_mode(target):
     """Mode to give a replaced file: the target's, else the umask default."""
@@ -39,53 +36,6 @@ def _file_mode(target):
     mask = os.umask(0)
     os.umask(mask)
     return 0o666 & ~mask
-
-
-def _parse_sheet_rels(zip_data):
-    rels_xml = zip_data.get("xl/_rels/workbook.xml.rels", b"").decode("utf-8")
-    rid_to_target = {}
-    for m in re.finditer(r'<Relationship([^>]+)/>', rels_xml):
-        attrs = dict(re.findall(r'(\w+)="([^"]+)"', m.group(1)))
-        rid = attrs.get("Id")
-        target = attrs.get("Target")
-        if rid and target:
-            rid_to_target[rid] = target
-    return rid_to_target
-
-
-def _parse_sheet_names(zip_data, rid_to_target):
-    wb_xml = zip_data.get("xl/workbook.xml", b"").decode("utf-8")
-    sheet_map = {}
-    for m in re.finditer(
-            r'<sheet[^>]*\s+name="([^"]+)"[^>]*r:id="([^"]+)"', wb_xml):
-        name, rid = m.group(1), m.group(2)
-        target = rid_to_target.get(rid, "")
-        if target.startswith("/"):
-            target = target[1:]
-        elif not target.startswith("xl/"):
-            target = "xl/" + target
-        sheet_map[name] = target
-    return sheet_map
-
-
-def _read_shared_strings(zip_data):
-    raw = zip_data.get("xl/sharedStrings.xml")
-    if raw is None:
-        return []
-    root = ET.fromstring(raw)
-    strings = []
-    for si in root.iter(f"{NS}si"):
-        t = si.find(f"{NS}t")
-        if t is not None and t.text:
-            strings.append(t.text)
-            continue
-        parts = []
-        for r_elem in si.iter(f"{NS}r"):
-            t2 = r_elem.find(f"{NS}t")
-            if t2 is not None and t2.text:
-                parts.append(t2.text)
-        strings.append("".join(parts))
-    return strings
 
 
 # ---------------------------------------------------------------------------
@@ -270,9 +220,9 @@ class Workbook:
         ]:
             ET.register_namespace(prefix, uri)
 
-        zip_data = _read_zip(path)
-        rid_to_target = _parse_sheet_rels(zip_data)
-        sheet_map = _parse_sheet_names(zip_data, rid_to_target)
+        zip_data = read_zip(path)
+        rid_to_target = parse_sheet_rels(zip_data)
+        sheet_map = parse_sheet_names(zip_data, rid_to_target)
         return cls(path, zip_data, sheet_map)
 
     @property
@@ -283,8 +233,8 @@ class Workbook:
     def write(self, ref, content):
         """Write one cell addressed as ``"SHEET!COORD"`` (decision 9).
 
-        ``ref`` is ``"MENU!B3"`` or ``"MENU!B3:C3"`` — a range / merged range
-        writes its top-left cell, exactly like :meth:`Sheet.write`.
+        ``ref`` is ``"SHEET!B3"`` or ``"SHEET!B3:C3"`` — a range / merged
+        range writes its top-left cell, exactly like :meth:`Sheet.write`.
         """
         sheet_name, sep, coord = str(ref).partition("!")
         if not sep or not coord:

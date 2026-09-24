@@ -16,9 +16,9 @@ from collections import defaultdict
 from datetime import datetime
 from xml.etree import ElementTree as ET
 
+from ...core.format import (NS, NS_R, parse_sheet_names, parse_sheet_rels,
+                            read_shared_strings, read_zip)
 from ...core.refs import _parse_cell_ref
-from ...core.xlsx import (NS, NS_R, _parse_sheet_names, _parse_sheet_rels,
-                         _read_shared_strings, _read_zip)
 from ...model import Lesson, Schedule
 
 DAY_ORDER = ["Ahad", "Isnin", "Selasa", "Rabu", "Khamis"]
@@ -99,8 +99,8 @@ def load_schedule(path):
     """Read a timetable file (``.csv`` or ``.xlsx``) into a Schedule."""
     if str(path).lower().endswith(".csv"):
         return build_schedule(read_csv(path))
-    zip_data = _read_zip(path)
-    return read_timetable_xlsx(zip_data, _read_shared_strings(zip_data))
+    zip_data = read_zip(path)
+    return read_timetable_xlsx(zip_data, read_shared_strings(zip_data))
 
 
 def _day_name_from_date(value):
@@ -191,8 +191,8 @@ def read_timetable_xlsx(zip_data, shared_strings):
     Returns:
         Schedule — { day_name: { period_num: Lesson } }
     """
-    rid_to_target = _parse_sheet_rels(zip_data)
-    sheet_map = _parse_sheet_names(zip_data, rid_to_target)
+    rid_to_target = parse_sheet_rels(zip_data)
+    sheet_map = parse_sheet_names(zip_data, rid_to_target)
 
     # Use the first sheet (or the one named "Sheet1" / "Timetable")
     target_path = next(iter(sheet_map.values()))
