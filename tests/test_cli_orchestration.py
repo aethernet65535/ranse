@@ -6,6 +6,7 @@ reader registry is a static list the readers declare into (decision 2).
 """
 
 import argparse
+import os
 from types import SimpleNamespace
 
 from harness import call_error, fn
@@ -77,3 +78,31 @@ def test_week_resolver_publishes_nothing_without_a_calendar():
 
 def test_the_registry_lists_the_shipped_readers():
     assert [spec["name"] for spec in subcommands()] == ["dskp"]
+
+
+# --- path bases (Phase 5: one builder, checkout-guarded repo fallback) -----
+
+input_bases = fn("input_bases")
+
+
+def test_input_bases_put_the_profile_folder_first():
+    profile = Profile(name="p", inputs=ProfileInputs(template="t.xlsx"),
+                      base_dir="/profiles/p")
+    bases = input_bases(profile)
+    assert bases[0] == "/profiles/p"
+    assert bases[1] == os.getcwd()
+
+
+def test_input_bases_accept_an_extra_first_base():
+    assert input_bases(first="/data")[0] == "/data"
+    assert input_bases(first="/data")[1] == os.getcwd()
+
+
+def test_repo_root_fallback_only_in_a_source_checkout():
+    from ranse import _IS_SOURCE_CHECKOUT, _REPO_ROOT
+    bases = input_bases()
+    assert _REPO_ROOT in bases
+    # This test suite runs from a source checkout, so the fallback is on;
+    # an installed wheel turns it off (no pyproject/src beside the package).
+    assert _IS_SOURCE_CHECKOUT is True
+    assert bases[-1] == _REPO_ROOT

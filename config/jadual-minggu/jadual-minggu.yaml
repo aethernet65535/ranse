@@ -19,6 +19,7 @@
 # ============================================================
 
 # siri number → timetable file (paths are relative to the repo root; absolute paths also work)
+# Resolution order: next to this file → current directory → repo root.
 jadual:
   1: assets/timetable/jadual-waktu-2026-siri-1.xlsx
   2: assets/timetable/jadual-waktu-2026-siri-2.xlsx

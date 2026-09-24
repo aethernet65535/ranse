@@ -28,6 +28,8 @@ ranse fill --profile profiles/ali-bin-abu/profile.yaml --date 2026-09-20
 
 ```yaml
 # siri number → timetable file (relative to the repo root; absolute works too)
+# Paths resolve next to this file first, then the current directory, then the
+# repo root — see input_bases() in inputs/yaml/.
 jadual:
   1: assets/timetable/jadual-waktu-2026-siri-1.xlsx
   7: assets/timetable/jadual-waktu-2026-siri-7.xlsx

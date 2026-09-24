@@ -5,7 +5,7 @@ import os
 
 import yaml
 
-from ... import _REPO_ROOT
+from ... import _IS_SOURCE_CHECKOUT, _REPO_ROOT
 from ...core.refs import _resolve_path
 from ...errors import ProfileError
 from ...model import HandlerSpec, Profile, ProfileInputs
@@ -125,9 +125,27 @@ def _week_map(value, path):
     return out
 
 
-def _input_bases(profile):
-    """Where relative profile input paths are looked up (decision: see README)."""
-    return [profile.base_dir, os.getcwd(), _REPO_ROOT]
+def input_bases(profile=None, first=None):
+    """Where relative input paths are looked up, in order.
+
+    ``first`` (e.g. the folder of a data file whose paths resolve next to
+    it), then the profile's own folder, then the current directory, then —
+    **only in a source checkout** — the repository root. An installed
+    package contributes no root: guessing beside site-packages would be
+    worse than not falling back at all.
+
+    This is the one place the base list is built; handlers and the profile
+    loader share it so relative paths resolve the same everywhere.
+    """
+    bases = []
+    if first:
+        bases.append(first)
+    if profile is not None:
+        bases.append(profile.base_dir)
+    bases.append(os.getcwd())
+    if _IS_SOURCE_CHECKOUT:
+        bases.append(_REPO_ROOT)
+    return bases
 
 
 def resolve_template(profile, template_vars=None):
@@ -157,13 +175,13 @@ def resolve_template(profile, template_vars=None):
         raw = raw.replace("{week}", str(week))
 
     if not glob.has_magic(raw):
-        path = _resolve_path(raw, _input_bases(profile))
+        path = _resolve_path(raw, input_bases(profile))
         if not os.path.isfile(path):
             raise ProfileError(f"file not found: {path}")
         return path
 
     matches = []
-    for base in _input_bases(profile):
+    for base in input_bases(profile):
         for hit in sorted(glob.glob(os.path.join(base, raw))):
             if hit not in matches:
                 matches.append(hit)

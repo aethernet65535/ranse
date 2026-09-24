@@ -4,7 +4,15 @@ import os
 
 # Repository root: the directory holding src/, profiles/, config/ and
 # assets/. The package sits three levels below it (src/ranse/__init__.py),
-# so it takes three dirname() calls. _resolve_path bases depend on this value
-# (relative profile/calendar paths fall back to the repo root).
+# so it takes three dirname() calls.
 _REPO_ROOT = os.path.dirname(os.path.dirname(
     os.path.dirname(os.path.abspath(__file__))))
+
+# Only a source checkout has a meaningful repo root: the root must really
+# hold this project's files (pyproject + the package under src/). An
+# installed wheel's site-packages parent has neither, so the path fallback
+# built on _REPO_ROOT (inputs.input_bases) silently stays out of the way
+# instead of guessing next to the installed package.
+_IS_SOURCE_CHECKOUT = (
+    os.path.isfile(os.path.join(_REPO_ROOT, "pyproject.toml"))
+    and os.path.isdir(os.path.join(_REPO_ROOT, "src", "ranse")))

@@ -152,7 +152,7 @@ handlers:
 | `timetable` | Fail jadual waktu xlsx eksplisit (pilihan); mengalahkan carian siri |
 | `csv` | Fail jadual waktu csv eksplisit (pilihan); mengalahkan carian siri |
 
-Laluan relatif diselesaikan terhadap direktori profil itu sendiri, kemudian direktori semasa, kemudian akar repositori — jadi profil yang disertakan berfungsi di mana-mana sahaja anda menjalankannya.
+Laluan relatif diselesaikan terhadap direktori profil itu sendiri, kemudian direktori semasa, kemudian akar repositori (langkah terakhir hanya dalam checkout sumber — pemasangan pakej tiada akar repositori) — jadi profil yang disertakan berfungsi di mana-mana sahaja anda menjalankannya.
 
 **Satu profil untuk setahun.** `template` ialah satu pola: `{week}` digantikan dengan nombor minggu yang diselesaikan, dan wildcard `*`/`?` mencari fail tersebut. Pola mesti sepadan dengan **tepat satu** buku kerja; jika ia sepadan dua (contohnya minggu lama disalin ke folder lain), `ranse fill` menyenaraikan calonnya dan anda tetapkan minggu itu:
 

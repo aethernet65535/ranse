@@ -203,10 +203,11 @@ Schema:
 | `handlers` | ordered list of `{name, params}` | the pipeline itself (D1); names must exist in the registry (D2) |
 
 Validation rules: a missing `inputs.template` or a malformed `handlers:` list
-raises `ProfileError` from `inputs/yaml.py`; an unknown handler name or invalid
-handler params raises `ProfileError` from the registry. Relative paths resolve
-against the profile's own directory, then the current directory, then the repo
-root.
+raises `ProfileError` from the `inputs/yaml/` reader; an unknown handler name or
+invalid handler params raises `ProfileError` from the registry. Relative paths
+resolve against the profile's own directory, then the current directory, then —
+only in a source checkout — the repo root (`inputs.input_bases`; an installed
+package has no repo root, so the fallback stays out of the way).
 
 `inputs.template` may contain `{week}` (substituted once the week number is
 known) and glob wildcards; it must match exactly one workbook, otherwise the

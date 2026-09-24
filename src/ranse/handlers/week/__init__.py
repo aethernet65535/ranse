@@ -9,10 +9,10 @@ import os
 import sys
 from datetime import datetime, timedelta
 
-from ... import _REPO_ROOT
 from ...core.refs import _resolve_path
 from ...inputs.calendar import load_jadual_config
 from ...inputs.timetable import load_period_times, load_schedule
+from ...inputs.yaml import input_bases
 from ...model import Week
 from ..base import Context
 
@@ -89,8 +89,9 @@ def siri_to_timetable(jadual_cfg, siri):
         print(f"Error: siri {siri} has no file registered under 'jadual:' "
               f"in the jadual config", file=sys.stderr)
         sys.exit(1)
-    return _resolve_path(path, [jadual_cfg.get("_config_dir", _REPO_ROOT),
-                                _REPO_ROOT, os.getcwd()])
+    # Paths inside the calendar file resolve next to the file first.
+    return _resolve_path(
+        path, input_bases(first=jadual_cfg.get("_config_dir")))
 
 
 class WeekResolver:
@@ -125,7 +126,7 @@ class WeekResolver:
     def resolve(self, ctx: Context) -> None:
         runtime = ctx.runtime
         inputs = ctx.profile.inputs
-        bases = [ctx.profile.base_dir, os.getcwd(), _REPO_ROOT]
+        bases = input_bases(ctx.profile)
 
         # --- Resolve the week date (weeks start on Sunday/Ahad) ---
         if runtime.get("date"):

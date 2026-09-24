@@ -7,9 +7,9 @@ import sys
 from typing import List
 from xml.etree import ElementTree as ET
 
-from ... import _REPO_ROOT
 from ...core.refs import _cell_ref, _resolve_path
 from ...errors import ProfileError
+from ...inputs.yaml import input_bases
 from ...model import merge_periods
 from ..base import Context
 
@@ -61,9 +61,7 @@ def _dskp_file_for_tingkatan(tingkatan, params, base_dir=None):
     if not path:
         return None
 
-    bases = [os.getcwd(), _REPO_ROOT]
-    if base_dir:
-        bases.insert(0, base_dir)
+    bases = input_bases(first=base_dir)
     return _resolve_path(path, bases)
 
 
@@ -325,7 +323,6 @@ class DskpFiller:
         entries = list(params.get("entries") or [])
         report = self._auto_entries(ctx, params, subjects, entries)
 
-        base_dir = ctx.profile.base_dir
         for dskp_cfg in entries:
             sheet_name = dskp_cfg.get("sheet")
             class_num = dskp_cfg.get("class", 1)
@@ -343,8 +340,8 @@ class DskpFiller:
                       file=sys.stderr)
                 continue
 
-            json_path = _resolve_path(json_path, [base_dir, os.getcwd(),
-                                                  _REPO_ROOT])
+            json_path = _resolve_path(json_path,
+                                      input_bases(ctx.profile))
             if not json_path or not os.path.isfile(json_path):
                 print(f"  Warning: DSKP file not found: {json_path}",
                       file=sys.stderr)

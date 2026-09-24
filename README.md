@@ -175,7 +175,7 @@ handlers:
 | `timetable` | Optional explicit timetable xlsx; wins over the siri lookup |
 | `csv` | Optional explicit timetable csv; wins over the siri lookup |
 
-Relative paths are resolved against the profile's own directory, then the current directory, then the repo root — so the shipped profile works no matter where you run it from.
+Relative paths are resolved against the profile's own directory, then the current directory, then the repo root (the last step only in a source checkout — an installed package has none) — so the shipped profile works no matter where you run it from.
 
 **One profile per year.** `template` is a pattern: `{week}` is replaced with the resolved week number, and `*`/`?` wildcards search for the file. The pattern must match **exactly one** workbook; if it matches two (e.g. an old week copied into another folder), `ranse fill` lists the candidates and you pin that week:
 
