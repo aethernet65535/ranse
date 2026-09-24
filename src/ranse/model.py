@@ -100,18 +100,37 @@ class HandlerSpec:
 class ProfileInputs:
     """Profile ``inputs:`` — where the files live (decision 10/11).
 
-    ``template`` may contain ``{week}`` (resolved once the week is known)
-    and/or glob wildcards, so one profile can serve the whole year:
-    ``"…/2026/*/M{week}.xlsx"``. ``templates`` maps a week number to an
-    explicit workbook and wins over the pattern (escape hatch for weeks whose
-    file is named or placed differently).
+    The framework itself only knows two keys:
+
+    ``template``   the workbook to fill; may contain ``{week}`` and/or glob
+                   wildcards, so one profile can serve the whole year:
+                   ``"…/2026/*/M{week}.xlsx"``;
+    ``templates``  maps a week number to an explicit workbook and wins over
+                   the pattern (escape hatch for weeks whose file is named
+                   or placed differently).
+
+    **Every other key is handler-specific**: it passes through verbatim into
+    ``extra`` and is interpreted by the handler/reader that declares it —
+    the same contract as handler ``params`` (docs/DESIGN.md S3.3: "every
+    other key is handler-specific"). Use :meth:`get` to read one.
     """
 
     template: str
-    jadual: Optional[str] = None
-    timetable: Optional[str] = None
-    csv: Optional[str] = None
     templates: Dict[str, str] = field(default_factory=dict)
+    extra: Dict[str, object] = field(default_factory=dict)
+
+    def get(self, key, default=None):
+        """One ``inputs:`` value by key — framework keys included.
+
+        ``inputs.get("jadual")`` is what a handler whose profile key is
+        ``jadual`` calls; ``template``/``templates`` resolve to the
+        framework's own fields.
+        """
+        if key == "template":
+            return self.template
+        if key == "templates":
+            return self.templates
+        return self.extra.get(key, default)
 
 
 @dataclass

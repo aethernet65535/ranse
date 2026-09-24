@@ -10,11 +10,12 @@ that folder's `DESIGN.md`:
 
 | Reader | Reads | Produces | Format |
 |---|---|---|---|
+| [`yaml/`](yaml/) | the profile YAML | `Profile` | [`yaml/DESIGN.md`](yaml/DESIGN.md) |
+| [`calendar/`](calendar/) | the school calendar YAML (jadual-minggu) | calendar config dict | [`calendar/DESIGN.md`](calendar/DESIGN.md) |
 | [`timetable/`](timetable/) | a weekly timetable (xlsx or csv) | `Schedule` | [`timetable/DESIGN.md`](timetable/DESIGN.md) |
 | [`dskp/`](dskp/) | curriculum documents (txt / pdf) and the JSON they produce | nested section dicts | [`dskp/DESIGN.md`](dskp/DESIGN.md) |
-| [`yaml/`](yaml/) | the profile YAML, and any data-file YAML a handler references | `Profile`, calendar config | [`yaml/DESIGN.md`](yaml/DESIGN.md) |
 
-The two YAML **schemas** are contract, not a reader's business, so they are
+The YAML **schemas** are contract, not a reader's business, so they are
 documented elsewhere: the profile schema in
 [`docs/DESIGN.md`](../../../docs/DESIGN.md) S3.3, the example's calendar data
 file in [`config/`](../../../config/README.md).

@@ -2,7 +2,6 @@
 
 import glob
 import os
-import sys
 
 import yaml
 
@@ -38,10 +37,8 @@ def load_profile(path):
             f"to fill)")
     inputs = ProfileInputs(
         template=template.strip(),
-        jadual=_text(raw_inputs.get("jadual"), path, "inputs.jadual"),
-        timetable=_text(raw_inputs.get("timetable"), path, "inputs.timetable"),
-        csv=_text(raw_inputs.get("csv"), path, "inputs.csv"),
         templates=_week_map(raw_inputs.get("templates"), path),
+        extra=_extra_inputs(raw_inputs, path),
     )
 
     raw_handlers = raw.get("handlers")
@@ -75,13 +72,36 @@ def load_profile(path):
                    base_dir=os.path.dirname(os.path.abspath(path)))
 
 
-def _text(value, path, key):
-    """Optional path-ish field: str → stripped, anything else → None."""
-    if value is None:
-        return None
-    if not isinstance(value, str) or not value.strip():
-        raise ProfileError(f"{path}: '{key}' must be a non-empty string")
-    return value.strip()
+def _extra_inputs(raw_inputs, path):
+    """Every ``inputs:`` key except ``template``/``templates``, verbatim.
+
+    The framework only shape-checks them: a value is a non-empty string
+    (the common case — a path) or a mapping; ``None`` means "absent".
+    Whether a key exists and what it means is the business of the
+    handler/reader that declares it — the same contract as handler
+    ``params``, which each handler validates itself.
+    """
+    extra = {}
+    for key, value in raw_inputs.items():
+        if key in ("template", "templates"):
+            continue
+        if not isinstance(key, str) or not key.strip():
+            raise ProfileError(
+                f"{path}: 'inputs' keys must be non-empty strings")
+        if value is None:
+            continue
+        if isinstance(value, str):
+            if not value.strip():
+                raise ProfileError(
+                    f"{path}: 'inputs.{key}' must be a non-empty string")
+            extra[key] = value.strip()
+        elif isinstance(value, dict):
+            extra[key] = value
+        else:
+            raise ProfileError(
+                f"{path}: 'inputs.{key}' must be a non-empty string "
+                f"or a mapping")
+    return extra
 
 
 def _week_map(value, path):
@@ -125,8 +145,9 @@ def resolve_template(profile, week):
     if "{week}" in raw:
         if week is None:
             raise ProfileError(
-                "the profile's template needs a week number ({week}) but "
-                "none is known — set inputs.jadual in the profile")
+                "the profile's template uses {week} but no week number is "
+                "known — a resolve-phase handler must publish one, or pin "
+                "the workbook with inputs.templates")
         raw = raw.replace("{week}", str(week))
 
     if not glob.has_magic(raw):
@@ -151,15 +172,3 @@ def resolve_template(profile, week):
             + ", ".join(matches)
             + " — add an explicit 'inputs.templates' entry to the profile")
     return matches[0]
-
-
-def load_jadual_config(path):
-    """Load jadual-minggu.yaml: {jadual: {siri: path}, jadual_siri: {minggu: siri},
-    minggu: [{start, minggu, cuti, siri}...]}"""
-    with open(path, encoding="utf-8") as f:
-        cfg = yaml.safe_load(f) or {}
-    if not isinstance(cfg.get("minggu"), list) or not cfg["minggu"]:
-        print(f"Error: {path} has no 'minggu' records", file=sys.stderr)
-        sys.exit(1)
-    cfg["_config_dir"] = os.path.dirname(os.path.abspath(path))
-    return cfg

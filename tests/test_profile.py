@@ -38,7 +38,7 @@ def test_shipped_profile_names_only_registered_handlers():
 def test_shipped_profile_resolves_its_inputs_against_itself():
     profile = load_profile(str(PROFILE_YAML))
     assert profile.inputs.template.endswith(".xlsx")
-    assert profile.inputs.jadual.endswith("jadual-minggu.yaml")
+    assert profile.inputs.get("jadual").endswith("jadual-minggu.yaml")
     # Each profile has its own folder (profiles/ali-bin-abu/profile.yaml), and
     # its relative inputs must still resolve against that folder.
     assert Path(profile.base_dir).name == "ali-bin-abu"
@@ -106,6 +106,64 @@ def test_handlers_default_to_an_empty_list(tmp_path):
     profile = load_profile(str(path))
     assert profile.handlers == []
     assert profile.name == "p"
+
+
+# --- extra inputs: passthrough + generic shape check ------------------------
+
+def test_extra_inputs_pass_through_verbatim(tmp_path):
+    path = write_profile(tmp_path, """
+        profile: p
+        inputs:
+          template: template.xlsx
+          jadual: cal.yaml
+          nested: {a: b}
+        handlers: []
+        """)
+    profile = load_profile(str(path))
+    assert profile.inputs.get("jadual") == "cal.yaml"
+    assert profile.inputs.get("nested") == {"a": "b"}
+    assert profile.inputs.get("missing") is None
+    # Framework keys answer through get() too.
+    assert profile.inputs.get("template") == "template.xlsx"
+
+
+def test_extra_input_must_be_a_string_or_mapping(tmp_path):
+    path = write_profile(tmp_path, """
+        profile: p
+        inputs:
+          template: template.xlsx
+          pages: 35
+        handlers: []
+        """)
+    with pytest.raises(ProfileError) as exc:
+        load_profile(str(path))
+    assert "inputs.pages" in str(exc.value)
+    assert "string or a mapping" in str(exc.value)
+
+
+def test_empty_extra_input_string_is_an_error(tmp_path):
+    path = write_profile(tmp_path, """
+        profile: p
+        inputs:
+          template: template.xlsx
+          jadual: ""
+        handlers: []
+        """)
+    with pytest.raises(ProfileError) as exc:
+        load_profile(str(path))
+    assert "inputs.jadual" in str(exc.value)
+
+
+def test_absent_extra_input_is_treated_as_unset(tmp_path):
+    path = write_profile(tmp_path, """
+        profile: p
+        inputs:
+          template: template.xlsx
+          jadual:
+        handlers: []
+        """)
+    profile = load_profile(str(path))
+    assert profile.inputs.get("jadual") is None
 
 
 # --- params validation (each handler validates its own params) -------------

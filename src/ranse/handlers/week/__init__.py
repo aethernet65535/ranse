@@ -11,8 +11,8 @@ from datetime import datetime, timedelta
 
 from ... import _REPO_ROOT
 from ...core.refs import _resolve_path
+from ...inputs.calendar import load_jadual_config
 from ...inputs.timetable import load_schedule
-from ...inputs.yaml import load_jadual_config
 from ...model import Week
 from ..base import Context
 
@@ -140,11 +140,12 @@ class WeekResolver:
         ctx.start_date = _sunday_of(raw_date).replace(
             hour=0, minute=0, second=0, microsecond=0)
 
-        # --- Week number / siri from jadual-minggu.yaml ---
+        # --- Week number / siri from the calendar file ---
         jadual_cfg = None
         jadual_path = None
-        if inputs.jadual:
-            jadual_path = _resolve_path(inputs.jadual, bases)
+        jadual_input = inputs.get("jadual")
+        if jadual_input:
+            jadual_path = _resolve_path(jadual_input, bases)
             if not os.path.isfile(jadual_path):
                 print(f"Error: file not found: {jadual_path}",
                       file=sys.stderr)
@@ -154,10 +155,12 @@ class WeekResolver:
                                 runtime.get("minggu"))
 
         # --- Timetable source: an explicit input wins, else siri from the week ---
-        if inputs.timetable:
-            tt_path = _resolve_path(inputs.timetable, bases)
-        elif inputs.csv:
-            tt_path = _resolve_path(inputs.csv, bases)
+        timetable_input = inputs.get("timetable")
+        csv_input = inputs.get("csv")
+        if timetable_input:
+            tt_path = _resolve_path(timetable_input, bases)
+        elif csv_input:
+            tt_path = _resolve_path(csv_input, bases)
         elif ctx.week is not None and ctx.week.siri is not None:
             tt_path = siri_to_timetable(jadual_cfg, ctx.week.siri)
         else:
