@@ -176,7 +176,8 @@ def test_a_plugin_imports_only_the_framework_and_itself():
 # 2. vocabulary neutrality (decision 6)
 # ---------------------------------------------------------------------------
 
-# The old Malay vocabulary, in full (see PLAN.md, the anglicization scope).
+# The old Malay vocabulary, in full — the language the business used to be
+# written in, and the language of the frozen artifacts (see S9).
 _MALAY_WORDS = (
     "jadual", "minggu", "cuti", "siri", "tingkatan", "hari", "waktu",
     "sekolah", "murid", "guru", "kelas", "rancangan", "pengajaran",
@@ -260,12 +261,12 @@ def test_every_mirror_exemption_is_used_and_lives_in_a_plugin():
 
 def test_the_word_lists_keep_the_whole_malay_set():
     # A guard on the word list itself: all seven Malay day names and the
-    # words PLAN.md fixed must stay in the scan.
+    # words the scan was written around must stay in the list.
     for word in ("jadual", "minggu", "cuti", "siri", "tingkatan",
                  "Ahad", "Isnin", "Selasa", "Rabu", "Khamis", "Jumaat",
                  "Sabtu"):
         assert word.lower() in _MALAY_WORDS, f"{word} left the word list"
-    # DSKP / ERPH are the business itself: never scanned (PLAN.md).
+    # DSKP / ERPH are the business itself: never scanned (S9).
     assert "dskp" not in _MALAY_WORDS and "erph" not in _MALAY_WORDS
 
 
