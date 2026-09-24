@@ -30,6 +30,7 @@ A reader may also add a `ranse <name>` subcommand of its own:
 |---|---|
 | [`dskp/`](dskp/) | `ranse dskp` — parse a DSKP txt/pdf into structured JSON |
 
-The spec is `{"name", "help", "add_arguments", "run"}`, collected into
-`SUBCOMMANDS` (`inputs/__init__.py`); `cli.py` adds and dispatches it without
-knowing what it does.
+The spec is `{"name", "help", "add_arguments", "run"}`; the readers that
+ship one are registered in `_READERS` (`inputs/__init__.py`) and collected
+by `inputs.subcommands()`; `cli.py` adds and dispatches them without
+knowing what they do.

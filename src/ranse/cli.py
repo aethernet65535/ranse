@@ -16,18 +16,20 @@ from .core.xlsx import Workbook
 from .errors import RanseError
 from .handlers.base import Context
 from .handlers.registry import build_handlers, cli_options, required_sheets
-from .inputs import SUBCOMMANDS
+from .inputs import subcommands
 from .inputs.yaml import load_profile, resolve_template
 
 # The subcommands the framework itself provides; every other one is
-# declared by the reader that owns it (`inputs/__init__.py`).
+# declared by the reader that owns it (`inputs.subcommands()`).
 _COMMANDS = ("fill", "write")
-_SUBCOMMANDS = {spec["name"]: spec for spec in SUBCOMMANDS}
 _PROFILE_HELP = "Path to the profile YAML (inputs + handlers)"
 
 
 def main(argv=None):
-    parser = _build_parser()
+    # Reader-declared subcommands are collected here (not at import time)
+    # so `import ranse.cli` never pulls a reader's parser stack in.
+    specs = {spec["name"]: spec for spec in subcommands()}
+    parser = _build_parser(specs)
     args = parser.parse_args(argv)
 
     try:
@@ -36,14 +38,14 @@ def main(argv=None):
         elif args.command == "write":
             _run_write(args)
         else:
-            _SUBCOMMANDS[args.command]["run"](args, parser)
+            specs[args.command]["run"](args, parser)
     except RanseError as e:
         print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)
 
 
-def _build_parser():
-    names = list(_COMMANDS) + [spec["name"] for spec in SUBCOMMANDS]
+def _build_parser(specs):
+    names = list(_COMMANDS) + list(specs)
     parser = argparse.ArgumentParser(
         prog="ranse",
         description="Fill spreadsheet templates in place, driven by a profile")
@@ -63,7 +65,7 @@ def _build_parser():
                        help="Cell to write, e.g. SHEET!B3 or SHEET!B3:C3")
     write.add_argument("value", help="Value to write (written as text)")
 
-    for spec in SUBCOMMANDS:
+    for spec in specs.values():
         spec["add_arguments"](
             subparsers.add_parser(spec["name"], help=spec["help"]))
 
@@ -79,7 +81,7 @@ def _run_write(args):
     profile = load_profile(args.profile)
     ctx = Context(profile=profile)
     _resolve_phase(build_handlers(profile.handlers), ctx)
-    template = resolve_template(profile, ctx.week.minggu if ctx.week else None)
+    template = resolve_template(profile, ctx.template_vars)
     wb = Workbook.open(template)
     wb.write(args.ref, args.value)
     wb.save()
@@ -111,7 +113,7 @@ def _run_fill(parser, args):
     _resolve_phase(handlers, ctx)
 
     # --- Which workbook is this week's? (profile input; {week} patterns) ---
-    template = resolve_template(profile, ctx.week.minggu if ctx.week else None)
+    template = resolve_template(profile, ctx.template_vars)
     wb = Workbook.open(template)
     ctx.workbook = wb
 
@@ -137,10 +139,25 @@ def _run_fill(parser, args):
 
 
 def _require_something_to_do(parser, handlers, ctx):
-    """Error when no input was read and no filler can run without one."""
-    if ctx.schedule is not None:
-        return
-    if any(not getattr(handler, "needs_schedule", False)
-           for _, handler in handlers if handler.phase == "fill"):
-        return
-    parser.error("nothing to do: every filler needs a timetable")
+    """Fail fast when no fill handler could write anything.
+
+    A filler declares what it cannot work without as ``requires`` — names
+    of context values the resolvers publish. The orchestrator only checks
+    that each declared name is set; the names are the handlers' own
+    vocabulary and are never interpreted here. Fillers with unmet
+    requirements simply no-op (their own report lines say why), exactly
+    like before, unless *every* filler is blocked.
+    """
+    fillers = [handler for _, handler in handlers if handler.phase == "fill"]
+    blocked = []
+    for handler in fillers:
+        missing = [name for name in getattr(handler, "requires", ())
+                   if getattr(ctx, name, None) is None]
+        if missing:
+            blocked.append(missing)
+    if len(blocked) == len(fillers):
+        needed = sorted({name for missing in blocked for name in missing})
+        parser.error(
+            "nothing to do: "
+            + ("no fill handler is configured" if not needed
+               else "every filler needs: " + ", ".join(needed)))

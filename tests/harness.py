@@ -163,6 +163,9 @@ _PACKAGE_CANDIDATES = (
     "ranse.handlers.fixed_cells",
     "ranse.handlers.dskp",
     "ranse.handlers.registry",
+    "ranse.handlers.base",
+    "ranse.inputs",
+    "ranse.cli",
 )
 def fn(name):
     """Return ``name`` from the ranse package (src/ranse), or fail loudly."""

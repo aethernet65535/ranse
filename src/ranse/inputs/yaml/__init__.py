@@ -130,14 +130,20 @@ def _input_bases(profile):
     return [profile.base_dir, os.getcwd(), _REPO_ROOT]
 
 
-def resolve_template(profile, week):
+def resolve_template(profile, template_vars=None):
     """Pick the workbook to fill (decision 10 + ``{week}`` patterns).
+
+    ``template_vars`` is what the resolvers published into
+    ``ctx.template_vars``; ``{week}`` inside ``inputs.template`` and the
+    ``inputs.templates`` override key are read from its ``"week"`` value —
+    the framework never derives a week number itself.
 
     Order: ``inputs.templates[week]`` → ``inputs.template`` with ``{week}``
     substituted. A pattern may contain glob wildcards; it must match exactly
     one existing workbook, otherwise the error lists the candidates and
     points at ``inputs.templates``.
     """
+    week = (template_vars or {}).get("week")
     inputs = profile.inputs
     override = inputs.templates.get(str(week)) if week is not None else None
     raw = override or inputs.template

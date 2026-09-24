@@ -23,6 +23,10 @@ class Context:
     ``schedule``   the input a resolver read for the fillers (or None);
     ``week``       resolved ``Week`` (or None when no calendar is used);
     ``start_date`` the week start a resolver resolved (or None);
+    ``template_vars`` values a resolver published for the ``{…}``
+                   placeholders in ``inputs.template`` (a resolver that
+                   knows the week number sets ``{"week": n}``); the
+                   framework substitutes them and never guesses one;
     ``params``     params of the handler currently running (set per handler
                    by the orchestrator);
     ``runtime``    values of the CLI options the handlers declared, keyed by
@@ -34,13 +38,18 @@ class Context:
     ``cli_options``      the ``ranse fill`` options it needs (docs/DESIGN.md
                          S3.4);
     ``required_sheets``  workbook sheets that must exist before any fill;
-    ``needs_schedule``   True when it cannot work without ``schedule``.
+    ``requires``         names of context values this filler cannot work
+                         without (e.g. ``("schedule",)``). The orchestrator
+                         only checks that each declared name is set — the
+                         names themselves are the handlers' own vocabulary,
+                         the framework never interprets them.
     """
     profile: Profile
     workbook: Optional[Workbook] = None
     schedule: Optional[Schedule] = None
     week: Optional[Week] = None
     start_date: Optional[date] = None
+    template_vars: dict = field(default_factory=dict)
     params: dict = field(default_factory=dict)
     runtime: dict = field(default_factory=dict)
     report: list = field(default_factory=list)

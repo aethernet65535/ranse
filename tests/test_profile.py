@@ -228,14 +228,14 @@ def _week_profile(tmp_path, template, templates=None):
 def test_template_placeholder_is_filled_from_the_week(tmp_path):
     (tmp_path / "M33.xlsx").write_bytes(b"x")
     profile = _week_profile(tmp_path, "M{week}.xlsx")
-    assert resolve_template(profile, 33) == str(tmp_path / "M33.xlsx")
+    assert resolve_template(profile, {"week": 33}) == str(tmp_path / "M33.xlsx")
 
 
 def test_template_pattern_searches_subdirectories(tmp_path):
     (tmp_path / "07. TMP-NEW").mkdir()
     (tmp_path / "07. TMP-NEW" / "M33.xlsx").write_bytes(b"x")
     profile = _week_profile(tmp_path, "*/M{week}.xlsx")
-    assert resolve_template(profile, 33) == str(
+    assert resolve_template(profile, {"week": 33}) == str(
         tmp_path / "07. TMP-NEW" / "M33.xlsx")
 
 
@@ -244,7 +244,7 @@ def test_templates_map_overrides_the_pattern(tmp_path):
     (tmp_path / "revisi.xlsx").write_bytes(b"x")
     profile = _week_profile(tmp_path, "M{week}.xlsx",
                             {"33": str(tmp_path / "revisi.xlsx")})
-    assert resolve_template(profile, 33) == str(tmp_path / "revisi.xlsx")
+    assert resolve_template(profile, {"week": 33}) == str(tmp_path / "revisi.xlsx")
 
 
 def test_ambiguous_pattern_lists_the_candidates(tmp_path):
@@ -253,7 +253,7 @@ def test_ambiguous_pattern_lists_the_candidates(tmp_path):
         (tmp_path / sub / "M18.xlsx").write_bytes(b"x")
     profile = _week_profile(tmp_path, "*/M{week}.xlsx")
     with pytest.raises(ProfileError) as exc:
-        resolve_template(profile, 18)
+        resolve_template(profile, {"week": 18})
     message = str(exc.value)
     assert "matches 2 workbooks" in message
     assert "06. JUNE" in message and "07. TMP-NEW" in message
@@ -263,14 +263,14 @@ def test_ambiguous_pattern_lists_the_candidates(tmp_path):
 def test_pattern_without_a_known_week_is_an_error(tmp_path):
     profile = _week_profile(tmp_path, "M{week}.xlsx")
     with pytest.raises(ProfileError) as exc:
-        resolve_template(profile, None)
+        resolve_template(profile, {})
     assert "{week}" in str(exc.value)
 
 
 def test_missing_workbook_is_an_error(tmp_path):
     profile = _week_profile(tmp_path, "M{week}.xlsx")
     with pytest.raises(ProfileError) as exc:
-        resolve_template(profile, 34)
+        resolve_template(profile, {"week": 34})
     assert "file not found" in str(exc.value)
     assert "M34.xlsx" in str(exc.value)
 
@@ -278,7 +278,7 @@ def test_missing_workbook_is_an_error(tmp_path):
 def test_pattern_that_matches_nothing_is_an_error(tmp_path):
     profile = _week_profile(tmp_path, "*/M{week}.xlsx")
     with pytest.raises(ProfileError) as exc:
-        resolve_template(profile, 34)
+        resolve_template(profile, {"week": 34})
     assert "no workbook matched" in str(exc.value)
     assert "week 34" in str(exc.value)
 
@@ -286,7 +286,7 @@ def test_pattern_that_matches_nothing_is_an_error(tmp_path):
 def test_plain_template_still_needs_no_week(tmp_path):
     (tmp_path / "template.xlsx").write_bytes(b"x")
     profile = _week_profile(tmp_path, "template.xlsx")
-    assert resolve_template(profile, None) == str(tmp_path / "template.xlsx")
+    assert resolve_template(profile, {}) == str(tmp_path / "template.xlsx")
 
 
 def test_templates_map_is_loaded_with_string_keys(tmp_path):

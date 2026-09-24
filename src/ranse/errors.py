@@ -14,9 +14,5 @@ class ProfileError(RanseError):
     """Invalid or unknown profile configuration."""
 
 
-class WeekError(RanseError):
-    """Week/calendar resolution failure."""
-
-
 class SheetError(RanseError):
     """Invalid workbook/sheet/cell reference or sheet XML."""

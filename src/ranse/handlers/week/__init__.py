@@ -153,6 +153,10 @@ class WeekResolver:
             jadual_cfg = load_jadual_config(jadual_path)
         ctx.week = resolve_week(jadual_cfg, ctx.start_date,
                                 runtime.get("minggu"))
+        if ctx.week is not None:
+            # Publish the number for the framework's {week} placeholder —
+            # this is where the domain field name stops being visible.
+            ctx.template_vars["week"] = ctx.week.minggu
 
         # --- Timetable source: an explicit input wins, else siri from the week ---
         timetable_input = inputs.get("timetable")
