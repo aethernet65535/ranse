@@ -72,7 +72,11 @@ def _profile_handlers(argv):
 
 
 def _profile_argument(argv):
-    """The value of ``--profile`` in argv, or None (only `fill` takes one)."""
+    """The value of ``--profile`` in argv, or None (only `fill` takes one).
+
+    An abbreviated form (argparse also accepts ``--prof``) is not matched
+    here, so it simply falls back to the every-handler option list.
+    """
     if not argv or argv[0] != "fill":
         return None
     for i, token in enumerate(argv):

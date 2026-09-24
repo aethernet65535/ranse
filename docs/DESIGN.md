@@ -309,11 +309,13 @@ consequences are deliberate:
 - an option belonging to a handler the profile does **not** name is a usage
   error (exit 2), not a silently ignored flag — a flag nobody will read is a
   mistake worth stopping for;
-- `ranse fill --help` without a profile — and a profile path that cannot be
-  opened, which the run itself reports in its own words — lists every
-  discovered handler's options instead, one section each. The parser has to
-  exist before a profile is known, so that is the fallback rather than an
-  error.
+- when there is no profile to read — a bare `ranse fill --help`, or a
+  `--profile` path that cannot be opened — the help lists every discovered
+  handler's options instead, one section each. The parser has to exist before
+  a profile is known, so that is the fallback rather than an error; the path
+  the run cannot open is still reported by the run itself, in its own words;
+- a profile that *is* readable but malformed reports its own `Error: …`
+  (exit 1) there and then, exactly as it would on a run.
 
 There is deliberately **no `--xlsx`**: the workbook is a profile input, so a
 mistake in the shell cannot overwrite the wrong file (D10).

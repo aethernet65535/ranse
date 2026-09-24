@@ -233,3 +233,15 @@ def test_profile_handlers_peek_only_reads_a_fill_profile(tmp_path):
     assert profile_handlers(["--help"]) is None
     # An unopenable path is left to the run, which reports it itself.
     assert profile_handlers(["fill", "--profile", "/nowhere/p.yaml"]) is None
+
+
+def test_a_malformed_profile_reports_its_own_error(tmp_path, capsys):
+    # Readable but malformed: the peek does not turn that into a fallback
+    # option list — the CLI reports it the way a run would (exit 1).
+    bad = tmp_path / "bad.yaml"
+    bad.write_text("profile: p\nhandlers: []\n", encoding="utf-8")
+    with pytest.raises(SystemExit) as exc:
+        main(["fill", "--profile", str(bad), "--help"])
+    assert exc.value.code == 1
+    err = capsys.readouterr().err
+    assert err.startswith("Error: ") and "inputs" in err
