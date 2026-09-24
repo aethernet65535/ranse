@@ -70,7 +70,7 @@ In short:
 
 - records are sorted by `start`; the chosen record is the last one whose
   `start ≤ date`;
-- `--minggu N` overrides the record's week number but not the timetable
+- `--week N` overrides the record's week number but not the timetable
   lookup chain;
 - `siri` precedence: the record's own `siri:` → `jadual_siri[minggu]`;
 - timetable precedence: `inputs.timetable` / `inputs.csv` in the profile →

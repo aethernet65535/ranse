@@ -13,7 +13,7 @@ import yaml
 from ...errors import ProfileError
 
 
-def load_jadual_config(path):
+def load_calendar_config(path):
     """Load jadual-minggu.yaml: {jadual: {siri: path}, jadual_siri: {minggu: siri},
     minggu: [{start, minggu, cuti, siri}...]}"""
     with open(path, encoding="utf-8") as f:

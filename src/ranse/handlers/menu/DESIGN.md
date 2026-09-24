@@ -48,7 +48,7 @@ For each day, up to eight rows are written after the header row (`header_row +
 | D | period start time + day-part suffix | `Lesson.start` |
 | E | period end time + day-part suffix | `Lesson.end` |
 | F | subject name | `context.subjects` lookup, else the raw code |
-| G | tingkatan, written as a **number** | `int(Lesson.tingkatan)` |
+| G | form, written as a **number** | `int(Lesson.form)` |
 
 The week's date is written **only** to `MENU!I6`, as an Excel date serial
 (`_date_to_excel`), for the Sunday the week starts on. Other day blocks have no
@@ -66,7 +66,7 @@ Two clearing rules keep a re-run honest:
 ## Merged lessons
 
 `merge_periods` (in `model.py`, so both `menu` and `dskp` share it) merges
-consecutive periods that have the same class, subject and tingkatan **and**
+consecutive periods that have the same class, subject and form **and**
 contiguous time (`entry.start == previous.end`). Two back-to-back Bahasa Cina
 periods therefore occupy one MENU row covering 07:40–09:00, and a gap in time
   ends a run even when the same lesson resumes (risk 4,

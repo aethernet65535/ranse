@@ -73,7 +73,7 @@ class MenuFiller:
                         (4, _time_with_suffix(entry.start)),
                         (5, _time_with_suffix(entry.end)),
                         (6, subject_map.get(entry.subject, entry.subject)),
-                        (7, int(entry.tingkatan)),
+                        (7, int(entry.form)),
                     ]
                     for col, val in cells:
                         sheet.write(_cell_ref(row, col), val)

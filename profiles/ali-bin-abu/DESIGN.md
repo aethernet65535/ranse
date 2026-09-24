@@ -44,7 +44,7 @@ context:
 
 | # | Handler | Phase | Why here |
 |---|---|---|---|
-| 1 | `week` | resolve | date → minggu/siri → timetable path ([rules](../../src/ranse/handlers/week/DESIGN.md)) |
+| 1 | `week` | resolve | date → week number/series → timetable path ([rules](../../src/ranse/handlers/week/DESIGN.md)) |
 | 2 | `menu` | fill | writes the week's time data to the MENU sheet ([rules](../../src/ranse/handlers/menu/DESIGN.md)) |
 | 3 | `fixed_cells` | fill | writes the teacher's name into `MENU!B3:C3` ([rules](../../src/ranse/handlers/fixed_cells/DESIGN.md)) |
 | 4 | `dskp` | fill | writes the DSKP standards to the day sheets ([rules](../../src/ranse/handlers/dskp/DESIGN.md)) |

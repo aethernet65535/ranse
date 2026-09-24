@@ -24,7 +24,7 @@ Source formats (txt / JSON / pdf): [`inputs/dskp/DESIGN.md`](../../inputs/dskp/D
     entries:                              # manual entries, written first
       - {sheet: ISNIN, class: 1, file: t1.json,
          selection: [1, 1, 1], col_start: 2}
-    file: "assets/bc-dskp/t{tingkatan}.txt"  # source for the automatic pair
+    file: "assets/bc-dskp/t{form}.txt"  # source for the automatic pair
     match_codes: [BC]                     # subject codes in the timetable xlsx
     match_names: ["BAHASA CINA", "华文"]   # matched when reading a CSV
     cs: 1                                 # which content standard inside a section
@@ -48,7 +48,7 @@ cell is touched.
 - **Automatic mode** (`mode: auto`, the default): for every merged lesson of a
   matched subject, two **parent-level** sections (`X.0` headings) are written
   side by side, sliding one section forward per week:
-  `idx = (minggu - 1) % (len(sections) - 1)` → `keys[idx]`, `keys[idx+1]`.
+  `idx = (number - 1) % (len(sections) - 1)` → `keys[idx]`, `keys[idx+1]`.
   When there is no next section the pair wraps back to the first two, so a
   week number alone always determines the content:
 
@@ -64,7 +64,7 @@ cell is touched.
 - **Static entries** (`params.entries`) are written first, then automatic
   entries are appended, so on the same cell the automatic entry wins
   (risk 9, [fill order](../README.md#fill-order-risk-9)).
-- **`file`** accepts `{tingkatan}` (`t1.txt`, `t2.txt`, …), a per-tingkatan
+- **`file`** accepts `{form}` (`t1.txt`, `t2.txt`, …), a per-form
   map, or nothing — then the built-in `DSKP_FILES` table is used
   ([formats](../../inputs/dskp/DESIGN.md)).
 - **Warnings, not errors**: a missing DSKP file, a file with no usable parent

@@ -21,7 +21,7 @@ def test_parse_class_code_multi_letter_subject():
     assert _parse_class_code("MATH-5C") == ("MATH", "5", "C")
 
 
-def test_parse_class_code_two_digit_tingkatan():
+def test_parse_class_code_two_digit_form():
     assert _parse_class_code("BC-10A") == ("BC", "10", "A")
 
 

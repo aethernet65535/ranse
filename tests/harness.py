@@ -39,7 +39,7 @@ TEMPLATE_XLSX = REPO_ROOT / "assets" / "ALI BIN ABU" / "12. ERPH" / "template.xl
 TIMETABLE_DIR = REPO_ROOT / "assets" / "timetable"
 DSKP_DIR = REPO_ROOT / "assets" / "bc-dskp"
 PROFILE_YAML = REPO_ROOT / "profiles" / "ali-bin-abu" / "profile.yaml"
-JADUAL_YAML = REPO_ROOT / "config" / "jadual-minggu" / "jadual-minggu.yaml"
+CALENDAR_YAML = REPO_ROOT / "config" / "jadual-minggu" / "jadual-minggu.yaml"
 
 # Golden cases: two normal weeks …
 GOLDEN_CASES = {
@@ -58,7 +58,7 @@ def assets_available():
             and TIMETABLE_DIR.is_dir()
             and DSKP_DIR.is_dir()
             and PROFILE_YAML.is_file()
-            and JADUAL_YAML.is_file())
+            and CALENDAR_YAML.is_file())
 
 
 # ---------------------------------------------------------------------------
@@ -85,7 +85,7 @@ def run_fill(xlsx_path, date, extra_args=()):
     with tempfile.TemporaryDirectory() as tmp:
         raw = yaml.safe_load(PROFILE_YAML.read_text(encoding="utf-8"))
         raw["inputs"]["template"] = str(xlsx_path)
-        raw["inputs"]["jadual"] = str(JADUAL_YAML)
+        raw["inputs"]["jadual"] = str(CALENDAR_YAML)
         # The shipped profile's template is a {week} pattern; a per-week
         # override would beat the temp copy, so drop it.
         raw["inputs"].pop("templates", None)

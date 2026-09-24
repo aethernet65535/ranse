@@ -1,8 +1,9 @@
-"""Week/date resolution: date → minggu/siri → timetable path.
+"""Week/date resolution: date → week number/series → timetable path.
 
-Business rules (cuti weeks, missing minggu, dates outside the calendar) live
-here in the handler layer, never in core (docs/DESIGN.md decision 6). Error
-reporting keeps the handler style: print to stderr + exit (decision 13).
+Business rules (holiday weeks, missing week numbers, dates outside the
+calendar) live here in the handler layer, never in core (docs/DESIGN.md
+decision 6). Error reporting keeps the handler style: print to stderr +
+exit (decision 13).
 """
 
 import os
@@ -10,7 +11,7 @@ import sys
 from datetime import datetime, timedelta
 
 from ...core.refs import _resolve_path
-from ...inputs.calendar import load_jadual_config
+from ...inputs.calendar import load_calendar_config
 from ...inputs.timetable import load_period_times, load_schedule
 from ...inputs.yaml import input_bases
 from ...model import Week
@@ -18,32 +19,32 @@ from ..base import Context
 
 
 def _sunday_of(dt):
-    """Return the Sunday of the week containing dt (school weeks start Ahad)."""
+    """Return the Sunday of the week containing dt (school weeks start Sunday)."""
     return dt - timedelta(days=(dt.weekday() + 1) % 7)
 
 
-def resolve_week(jadual_cfg, start_date, override=None):
-    """Resolve start_date → Week(minggu, siri) (or None if no config).
+def resolve_week(calendar_cfg, start_date, override=None):
+    """Resolve start_date → Week(number, series) (or None if no config).
 
     Each record takes effect from its `start` date (a Sunday) until the next
-    record. Holiday weeks (`cuti`) and records without a minggu number are
+    record. Holiday weeks (`cuti`) and records without a `minggu` number are
     hard errors — a wrong week would silently fill the wrong DSKP content.
     """
-    if jadual_cfg is None:
+    if calendar_cfg is None:
         if override is None:
             return None
-        return Week(minggu=int(override), siri=None)
+        return Week(number=int(override), series=None)
 
     def _as_date(value):
         return value.date() if isinstance(value, datetime) else value
 
     records = sorted(
-        (e for e in jadual_cfg.get("minggu") or []
+        (e for e in calendar_cfg.get("minggu") or []
          if isinstance(e, dict) and e.get("start")),
         key=lambda e: _as_date(e["start"]))
 
     if not records:
-        print("Error: jadual config contains no dated minggu records",
+        print("Error: the calendar config contains no dated 'minggu' records",
               file=sys.stderr)
         sys.exit(1)
 
@@ -57,7 +58,7 @@ def resolve_week(jadual_cfg, start_date, override=None):
 
     if chosen is None:
         print(f"Error: {d} is earlier than the first record in the "
-              f"jadual config ({_as_date(records[0]['start'])})",
+              f"calendar config ({_as_date(records[0]['start'])})",
               file=sys.stderr)
         sys.exit(1)
 
@@ -66,41 +67,41 @@ def resolve_week(jadual_cfg, start_date, override=None):
               f"(check --date)", file=sys.stderr)
         sys.exit(1)
 
-    minggu = override if override is not None else chosen.get("minggu")
-    if minggu is None:
-        print(f"Error: jadual record starting {_as_date(chosen['start'])} "
+    number = override if override is not None else chosen.get("minggu")
+    if number is None:
+        print(f"Error: calendar record starting {_as_date(chosen['start'])} "
               f"has no 'minggu' number", file=sys.stderr)
         sys.exit(1)
-    minggu = int(minggu)
+    number = int(number)
 
-    siri = chosen.get("siri")
-    if siri is None:
-        per_minggu = jadual_cfg.get("jadual_siri") or {}
-        siri = per_minggu.get(minggu, per_minggu.get(str(minggu)))
+    series = chosen.get("siri")
+    if series is None:
+        series_by_week = calendar_cfg.get("jadual_siri") or {}
+        series = series_by_week.get(number, series_by_week.get(str(number)))
 
-    return Week(minggu=minggu, siri=siri)
+    return Week(number=number, series=series)
 
 
-def siri_to_timetable(jadual_cfg, siri):
-    """siri number → timetable file path (registered under 'jadual:')."""
-    jadual_map = jadual_cfg.get("jadual") or {}
-    path = jadual_map.get(siri, jadual_map.get(str(siri)))
+def series_to_timetable(calendar_cfg, series):
+    """series number → timetable file path (registered under 'jadual:')."""
+    timetable_map = calendar_cfg.get("jadual") or {}
+    path = timetable_map.get(series, timetable_map.get(str(series)))
     if not path:
-        print(f"Error: siri {siri} has no file registered under 'jadual:' "
-              f"in the jadual config", file=sys.stderr)
+        print(f"Error: series {series} has no file registered under 'jadual:' "
+              f"in the calendar config", file=sys.stderr)
         sys.exit(1)
     # Paths inside the calendar file resolve next to the file first.
     return _resolve_path(
-        path, input_bases(first=jadual_cfg.get("_config_dir")))
+        path, input_bases(first=calendar_cfg.get("_config_dir")))
 
 
 class WeekResolver:
-    """Phase-one resolver: date → minggu/siri → timetable path.
+    """Phase-one resolver: date → week number/series → timetable path.
 
-    Reads the profile's ``inputs:`` (jadual calendar, optional timetable /
-    csv override) plus the runtime ``--date`` / ``--minggu`` overrides, and
-    fills ``ctx.start_date``, ``ctx.week`` and ``ctx.schedule`` — it never
-    writes a cell.
+    Reads the profile's ``inputs:`` (the school-week calendar, optional
+    timetable / csv override) plus the runtime ``--date`` / ``--week``
+    overrides, and fills ``ctx.start_date``, ``ctx.week`` and
+    ``ctx.schedule`` — it never writes a cell.
     """
 
     name = "week"
@@ -112,7 +113,7 @@ class WeekResolver:
             "help": "Week start date YYYY-MM-DD "
                     "(default: the Sunday of the current week)",
         }),
-        "minggu": ("--minggu", {
+        "week": ("--week", {
             "type": int,
             "help": "Override the week number "
                     "(default: resolved from --date)",
@@ -128,7 +129,7 @@ class WeekResolver:
         inputs = ctx.profile.inputs
         bases = input_bases(ctx.profile)
 
-        # --- Resolve the week date (weeks start on Sunday/Ahad) ---
+        # --- Resolve the week date (weeks start on Sunday) ---
         if runtime.get("date"):
             try:
                 raw_date = datetime.strptime(runtime["date"], "%Y-%m-%d")
@@ -141,41 +142,41 @@ class WeekResolver:
         ctx.start_date = _sunday_of(raw_date).replace(
             hour=0, minute=0, second=0, microsecond=0)
 
-        # --- Week number / siri from the calendar file ---
-        jadual_cfg = None
-        jadual_path = None
-        jadual_input = inputs.get("jadual")
-        if jadual_input:
-            jadual_path = _resolve_path(jadual_input, bases)
-            if not os.path.isfile(jadual_path):
-                print(f"Error: file not found: {jadual_path}",
+        # --- Week number / series from the calendar file ---
+        calendar_cfg = None
+        calendar_path = None
+        calendar_input = inputs.get("jadual")
+        if calendar_input:
+            calendar_path = _resolve_path(calendar_input, bases)
+            if not os.path.isfile(calendar_path):
+                print(f"Error: file not found: {calendar_path}",
                       file=sys.stderr)
                 sys.exit(1)
-            jadual_cfg = load_jadual_config(jadual_path)
-        ctx.week = resolve_week(jadual_cfg, ctx.start_date,
-                                runtime.get("minggu"))
+            calendar_cfg = load_calendar_config(calendar_path)
+        ctx.week = resolve_week(calendar_cfg, ctx.start_date,
+                                runtime.get("week"))
         if ctx.week is not None:
             # Publish the number for the framework's {week} placeholder —
             # this is where the domain field name stops being visible.
-            ctx.template_vars["week"] = ctx.week.minggu
+            ctx.template_vars["week"] = ctx.week.number
 
-        # --- Timetable source: an explicit input wins, else siri from the week ---
+        # --- Timetable source: an explicit input wins, else the week's series ---
         timetable_input = inputs.get("timetable")
         csv_input = inputs.get("csv")
         if timetable_input:
             tt_path = _resolve_path(timetable_input, bases)
         elif csv_input:
             tt_path = _resolve_path(csv_input, bases)
-        elif ctx.week is not None and ctx.week.siri is not None:
-            tt_path = siri_to_timetable(jadual_cfg, ctx.week.siri)
+        elif ctx.week is not None and ctx.week.series is not None:
+            tt_path = series_to_timetable(calendar_cfg, ctx.week.series)
         else:
             tt_path = None
 
-        if (jadual_cfg is not None and not tt_path
-                and ctx.week is not None and ctx.week.siri is None):
-            print(f"Error: minggu {ctx.week.minggu} has no siri "
-                  f"configured yet (fill in jadual_siri in "
-                  f"{jadual_path}, or set inputs.timetable / inputs.csv "
+        if (calendar_cfg is not None and not tt_path
+                and ctx.week is not None and ctx.week.series is None):
+            print(f"Error: week {ctx.week.number} has no series configured "
+                  f"yet (fill in jadual_siri in "
+                  f"{calendar_path}, or set inputs.timetable / inputs.csv "
                   f"in the profile)", file=sys.stderr)
             sys.exit(1)
 
@@ -199,6 +200,7 @@ class WeekResolver:
                 period_times = load_period_times(pt_path)
             ctx.schedule = load_schedule(tt_path, period_times=period_times)
         if ctx.week is not None:
-            siri_txt = ctx.week.siri if ctx.week.siri is not None else "-"
-            print(f"Week: minggu {ctx.week.minggu}, siri {siri_txt}"
+            series_txt = (ctx.week.series
+                          if ctx.week.series is not None else "-")
+            print(f"Week {ctx.week.number}, series {series_txt}"
                   + (f" ({tt_path})" if tt_path else ""))

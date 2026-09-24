@@ -17,7 +17,7 @@ inputs:
   # whole year and the CLI stays week-agnostic:
   #   ranse fill --profile profiles/ali-bin-abu/profile.yaml --date 2026-09-20
   template: "assets/ALI BIN ABU/12. ERPH/2026/*/M{week}.xlsx"
-  # School calendar: date → minggu/siri → timetable file.
+  # School calendar: date → week number/series → timetable file.
   jadual: "config/jadual-minggu/jadual-minggu.yaml"
   # Escape hatch: if {week} ever matches more than one workbook (e.g. an
   # old week copied into another folder) or a file is named/placed
@@ -25,8 +25,8 @@ inputs:
   # candidates and suggests this entry.
   # templates:
   #   25: "assets/ALI BIN ABU/12. ERPH/2026/07. TMP-NEW/M25.xlsx"
-  # Optional explicit timetable source; when omitted the siri of the week
-  # decides (jadual: → the file registered for that siri).
+  # Optional explicit timetable source; when omitted the week's series
+  # decides (jadual: → the file registered for that series).
   # timetable: "assets/timetable/jadual-waktu-2026-siri-7.xlsx"
   # csv: "assets/timetable/timetable.csv"
   # Period table (period → [start, end]); replaces the built-in one.
@@ -43,7 +43,7 @@ context:
     BI: "ENGLISH"
 
 handlers:
-  # Phase one (resolve): date → minggu/siri → timetable path.
+  # Phase one (resolve): date → week number/series → timetable path.
   - name: week
 
   # Phase two (fill): MENU layout, fixed cells, DSKP blocks.
@@ -59,7 +59,7 @@ handlers:
       # Static entries (params.entries) are written first, so the automatic
       # ones win on the same cell.
       mode: auto
-      file: "assets/bc-dskp/t{tingkatan}.txt"
+      file: "assets/bc-dskp/t{form}.txt"
       match_codes: [BC]
       match_names: ["BAHASA CINA", "华文"]
       cs: 1

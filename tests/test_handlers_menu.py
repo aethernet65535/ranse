@@ -12,7 +12,7 @@ Lesson = fn("Lesson")
 
 
 def _entry(start, end, **overrides):
-    fields = {"cls": "1E", "subject": "BC", "tingkatan": "1",
+    fields = {"cls": "1E", "subject": "BC", "form": "1",
               "start": start, "end": end}
     fields.update(overrides)
     return Lesson(**fields)
@@ -57,9 +57,9 @@ def test_no_merge_different_subject():
     assert [p for p, _ in merge_periods(day)] == [1, 2]
 
 
-def test_no_merge_different_tingkatan():
+def test_no_merge_different_form():
     day = {1: _entry("07:40", "08:20"),
-           2: _entry("08:20", "09:00", tingkatan="2")}
+           2: _entry("08:20", "09:00", form="2")}
     assert [p for p, _ in merge_periods(day)] == [1, 2]
 
 

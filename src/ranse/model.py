@@ -1,7 +1,7 @@
 """Domain model: lessons, schedules, weeks and the loaded profile.
 
 Deliberately *outside* core (docs/DESIGN.md S2): these types carry timetable / e-RPH
-semantics (day names, tingkatan, handler names) that the write-only workbook
+semantics (day names, form levels, handler names) that the write-only workbook
 engine must not know about. ``inputs`` produce them, ``handlers`` consume them.
 """
 
@@ -21,18 +21,17 @@ class Lesson:
     start: str
     end: str
     subject: str
-    tingkatan: str
+    form: str
 
 
 @dataclass
 class Schedule:
     """A week of lessons: ``{day_name: {period_number: Lesson}}``.
 
-    Day names are the Malay school days (``"Ahad"`` … ``"Sabtu"``). A
-    reader keeps every day the source carries; which days a template
-    actually has is declared once by the profile (``context.days``) and
-    used by the fillers (risk 10,
-    src/ranse/inputs/timetable/DESIGN.md).
+    Day names are the school-day labels the source carries (a reader
+    keeps every one of them); which days a template actually has is
+    declared once by the profile (``context.days``) and used by the
+    fillers (risk 10, src/ranse/inputs/timetable/DESIGN.md).
     """
 
     days: Dict[str, Dict[int, Lesson]] = field(default_factory=dict)
@@ -51,7 +50,7 @@ class Schedule:
 
 
 def merge_periods(day_schedule: Dict[int, Lesson]) -> List[Tuple[int, Lesson]]:
-    """Merge consecutive periods with the same class/subject/tingkatan.
+    """Merge consecutive periods with the same class/subject/form.
 
     Returns ``[(first_period, lesson_with_merged_end), …]`` in period order.
     A gap in time ends a run even when the lesson repeats
@@ -69,7 +68,7 @@ def merge_periods(day_schedule: Dict[int, Lesson]) -> List[Tuple[int, Lesson]]:
         entry = day_schedule[p]
         same = (entry.cls == buf_entry.cls
                 and entry.subject == buf_entry.subject
-                and entry.tingkatan == buf_entry.tingkatan
+                and entry.form == buf_entry.form
                 and entry.start == buf_entry.end)
         if same:
             buf_entry = replace(buf_entry, end=entry.end)
@@ -84,10 +83,10 @@ def merge_periods(day_schedule: Dict[int, Lesson]) -> List[Tuple[int, Lesson]]:
 
 @dataclass(frozen=True)
 class Week:
-    """A resolved school week: ``minggu`` number + optional ``siri``."""
+    """A resolved school week: ``number`` + optional ``series``."""
 
-    minggu: int
-    siri: Optional[int] = None
+    number: int
+    series: Optional[int] = None
 
 
 @dataclass(frozen=True)

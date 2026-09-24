@@ -108,7 +108,7 @@ shipped profile that is:
 | Option | Declared by | Description |
 |---|---|---|
 | `--date YYYY-MM-DD` | [`week`](src/ranse/handlers/week/DESIGN.md) | Week start (default: the Sunday of the current week; other days roll back to their Sunday) |
-| `--minggu N` | [`week`](src/ranse/handlers/week/DESIGN.md) | Override the week number (default: resolved from `--date`) |
+| `--week N` | [`week`](src/ranse/handlers/week/DESIGN.md) | Override the week number (default: resolved from `--date`) |
 | `--no-dskp-auto` | [`dskp`](src/ranse/handlers/dskp/DESIGN.md) | Skip that handler's automatic filling for this run |
 
 There is deliberately no `--xlsx`: the workbook is a profile input, so a
@@ -173,10 +173,10 @@ handlers:
 | Key | Description |
 |---|---|
 | `template` | **Required.** The workbook that gets filled in place. May contain `{week}` and glob wildcards |
-| `templates` | Optional `minggu → path` map; wins over `template` for those weeks |
+| `templates` | Optional `week number → path` map; wins over `template` for those weeks |
 | `jadual` | The week calendar data file (documented in [`config/jadual-minggu/DESIGN.md`](config/jadual-minggu/DESIGN.md)) |
-| `timetable` | Optional explicit timetable xlsx; wins over the siri lookup |
-| `csv` | Optional explicit timetable csv; wins over the siri lookup |
+| `timetable` | Optional explicit timetable xlsx; wins over the series lookup |
+| `csv` | Optional explicit timetable csv; wins over the series lookup |
 | `period_times` | Optional period table (period → `[start, end]`); replaces the built-in one (documented in [`config/period-times/DESIGN.md`](config/period-times/DESIGN.md)) |
 
 Relative paths are resolved against the profile's own directory, then the current directory, then the repo root (the last step only in a source checkout — an installed package has none) — so the shipped profile works no matter where you run it from.
@@ -203,7 +203,7 @@ An explicit, ordered list. Only built-in handlers can be named — an unknown na
 
 | Handler | Phase | What it does |
 |---|---|---|
-| `week` | resolve | date → week number/siri → timetable path (holiday weeks are an error) |
+| `week` | resolve | date → week number/series → timetable path (holiday weeks are an error) |
 | `menu` | fill | writes the week's time data to the MENU sheet |
 | `fixed_cells` | fill | writes `params.cells` — a list of `[sheet, range, value]` |
 | `dskp` | fill | writes the DSKP standard rows to the day sheets |

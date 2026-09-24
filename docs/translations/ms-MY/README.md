@@ -88,7 +88,7 @@ Dengan profil yang dihantar, itu bermakna:
 | Pilihan | Diisytiharkan oleh | Penerangan |
 |---|---|---|
 | `--date YYYY-MM-DD` | [`week`](../../../src/ranse/handlers/week/DESIGN.md) | Permulaan minggu (lalai: hari Ahad minggu semasa; hari lain dikembalikan ke Ahadnya) |
-| `--minggu N` | [`week`](../../../src/ranse/handlers/week/DESIGN.md) | Gantikan nombor minggu (lalai: diselesaikan daripada `--date`) |
+| `--week N` | [`week`](../../../src/ranse/handlers/week/DESIGN.md) | Gantikan nombor minggu (lalai: diselesaikan daripada `--date`) |
 | `--no-dskp-auto` | [`dskp`](../../../src/ranse/handlers/dskp/DESIGN.md) | Langkau pengisian automatik handler itu untuk jalan ini |
 
 Tiada `--xlsx` dengan sengaja: buku kerja ialah input profil, jadi kesilapan pada baris arahan tidak boleh menulis ganti fail yang salah.

@@ -5,7 +5,7 @@ format, [`inputs/README.md`](../README.md)). It is a pure input: it never
 touches the target workbook (decision 8,
 [`docs/DESIGN.md`](../../../../docs/DESIGN.md)).
 
-Loader: `load_jadual_config(path)` → dict. It validates only that a `minggu:`
+Loader: `load_calendar_config(path)` → dict. It validates only that a `minggu:`
 list exists (otherwise `ProfileError`, decision 13) and adds `_config_dir`
 so relative paths inside the file resolve next to it.
 

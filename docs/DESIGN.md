@@ -175,7 +175,7 @@ run without, e.g. `("schedule",)` — the orchestrator only checks presence,
 never interprets the names: they are the handlers' own vocabulary). A
 resolve-phase handler publishes values the framework substitutes by filling
 `ctx.template_vars` (the `{week}` placeholder in `inputs.template` is fed
-that way — the domain field name `Week.minggu` stops at the handler
+that way — the domain field name `Week.number` stops at the handler
 boundary).
 
 The shipped handlers and everything they compute are documented per handler in

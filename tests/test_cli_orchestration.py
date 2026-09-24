@@ -63,7 +63,7 @@ def test_no_fill_handler_is_reported():
 # --- template_vars published by the week resolver ---------------------------
 
 def test_week_resolver_publishes_the_week_for_the_template():
-    ctx = _ctx(runtime={"date": "2026-09-20", "minggu": 33})
+    ctx = _ctx(runtime={"date": "2026-09-20", "week": 33})
     WeekResolver().resolve(ctx)
     assert ctx.template_vars == {"week": 33}
 

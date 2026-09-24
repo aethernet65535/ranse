@@ -20,19 +20,19 @@ _DSKP_CONTENT_CACHE = {}
 DEFAULT_DAYS = ("Ahad", "Isnin", "Selasa", "Rabu", "Khamis")
 
 
-# {tingkatan} / {t} / {T} in the params' `file` → the lesson's tingkatan number
-_DSKP_TINGKATAN_PLACEHOLDER = re.compile(r"\{(?:tingkatan|t|T)\}")
+# {form} / {t} / {T} in the params' `file` → the lesson's form number
+_DSKP_FORM_PLACEHOLDER = re.compile(r"\{(?:form|t|T)\}")
 
 
-def _dskp_file_for_tingkatan(tingkatan, params, base_dir=None):
-    """tingkatan ('1'..'5') → DSKP txt/json file path, or None.
+def _dskp_file_for_form(form, params, base_dir=None):
+    """form ('1'..'5') → DSKP txt/json file path, or None.
 
-    `params.file` picks the source file and auto-detects the tingkatan
-    through the {tingkatan} placeholder:
+    `params.file` picks the source file and auto-detects the form
+    through the {form} placeholder:
 
-        file: assets/bc-dskp/t{tingkatan}.txt   # T1 → assets/bc-dskp/t1.txt
+        file: assets/bc-dskp/t{form}.txt   # T1 → assets/bc-dskp/t1.txt
 
-    It may also be a per-tingkatan map (keys '1'..'5' or 'T1'..'T5'):
+    It may also be a per-form map (keys '1'..'5' or 'T1'..'T5'):
 
         file:
           1: assets/bc-dskp/t1.txt
@@ -54,10 +54,10 @@ def _dskp_file_for_tingkatan(tingkatan, params, base_dir=None):
     if isinstance(spec, dict):
         # Keys may be ints (YAML `1:`) or strings ('1', 'T1', 't1')
         lookup = {str(k).strip().upper(): v for k, v in spec.items()}
-        path = lookup.get(str(tingkatan).upper()) or lookup.get(f"T{tingkatan}")
+        path = lookup.get(str(form).upper()) or lookup.get(f"T{form}")
     else:
-        path = _DSKP_TINGKATAN_PLACEHOLDER.sub(str(tingkatan),
-                                               str(spec).strip())
+        path = _DSKP_FORM_PLACEHOLDER.sub(str(form),
+                                          str(spec).strip())
     if not path:
         return None
 
@@ -65,7 +65,7 @@ def _dskp_file_for_tingkatan(tingkatan, params, base_dir=None):
     return _resolve_path(path, bases)
 
 
-def _section_pair(sections, minggu):
+def _section_pair(sections, number):
     """Two parent-level sections for this week: (1,2) → (2,3) → … → wrap to (1,2).
 
     Sections are the X.0 headings of a DSKP (e.g. '1.0 Listening and Speaking'). The pair
@@ -78,7 +78,7 @@ def _section_pair(sections, minggu):
     if len(keys) < 2:
         return None
     keys.sort(key=int)
-    idx = (int(minggu) - 1) % (len(keys) - 1)
+    idx = (int(number) - 1) % (len(keys) - 1)
     return keys[idx], keys[idx + 1]
 
 
@@ -108,7 +108,7 @@ def schedule_has_auto_match(schedule, params, subjects, days=None):
     return False
 
 
-def build_auto_dskp_entries(schedule, minggu, params, subjects, base_dir=None,
+def build_auto_dskp_entries(schedule, number, params, subjects, base_dir=None,
                             days=None):
     """Turn this week's timetable lessons into DSKP fill entries.
 
@@ -133,17 +133,17 @@ def build_auto_dskp_entries(schedule, minggu, params, subjects, base_dir=None,
             if not _is_matched_subject(subject, codes, names, subject_map):
                 continue
 
-            tingkatan = str(entry.tingkatan).strip()
-            dskp_path = _dskp_file_for_tingkatan(tingkatan, params, base_dir)
+            form = str(entry.form).strip()
+            dskp_path = _dskp_file_for_form(form, params, base_dir)
             if not dskp_path or not os.path.isfile(dskp_path):
-                print(f"  Warning: no DSKP file for tingkatan {tingkatan} "
+                print(f"  Warning: no DSKP file for form {form} "
                       f"({day} class {class_num}): "
                       f"{dskp_path or 'file not configured'}, skipping",
                       file=sys.stderr)
                 continue
 
             sections = load_dskp_content(dskp_path)
-            pair = _section_pair(sections, minggu)
+            pair = _section_pair(sections, number)
             if pair is None:
                 print(f"  Warning: {dskp_path} has no usable parent sections, "
                       f"skipping", file=sys.stderr)
@@ -163,7 +163,7 @@ def build_auto_dskp_entries(schedule, minggu, params, subjects, base_dir=None,
             right_title = sections[right].get("title", str(right))
             report.append(
                 f"  {day.upper()} class {class_num} "
-                f"({entry.cls}, {entry.start}-{entry.end}, T{tingkatan}): "
+                f"({entry.cls}, {entry.start}-{entry.end}, T{form}): "
                 f"{left_title} + {right_title}")
 
     return entries, report
@@ -260,7 +260,7 @@ class DskpFiller:
             entries:                  # static entries (written first)
               - {sheet: ISNIN, class: 1, file: t1.json,
                  selection: [1, 1, 1], col_start: 2}
-            file: assets/bc-dskp/t{tingkatan}.txt
+            file: assets/bc-dskp/t{form}.txt
             match_codes: [BC]
             match_names: ["BAHASA CINA", "华文"]
             cs: 1
@@ -379,7 +379,7 @@ class DskpFiller:
             if not ctx.schedule:
                 return []
             auto, report = build_auto_dskp_entries(
-                ctx.schedule, ctx.week.minggu, params, subjects,
+                ctx.schedule, ctx.week.number, params, subjects,
                 ctx.profile.base_dir, days=days)
             entries.extend(auto)
             return report
@@ -389,6 +389,6 @@ class DskpFiller:
         if ctx.schedule and schedule_has_auto_match(ctx.schedule, params,
                                                    subjects, days=days):
             return ["Note: automatic DSKP filling skipped (no week known) — "
-                    "add inputs.jadual to the profile or pass --minggu N "
+                    "add inputs.jadual to the profile or pass --week N "
                     "to enable it"]
         return []

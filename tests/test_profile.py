@@ -296,5 +296,5 @@ def test_templates_map_is_loaded_with_string_keys(tmp_path):
 
 def test_templates_map_rejects_a_bad_key(tmp_path):
     with pytest.raises(ProfileError) as exc:
-        _week_profile(tmp_path, "M{week}.xlsx", {"minggu-33": "m33.xlsx"})
+        _week_profile(tmp_path, "M{week}.xlsx", {"week-33": "m33.xlsx"})
     assert "not a week number" in str(exc.value)

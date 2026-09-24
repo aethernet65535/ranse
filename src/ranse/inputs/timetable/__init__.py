@@ -1,6 +1,6 @@
 """Weekly timetable reading (CSV / xlsx) → schedule structures.
 
-This reader recognises the school week's day names (``ALL_DAYS``, Ahad
+This reader recognises the school week's day names (``ALL_DAYS``, Sunday
 first) and keeps **every day the source carries** — which days a template
 actually has is the fillers' business, declared once by the profile in
 ``context.days`` (risk 10, defined with the handlers; the reader must not
@@ -30,13 +30,13 @@ from ...core.refs import _parse_cell_ref
 from ...errors import ProfileError
 from ...model import Lesson, Schedule
 
-# The school week's day names, Ahad first — what the reader *recognises* in
+# The school week's day names, Sunday first — what the reader *recognises* in
 # headers and CSV dates. Selecting the days a template carries is the
 # fillers' job (context.days), never this reader's.
 ALL_DAYS = ["Ahad", "Isnin", "Selasa", "Rabu", "Khamis", "Jumaat", "Sabtu"]
 
 # Weekday index (Monday-first, datetime.weekday()) → day name; the school
-# week starts on Sunday/Ahad.
+# week starts on Sunday.
 DAY_BY_WEEKDAY = ["Isnin", "Selasa", "Rabu", "Khamis", "Jumaat", "Sabtu", "Ahad"]
 
 # Built-in fallback: period number → (start, end). The values are pinned by
@@ -123,7 +123,7 @@ def build_schedule(rows, period_times=None):
             start=r["Start Time"],
             end=r["End Time"],
             subject=r["Subject"],
-            tingkatan=r["Tingkatan"],
+            form=r["Tingkatan"],
         )
     return Schedule(days=dict(schedule))
 
@@ -138,7 +138,7 @@ def load_schedule(path, period_times=None):
 
 
 def _day_name_from_date(value):
-    """'2026-09-20' → 'Ahad'. Returns None if the date cannot be parsed."""
+    """Date string → the school day's name. Returns None if unparseable."""
     value = str(value).strip()
     for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%Y/%m/%d", "%d-%m-%Y"):
         try:
@@ -285,15 +285,15 @@ def read_timetable_xlsx(zip_data, shared_strings, period_times=None):
             if not code or code == "NaN":
                 continue
 
-            subject, tingkatan, cls = _parse_class_code(code)
+            subject, form, cls = _parse_class_code(code)
             start, end = period_times[period_num]
 
             schedule[day_name][period_num] = Lesson(
-                cls=f"{tingkatan}{cls}",
+                cls=f"{form}{cls}",
                 start=start,
                 end=end,
                 subject=subject,
-                tingkatan=tingkatan,
+                form=form,
             )
 
     return Schedule(days=dict(schedule))

@@ -27,17 +27,17 @@ number, every other day column holds a class code:
 - **Period number** — the first numeric cell in the row; rows whose number is
   not in the active period table are skipped.
 - **Class code** — matched by `([A-Z]+)[–-](\d+)([A-Za-z]+)`, i.e.
-  `<SUBJECT>-<TINGKATAN><CLASS>` with an ASCII hyphen or an en dash:
-  `BC-1A` → subject `BC`, tingkatan `1`, class `A`. The timetable's class
-  label becomes `tingkatan + class` (`1A`), so `5SPA` survives as written. A
+  `<SUBJECT>-<FORM><CLASS>` with an ASCII hyphen or an en dash:
+  `BC-1A` → subject `BC`, form `1`, class `A`. The timetable's class
+  label becomes `form + class` (`1A`), so `5SPA` survives as written. A
   cell that is empty or literally `NaN` is skipped.
 - **Value resolution** — shared strings, inline strings and plain numbers are
   all read.
 
 ### Day coverage (risk 10)
 
-The school week runs **Ahad … Sabtu** and the reader keeps **every day the
-source carries** — including Jumaat/Sabtu. A reader must not encode the
+The school week runs **Sunday … Saturday** and the reader keeps **every day the
+source carries** — including Friday/Saturday. A reader must not encode the
 target workbook's sheet layout (decision 8), so which days a template
 actually has is declared once by the profile in `context.days` and used by
 the fillers (`menu` for the MENU row blocks, `dskp` for the day sheets).
@@ -60,7 +60,7 @@ Date,Class,Start Time,End Time,Subject,Tingkatan
 | `Class` | class label as the template spells it (`1E`, `5SPA`) |
 | `Start Time` / `End Time` | `HH:MM`, must match a key pair of the active period table, else the row is skipped |
 | `Subject` | subject code or name (after `context.subjects` mapping it feeds `dskp`'s `match_names`) |
-| `Tingkatan` | tingkatan number as text |
+| `Tingkatan` | form number as text |
 
 - A `Date` that cannot be parsed produces a warning on stderr and the row is
   skipped.

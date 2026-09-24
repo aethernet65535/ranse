@@ -8,7 +8,7 @@ in its own folder, with its business rules in that folder's DESIGN.md:
 
 | Handler | Phase | Rules |
 |---|---|---|
-| [`week/`](week/) | resolve | date → minggu/siri → timetable path ([`week/DESIGN.md`](week/DESIGN.md)) |
+| [`week/`](week/) | resolve | date → week number/series → timetable path ([`week/DESIGN.md`](week/DESIGN.md)) |
 | [`menu/`](menu/) | fill | the MENU sheet owns all time data (decision 14), layout, clearing ([`menu/DESIGN.md`](menu/DESIGN.md)) |
 | [`fixed_cells/`](fixed_cells/) | fill | constant cells, `int(value)` timing ([`fixed_cells/DESIGN.md`](fixed_cells/DESIGN.md)) |
 | [`dskp/`](dskp/) | fill | day-sheet DSKP blocks, automatic section pair ([`dskp/DESIGN.md`](dskp/DESIGN.md)) |
