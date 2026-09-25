@@ -231,9 +231,13 @@ raises `ProfileError` from the `inputs/yaml/` reader; an unknown handler name or
 invalid handler params raises `ProfileError` from the plugin loader (it lists
 the names it did find, or says there are no plugins under `./plugins`).
 Relative paths resolve against the profile's own directory, then the current
-directory, then — only in a source checkout — the repo root
-(`inputs.input_bases`; an installed package has no repo root, so the fallback
-stays out of the way). Plugin discovery searches `./plugins` the same way.
+directory, then the application's own roots (`inputs.input_bases` →
+`ranse.resource_roots`): the repo root **only in a source checkout** — an
+installed package has none, so the fallback stays out of the way — or, in a
+packaged app, the executable's folder and the unpacked bundle folder (the
+current directory can be anywhere: a Windows shortcut without "Start in"
+launches the program in `System32`, so it is never the app's own anchor).
+Plugin discovery searches `./plugins` the same way.
 
 `inputs.template` may contain the `{week}` placeholder — substituted with the
 number a resolve-phase handler publishes in `ctx.template_vars` — and glob
@@ -441,8 +445,10 @@ own `DESIGN.md`, and the plugin's `README.md` indexes them.
 
 `plugins.py` is the framework's only plugin-aware module. It:
 
-- scans `./plugins` (current directory first, then — only in a source
-  checkout — the repository root, the same fallback the input paths use);
+- scans `./plugins` (current directory first, then the application's own
+  roots from `resource_roots()`, the same fallback the input paths use: the
+  repository root only in a source checkout, or a packaged app's executable
+  and bundle folders);
 - accepts a plugin folder when it is a legal snake_case package
   (`__init__.py` present) and registers `handlers/<name>/` and
   `inputs/<name>/` inside it;

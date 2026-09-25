@@ -202,7 +202,7 @@ handlers:
 | `csv` | Optional explicit timetable csv; wins over the series lookup |
 | `period_times` | Optional period table (period → `[start, end]`); replaces the built-in one (documented in [`plugins/erph/config/period-times/DESIGN.md`](plugins/erph/config/period-times/DESIGN.md)) |
 
-Relative paths are resolved against the profile's own directory, then the current directory, then the repo root (the last step only in a source checkout — an installed package has none) — so the shipped profile works no matter where you run it from.
+Relative paths are resolved against the profile's own directory, then the current directory, then the application's own roots: the repo root (only in a source checkout — an installed package has none) or, in a packaged app, the executable's folder and the bundle folder. The current directory is never the application's own anchor — a Windows shortcut may start it anywhere, `System32` included — so the shipped profile works no matter where you run it from.
 
 **One profile per year.** `template` is a pattern: `{week}` is replaced with the resolved week number, and `*`/`?` wildcards search for the file. The pattern must match **exactly one** workbook; if it matches two (e.g. an old week copied into another folder), `ranse fill` lists the candidates and you pin that week:
 

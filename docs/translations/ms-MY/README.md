@@ -159,7 +159,7 @@ handlers:
 | `csv` | Fail jadual waktu csv eksplisit (pilihan); mengalahkan carian siri |
 | `period_times` | Jadual tempoh pilihan (tempoh → `[mula, tamat]`); menggantikan jadual terbina dalam (didokumenkan dalam [`plugins/erph/config/period-times/DESIGN.md`](../../../plugins/erph/config/period-times/DESIGN.md)) |
 
-Laluan relatif diselesaikan terhadap direktori profil itu sendiri, kemudian direktori semasa, kemudian akar repositori (langkah terakhir hanya dalam checkout sumber — pemasangan pakej tiada akar repositori) — jadi profil yang disertakan berfungsi di mana-mana sahaja anda menjalankannya.
+Laluan relatif diselesaikan terhadap direktori profil itu sendiri, kemudian direktori semasa, kemudian akar aplikasi itu sendiri: akar repositori (hanya dalam checkout sumber — pemasangan pakej tiada akar repositori) atau, dalam aplikasi berbungkus, direktori executable dan direktori bundle. Direktori semasa tidak pernah menjadi sauh milik aplikasi — pintasan Windows boleh memulakannya di mana-mana sahaja, termasuk `System32` — jadi profil yang disertakan berfungsi di mana-mana sahaja anda menjalankannya.
 
 **Satu profil untuk setahun.** `template` ialah satu pola: `{week}` digantikan dengan nombor minggu yang diselesaikan, dan wildcard `*`/`?` mencari fail tersebut. Pola mesti sepadan dengan **tepat satu** buku kerja; jika ia sepadan dua (contohnya minggu lama disalin ke folder lain), `ranse fill` menyenaraikan calonnya dan anda tetapkan minggu itu:
 

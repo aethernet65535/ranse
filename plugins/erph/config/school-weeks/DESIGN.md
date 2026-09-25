@@ -29,7 +29,7 @@ ranse fill --profile plugins/erph/profiles/ali-bin-abu/profile.yaml --date 2026-
 ```yaml
 # series number → timetable file (relative to the repo root; absolute works too)
 # Paths resolve next to this file first, then the current directory, then the
-# repo root — see input_bases() in inputs/yaml/.
+# repo root — see input_bases() in inputs/yaml/ and resource_roots().
 timetable:
   1: assets/timetable/jadual-waktu-2026-siri-1.xlsx
   7: assets/timetable/jadual-waktu-2026-siri-7.xlsx
