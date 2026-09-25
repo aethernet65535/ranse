@@ -173,6 +173,10 @@ _PACKAGE_CANDIDATES = (
     "ranse.handlers.base",
     "ranse.inputs",
     "ranse.cli",
+    # the package root last: names it owns (resource_roots, the checkout
+    # guards) live there, and searching it last keeps a submodule's own
+    # attribute of the same name winning.
+    "ranse",
     # the shipped plugin (plugins/erph)
     "erph.domain",
     "erph.inputs.timetable",

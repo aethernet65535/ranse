@@ -12,6 +12,7 @@ presents each handler as its own help section (docs/DESIGN.md S3.4).
 
 import argparse
 import os
+import sys
 import textwrap
 from types import SimpleNamespace
 
@@ -100,9 +101,10 @@ def test_top_level_help_lists_only_framework_commands():
     assert "dskp" not in help_text.lower()
 
 
-# --- path bases (Phase 5: one builder, checkout-guarded repo fallback) -----
+# --- path bases (one builder; fallback roots: checkout / executable) -------
 
 input_bases = fn("input_bases")
+resource_roots = fn("resource_roots")
 
 
 def test_input_bases_put_the_profile_folder_first():
@@ -126,6 +128,46 @@ def test_repo_root_fallback_only_in_a_source_checkout():
     # an installed wheel turns it off (no pyproject/src beside the package).
     assert _IS_SOURCE_CHECKOUT is True
     assert bases[-1] == _REPO_ROOT
+    assert resource_roots() == [_REPO_ROOT]
+
+
+def test_a_frozen_app_covers_the_bundle_folder_as_well(tmp_path,
+                                                        monkeypatch):
+    # Files packed *inside* the bundle unpack to sys._MEIPASS rather than
+    # sitting beside the executable; both are roots, executable first.
+    monkeypatch.setattr(sys, "frozen", True, raising=False)
+    monkeypatch.setattr(sys, "executable", str(tmp_path / "app" / "ranse"))
+    monkeypatch.setattr(sys, "_MEIPASS", str(tmp_path / "bundle"),
+                        raising=False)
+
+    assert resource_roots() == [str(tmp_path / "app"),
+                                str(tmp_path / "bundle")]
+
+
+def test_an_installed_wheel_contributes_no_root(monkeypatch):
+    # Not frozen, not a checkout (no pyproject/src beside the package):
+    # guessing beside site-packages would be worse than no fallback at all.
+    import ranse
+    monkeypatch.setattr(ranse, "_IS_SOURCE_CHECKOUT", False)
+    assert resource_roots() == []
+
+
+def test_plain_python_resolves_no_nuitka_root():
+    # ``__compiled__`` exists only in a Nuitka build, so the guarded
+    # lookup at import time found nothing here.
+    import ranse
+    assert ranse._COMPILED_DIR is None
+
+
+def test_a_nuitka_build_falls_back_to_its_compiled_folder(tmp_path,
+                                                           monkeypatch):
+    # Nuitka sets no sys.frozen: ``__compiled__`` is its only marker, and
+    # the package resolved it once at import. The repository root — the
+    # source-checkout root — still comes first.
+    import ranse
+    from ranse import _REPO_ROOT
+    monkeypatch.setattr(ranse, "_COMPILED_DIR", str(tmp_path / "dist"))
+    assert resource_roots() == [_REPO_ROOT, str(tmp_path / "dist")]
 
 
 # --- the `ranse fill` option surface (declared by handlers) ----------------
