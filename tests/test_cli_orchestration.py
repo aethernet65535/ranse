@@ -131,6 +131,23 @@ def test_repo_root_fallback_only_in_a_source_checkout():
     assert resource_roots() == [_REPO_ROOT]
 
 
+def test_a_frozen_app_anchors_on_its_executable_not_the_working_dir(
+        tmp_path, monkeypatch):
+    # A Windows shortcut that lacks "Start in" launches a program with the
+    # working directory set to System32, so the app's own files must resolve
+    # against the executable the user actually ran — never against the CWD.
+    exe = tmp_path / "dist" / "ranse.exe"
+    monkeypatch.setattr(sys, "frozen", True, raising=False)
+    monkeypatch.setattr(sys, "executable", str(exe))
+    monkeypatch.delattr(sys, "_MEIPASS", raising=False)
+
+    assert resource_roots() == [str(exe.parent)]
+    # The current directory keeps its place, ahead of the app's own roots:
+    # relative paths the user typed still mean "here".
+    assert input_bases(first="/data") == [
+        "/data", os.getcwd(), str(exe.parent)]
+
+
 def test_a_frozen_app_covers_the_bundle_folder_as_well(tmp_path,
                                                         monkeypatch):
     # Files packed *inside* the bundle unpack to sys._MEIPASS rather than

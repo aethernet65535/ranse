@@ -81,6 +81,28 @@ def test_search_roots_start_with_the_current_directory():
     assert has_plugins() is True
 
 
+def test_search_roots_also_cover_the_checkout_plugins_folder():
+    from ranse import _REPO_ROOT
+    roots = PLUGIN_SCAN.search_roots()
+    assert os.path.join(_REPO_ROOT, "plugins") in roots
+
+
+def test_a_frozen_app_searches_beside_its_executable_too(tmp_path,
+                                                          monkeypatch):
+    # The working directory of a launched app may be anywhere (System32 is
+    # the classic), so the plugins shipped with the executable resolve
+    # against it — after the current directory, which stays first.
+    exe = tmp_path / "dist" / "ranse.exe"
+    monkeypatch.setattr(sys, "frozen", True, raising=False)
+    monkeypatch.setattr(sys, "executable", str(exe))
+    monkeypatch.delattr(sys, "_MEIPASS", raising=False)
+
+    roots = PLUGIN_SCAN.search_roots()
+    shipped = str(tmp_path / "dist" / "plugins")
+    assert roots[0] == os.path.abspath("plugins")
+    assert roots[1:] == [shipped]
+
+
 def test_no_plugins_directory_is_a_neutral_prompt(tmp_path, monkeypatch):
     monkeypatch.setattr(PLUGIN_SCAN, "search_roots",
                         lambda: [str(tmp_path / "nowhere")])

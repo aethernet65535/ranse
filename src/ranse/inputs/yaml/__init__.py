@@ -5,7 +5,7 @@ import os
 
 import yaml
 
-from ... import _IS_SOURCE_CHECKOUT, _REPO_ROOT
+from ... import resource_roots
 from ...core.refs import _resolve_path
 from ...errors import ProfileError
 from ...model import HandlerSpec, Profile, ProfileInputs
@@ -129,10 +129,14 @@ def input_bases(profile=None, first=None):
     """Where relative input paths are looked up, in order.
 
     ``first`` (e.g. the folder of a data file whose paths resolve next to
-    it), then the profile's own folder, then the current directory, then —
-    **only in a source checkout** — the repository root. An installed
-    package contributes no root: guessing beside site-packages would be
-    worse than not falling back at all.
+    it), then the profile's own folder, then the current directory, then
+    the application's own roots (:func:`ranse.resource_roots`). The last
+    step is the repository root **only in a source checkout** — an
+    installed package contributes none, guessing beside site-packages
+    would be worse than not falling back at all — and, in a bundled app,
+    the executable's folder plus the unpacked bundle folder, so a run
+    started from an unrelated working directory still finds the files the
+    app ships with.
 
     This is the one place the base list is built; handlers and the profile
     loader share it so relative paths resolve the same everywhere.
@@ -143,8 +147,7 @@ def input_bases(profile=None, first=None):
     if profile is not None:
         bases.append(profile.base_dir)
     bases.append(os.getcwd())
-    if _IS_SOURCE_CHECKOUT:
-        bases.append(_REPO_ROOT)
+    bases.extend(resource_roots())
     return bases
 
 

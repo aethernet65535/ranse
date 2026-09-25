@@ -12,10 +12,12 @@ works with the plain names it returns. It knows nothing about what any
 plugin means.
 
 The search roots mirror the input-path fallback in :func:`ranse.inputs.yaml.
-input_bases`: ``./plugins`` in the current directory first, then — **only in
-a source checkout** — the repository root's ``plugins/``. An installed
-package contributes no root, so it looks for plugins beside the project it
-is run against instead of guessing.
+input_bases`: ``./plugins`` in the current directory first — that is the
+documented contract (drop a plugin beside whatever you run against) — then
+the application's own roots from :func:`ranse.resource_roots`: a source
+checkout's repository root, or a bundled app's executable and bundle
+folders. An installed package contributes no root, so it looks for plugins
+beside the project instead of guessing.
 """
 
 import importlib
@@ -23,7 +25,7 @@ import os
 import re
 import sys
 
-from . import _IS_SOURCE_CHECKOUT, _REPO_ROOT
+from . import resource_roots
 from .errors import ProfileError
 
 PLUGINS_DIRNAME = "plugins"
@@ -36,12 +38,19 @@ _PACKAGE_NAME_RE = re.compile(r"^[a-z][a-z0-9_]*$")
 
 
 def search_roots():
-    """The directories a plugin may live in, in resolution order."""
+    """The directories a plugin may live in, in resolution order.
+
+    The current directory's ``plugins/`` stays first: it is what the docs
+    promise and what a source checkout has always had. The application's
+    own roots follow, so a bundled app still finds the ``plugins/`` folder
+    shipped beside it (or inside the bundle) when the working directory is
+    somewhere else entirely.
+    """
     roots = [os.path.abspath(PLUGINS_DIRNAME)]
-    if _IS_SOURCE_CHECKOUT:
-        checkout = os.path.join(_REPO_ROOT, PLUGINS_DIRNAME)
-        if checkout not in roots:
-            roots.append(checkout)
+    for base in resource_roots():
+        root = os.path.join(base, PLUGINS_DIRNAME)
+        if root not in roots:
+            roots.append(root)
     return roots
 
 
