@@ -2,3 +2,6 @@ __pycache__/
 assets/
 archived/
 *.egg-info/
+# PyInstaller output (pyinstaller ranse.spec)
+build/
+dist/
