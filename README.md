@@ -87,7 +87,35 @@ pip install -e .
 
 This installs the `ranse` command. `pip install -e ".[dev]"` also installs pytest for development.
 
-> **Note:** A standalone Windows executable (no Python required) is planned for future release.
+## Building a standalone executable
+
+A machine that runs the app needs no Python: [PyInstaller](https://pyinstaller.org)
+builds a one-folder application from the tracked `ranse.spec`.
+
+```bash
+pip install -e .            # the project's dependencies (PyYAML)
+pip install pyinstaller
+pyinstaller ranse.spec      # → dist/ranse/  (ranse + _internal/)
+```
+
+PyInstaller does not cross-compile: a Windows `.exe` is built on Windows, a
+Linux binary on Linux. If a dependency was installed after the first build,
+pass `--clean` — PyInstaller caches its module analysis and would otherwise
+ship the previous result.
+
+One folder, not one file, on purpose: `plugins/` and `assets/` are looked up
+at runtime, and beside the executable they can be opened, replaced or added
+to without unpacking anything.
+
+| Path in the bundle | What it is |
+|---|---|
+| `_internal/plugins/` | the plugin folders, as plain source. The loader puts that folder on `sys.path`, so a plugin dropped next to `ranse` later is discovered the same way — no rebuild needed. |
+| `assets/` | **not** bundled: it is gitignored per-user data (~300 MB of workbooks). Copy `assets/` next to `ranse`, or set `BUNDLE_ASSETS = True` in `ranse.spec` to ship it inside instead. |
+
+Relative paths resolve against the executable's own folder as well as the
+current directory, so the app does not care where it was started from — on
+Windows, a shortcut with an empty "Start in" launches the program in
+`System32`.
 
 ## Usage
 

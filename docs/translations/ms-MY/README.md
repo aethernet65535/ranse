@@ -67,7 +67,36 @@ pip install -e .
 
 Ini memasang arahan `ranse`. `pip install -e ".[dev]"` juga memasang pytest untuk pembangunan.
 
-> **Nota:** Fail boleh laku Windows yang berdiri sendiri (tanpa Python) dirancang untuk keluaran akan datang.
+## Membina aplikasi berbungkus (standalone)
+
+Mesin yang menjalankan aplikasi ini tidak memerlukan Python:
+[PyInstaller](https://pyinstaller.org) membina aplikasi satu-folder daripada
+`ranse.spec` yang disertakan dalam repo.
+
+```bash
+pip install -e .            # kebergantungan projek (PyYAML)
+pip install pyinstaller
+pyinstaller ranse.spec      # → dist/ranse/  (ranse + _internal/)
+```
+
+PyInstaller tidak merentas kompilasi: `.exe` Windows dibina di Windows,
+binari Linux dibina di Linux. Jika satu kebergantungan dipasang selepas
+binaan pertama, gunakan `--clean` — PyInstaller menyimpan analisis modulnya
+dan sebaliknya akan menghasilkan semula binaan terdahulu.
+
+Satu folder, bukan satu fail, secara sengaja: `plugins/` dan `assets/`
+dicari semasa runtime, dan di sebelah executable itu ia boleh dibuka,
+diganti atau ditambah tanpa membuka bungkusan apa-apa.
+
+| Laluan dalam bundle | Apa dia |
+|---|---|
+| `_internal/plugins/` | folder plugin, sebagai fail sumber biasa. Loader meletakkan folder itu pada `sys.path`, jadi plugin yang diletakkan bersebelahan `ranse` kemudian ditemui dengan cara yang sama — tanpa perlu bina semula. |
+| `assets/` | **tidak** dibundel: ia data pergunaan yang digitignore (~300 MB buku kerja). Salin `assets/` bersebelahan `ranse`, atau tetapkan `BUNDLE_ASSETS = True` dalam `ranse.spec` untuk menghantarnya di dalam sebaliknya. |
+
+Laluan relatif diselesaikan terhadap folder executable itu sendiri serta
+direktori semasa, jadi aplikasi tidak kisah di mana ia dimulakan — di
+Windows, pintasan dengan "Start in" kosong melancarkan program dalam
+`System32`.
 
 ## Penggunaan
 
